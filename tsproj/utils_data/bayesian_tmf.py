@@ -400,7 +400,7 @@ class BTMF:
     @staticmethod
     def MvnrndPre(mu, Lambda):
         """
-        给定均值向量和方差, 求多维变量的先验？
+        给定均值向量和方差, 求多维变量的先验?
         """
         src = normrnd(size=(mu.shape[0],))
         return solve_ut(cholesky_upper(Lambda, overwrite_a=True, check_finite=False),
