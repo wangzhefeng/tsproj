@@ -1,0 +1,15 @@
+PATH:
+  project_dir: ../  # 项目根目录
+  data_online_dir: https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip
+  data_root_dir:  /Users/zfwang/machinelearning/datasets/  # 本地数据根目录
+  data_fold: weather
+  data_file: jena_climate_2009_2016.csv
+  model_dir: ../models  # 模型
+DATA:
+  validation_split: 0.2
+  buffer_size: 
+  num_classes: 10
+MODEL:
+  epochs: 12
+  batch_size: 128
+  learning_rate: 1e-3
