@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : feature_extraction.py
 # * Author      : Zhefeng Wang
@@ -12,15 +11,10 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
-import os
-import sys
-
 import numpy as np
 from scipy import stats
 import statsmodels.tsa.stattools as ts
-
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -71,7 +65,6 @@ def correlation(x: np.ndarray, y: np.ndarray, method: str = "kendall"):
         _type_: _description_
     """
     assert method in ["pearson", "spearman", "kendall"]
-
     corr, p_value = stats.kendalltau(x, y)
 
     return corr
@@ -85,4 +78,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
