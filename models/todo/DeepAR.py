@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : DeepAR.py
 # * Author      : Zhefeng Wang
@@ -12,16 +11,13 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
-import os
-import sys
-
 import pandas as pd
 import matplotlib.pyplot as plt
+
 from gluonts.dataset.pandas import PandasDataset
-from gluonts.mx import DeepAREstimator, Trainer
 from gluonts.dataset.split import split
+from gluonts.mx import DeepAREstimator, Trainer
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

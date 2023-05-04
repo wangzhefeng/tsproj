@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : losses.py
 # * Author      : Zhefeng Wang
@@ -12,15 +11,10 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
-import os
-import sys
-
 import numpy as np
 import torch
 import torch.nn as nn
-
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -42,11 +36,11 @@ class mape_loss(nn.Module):
     def __init__(self):
         super(mape_loss, self).__init__()
 
-    def forward(self, 
-                insample: torch.Tensor, 
+    @staticmethod
+    def forward(insample: torch.Tensor,
                 freq: int,
-                forecast: torch.Tensor, 
-                target: torch.Tensor, 
+                forecast: torch.Tensor,
+                target: torch.Tensor,
                 mask: torch.Tensor) -> torch.float:
         """
         MAPE loss as defined in: https://en.wikipedia.org/wiki/Mean_absolute_percentage_error
@@ -65,11 +59,11 @@ class smape_loss(nn.Module):
     def __init__(self):
         super(smape_loss, self).__init__()
 
-    def forward(self, 
-                insample: torch.Tensor, 
+    @staticmethod
+    def forward(insample: torch.Tensor,
                 freq: int,
-                forecast: torch.Tensor, 
-                target: torch.Tensor, 
+                forecast: torch.Tensor,
+                target: torch.Tensor,
                 mask: torch.Tensor) -> torch.float:
         """
         sMAPE loss as defined in https://robjhyndman.com/hyndsight/smape/ (Makridakis 1993)
@@ -92,11 +86,11 @@ class mase_loss(nn.Module):
     def __init__(self):
         super(mase_loss, self).__init__()
 
-    def forward(self, 
-                insample: torch.Tensor, 
+    @staticmethod
+    def forward(insample: torch.Tensor,
                 freq: int,
-                forecast: torch.Tensor, 
-                target: torch.Tensor, 
+                forecast: torch.Tensor,
+                target: torch.Tensor,
                 mask: torch.Tensor) -> torch.float:
         """
         MASE loss as defined in "Scaled Errors" https://robjhyndman.com/papers/mase.pdf

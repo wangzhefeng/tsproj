@@ -135,6 +135,8 @@ dmypy.json
 *.zip
 *.csv
 *.h5
+*.pt
+data/
 
 # log files
 lightning_logs/

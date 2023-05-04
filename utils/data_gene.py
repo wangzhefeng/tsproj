@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : data_gene.py
 # * Author      : Zhefeng Wang
@@ -12,11 +11,7 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
-import os
-import sys
-
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -29,7 +24,6 @@ from sklearn.linear_model import LinearRegression
 font_name = ["Arial Unicode MS"]
 mpl.rcParams["font.sans-serif"] = font_name
 mpl.rcParams["axes.unicode_minus"] = False
-
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
