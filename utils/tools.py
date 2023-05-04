@@ -31,7 +31,6 @@ plt.switch_backend('agg')
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-# TODO 未使用
 class dotdict(dict):
     """
     dot.notation access to dictionary attributes
@@ -41,17 +40,43 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
+class StandardScaler:
+    """
+    标准化转换
+    """
+    def __init__(self, mean = 0, std = 1):
+        self.mean = mean
+        self.std = std
+    
+    def fit(self, data):
+        self.mean = data.mean(axis = 0)
+        self.std = data.std(axis = 0)
+
+    def transform(self, data):
+        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) \
+            if torch.is_tensor(data) \
+            else self.mean
+        std = torch.from_numpy(self.std).type_as(data).to(data.device) \
+            if torch.is_tensor(data) \
+            else self.std
+        return (data - mean) / std
+
+    def inverse_transform(self, data):
+        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) \
+            if torch.is_tensor(data) \
+            else self.mean
+        std = torch.from_numpy(self.std).type_as(data).to(data.device) \
+            if torch.is_tensor(data) \
+            else self.std
+        if data.shape[-1] != mean.shape[-1]:
+            mean = mean[-1:]
+            std = std[-1:]
+        return (data * std) + mean
+
+
 class EarlyStopping:
 
     def __init__(self, patience = 7, verbose = False, delta = 0):
-        """
-        TODO
-
-        Args:
-            patience (int, optional): _description_. Defaults to 7.
-            verbose (bool, optional): _description_. Defaults to False.
-            delta (int, optional): _description_. Defaults to 0.
-        """
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
@@ -93,31 +118,14 @@ class EarlyStopping:
             path (_type_): model checkpoint saved path
         """
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), path + '/' + 'checkpoint.pth')
+            print(f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...")
+        torch.save(model.state_dict(), f"{path}/checkpoint.pth")
         self.val_loss_min = val_loss
-
-
-# TODO
-class StandardScaler():
-    """
-    标准化转换
-    """
-
-    def __init__(self, mean, std):
-        self.mean = mean
-        self.std = std
-
-    def transform(self, data):
-        return (data - self.mean) / self.std
-
-    def inverse_transform(self, data):
-        return (data * self.std) + self.mean
 
 
 def adjust_learning_rate(optimizer, epoch, args):
     """
-    TODO
+    Informer func
 
     Args:
         optimizer (_type_): _description_
@@ -131,8 +139,13 @@ def adjust_learning_rate(optimizer, epoch, args):
         }
     elif args.lradj == 'type2':
         lr_adjust = {
-            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
-            10: 5e-7, 15: 1e-7, 20: 5e-8
+            2: 5e-5, 
+            4: 1e-5, 
+            6: 5e-6, 
+            8: 1e-6,
+            10: 5e-7, 
+            15: 1e-7, 
+            20: 5e-8,
         }
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
@@ -141,6 +154,7 @@ def adjust_learning_rate(optimizer, epoch, args):
         print('Updating learning rate to {}'.format(lr))
 
 
+# TODO
 def visual(true, preds = None, name = './pic/test.pdf'):
     """
     Results visualization
@@ -153,17 +167,8 @@ def visual(true, preds = None, name = './pic/test.pdf'):
     plt.savefig(name, bbox_inches = 'tight')
 
 
+# TODO
 def adjustment(gt, pred):
-    """
-    TODO
-
-    Args:
-        gt (_type_): _description_
-        pred (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
     anomaly_state = False
     for i in range(len(gt)):
         if gt[i] == 1 and pred[i] == 1 and not anomaly_state:
@@ -188,6 +193,7 @@ def adjustment(gt, pred):
     return gt, pred
 
 
+# TODO
 def cal_accuracy(y_pred, y_true):
     """
     计算准确率
@@ -202,15 +208,8 @@ def cal_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
 
 
+# TODO
 def register_metric(mae, mse, configs):
-    """
-    TODO
-
-    Args:
-        mae (_type_): _description_
-        mse (_type_): _description_
-        configs (_type_): _description_
-    """
     seq_len = configs.seq_len
     pred_len = configs.pred_len
     model = configs.model

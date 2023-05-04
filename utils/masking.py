@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : masking.py
 # * Author      : Zhefeng Wang
@@ -12,13 +11,8 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
-import os
-import sys
-
 import torch
-
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -45,8 +39,9 @@ class ProbMask():
         _mask_ex = _mask[None, None, :].expand(B, H, L, scores.shape[-1])
         indicator = _mask_ex[
             torch.arange(B)[:, None, None],
-            torch.arange(H)[None, :, None],
-            index, :
+            torch.arange(H)[None, :, None], 
+            index, 
+            :
         ].to(device)
         self._mask = indicator.view(scores.shape).to(device)
 

@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from data_provider.m4 import M4Dataset, M4Meta
+from data.m4 import M4Dataset, M4Meta
 
 
 # global variable

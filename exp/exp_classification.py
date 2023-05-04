@@ -24,7 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 
-from data_provider.data_factory import data_provider
+from data.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, cal_accuracy
 
