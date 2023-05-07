@@ -20,7 +20,7 @@ import torch
 
 from models import (
     MICN, Autoformer, Crossformer, DLinear, ETSformer,
-    FEDformer, FiLM, Informer, LightTS,
+    FEDformer, FiLM, Informer, InformerModel, LightTS,
     Nonstationary_Transformer, PatchTST, Pyraformer, Reformer,
     TimesNet, Transformer
 )
@@ -40,7 +40,8 @@ class Exp_Basic(object):
             'Nonstationary_Transformer': Nonstationary_Transformer,
             'DLinear': DLinear,
             'FEDformer': FEDformer,
-            'Informer': Informer,
+            'Informer': InformerModel,
+            'InformerRaw': Informer,
             'LightTS': LightTS,
             'Reformer': Reformer,
             'ETSformer': ETSformer,
