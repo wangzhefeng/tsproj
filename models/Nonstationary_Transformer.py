@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : Nonstationary_Transformer.py
 # * Author      : Zhefeng Wang
@@ -11,7 +10,6 @@
 # * Link        : Paper link: https://openreview.net/pdf?id=ucNDIDRNjjv
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
-
 
 # python libraries
 import torch

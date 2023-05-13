@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : m4.py
 # * Author      : Zhefeng Wang
@@ -11,8 +10,6 @@
 # * Link        : M4 Dataset
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
-
-
 
 # python libraries
 import os

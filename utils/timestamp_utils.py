@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : timestamp.py
+# * File        : timestamp_utils.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2023-03-19
@@ -12,6 +12,7 @@
 # ***************************************************
 
 # python libraries
+from typing import Union
 import pytz
 from datetime import datetime
 
@@ -19,24 +20,39 @@ from datetime import datetime
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def timestamp2datetime(timestamp: int, time_zone: str = "Asia/Shanghai") -> datetime:
+def to_unix_time(dt: Union[str, datetime], dt_format: str = '%Y-%m-%d %H:%M:%S') -> int:
+    """
+    timestamp to unix
+    """
+    epoch = datetime.utcfromtimestamp(0)
+    if isinstance(dt, str):
+        dt = datetime.strptime(dt, dt_format)
+    unix_time = int((dt - epoch).total_seconds())
+
+    return unix_time
+
+
+def from_unix_time(unix_time: int, tz: str = None) -> datetime:
     """
     将 Unix 时间戳转换为指定时区的日期时间格式
 
     Args:
-        timestamp (int): 需要转化的时间戳
+        unix_time (int): 需要转化的 unix 时间戳
         time_zone (str): 时区. Defaults to "Asia/Shanghai".
 
     Returns:
         datetime: datetime 格式
     """
-    local_tz = pytz.timezone(time_zone)
-    datetime_ = datetime \
-        .utcfromtimestamp(int(timestamp)) \
-        .replace(tzinfo = pytz.utc) \
-        .astimezone(local_tz)
-    
-    return datetime_
+    if tz:
+        local_tz = pytz.timezone(tz)
+        timestamp = datetime \
+            .utcfromtimestamp(int(unix_time)) \
+            .replace(tzinfo = pytz.utc) \
+            .astimezone(local_tz)
+    else:
+        timestamp = datetime.utcfromtimestamp(int(unix_time))   
+
+    return timestamp
 
 
 def align_timestamp(timestamp: int, time_zone: str = "Asia/Shanghai", resolution: str = "5s") -> int:
@@ -131,10 +147,30 @@ def align_timestamp(timestamp: int, time_zone: str = "Asia/Shanghai", resolution
 
 
 
+
+
 # 测试代码 main 函数
 def main():
-    datetime_data = timestamp2datetime(1591148504)
-    print(datetime_data)
+    timestamp_str = "2020-06-03 09:41:44"
+    timestamp_format = '%Y-%m-%d %H:%M:%S'
+    
+    timestamp = datetime.strptime(timestamp_str, timestamp_format)
+
+    res = to_unix_time(timestamp_str)
+    print(res)
+
+    res = to_unix_time(timestamp)
+    print(res)
+    # -----------
+    unix = 1591148504
+    res = from_unix_time(unix)
+    print(res)
+    
+    res = from_unix_time(unix, tz = "UTC")
+    print(res)
+
+    res = from_unix_time(unix, tz = "Asia/Shanghai")
+    print(res)
 
 if __name__ == "__main__":
     main()

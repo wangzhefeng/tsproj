@@ -31,6 +31,22 @@ from utils_func import is_weekend
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
+def feature_engineer(df):
+    """
+    特征工程
+    1. 时间戳特征
+    2. 差分序列
+    3. 同时刻风场、邻近风机的特均值、标准差
+    """
+    df["month"] = df.DATATIME.apply(lambda x: x.month, 1)
+    df["day"] = df.DATATIME.apply(lambda x: x.day, 1)
+    df["weekday"] = df.DATATIME.apply(lambda x: x.weekday(), 1)
+    df["hour"] = df.DATATIME.apply(lambda x: x.hour, 1)
+    df["minute"] = df.DATATIME.apply(lambda x: x.minute, 1)
+
+    return df
+
+
 def time_static_features(series, 
                          datetime_format: str = '%Y-%m-%d %H:%M:%S', 
                          datetime_is_index: bool = False, 

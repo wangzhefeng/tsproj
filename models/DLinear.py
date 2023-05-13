@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : DLinear.py
 # * Author      : Zhefeng Wang
@@ -11,7 +10,6 @@
 # * Link        : Paper link: https://arxiv.org/pdf/2205.13504.pdf
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
-
 
 # python libraries
 import torch

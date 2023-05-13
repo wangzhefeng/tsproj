@@ -16,6 +16,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import paddle
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
@@ -105,6 +107,15 @@ class mase_loss(nn.Module):
         masep = torch.mean(torch.abs(insample[:, freq:] - insample[:, :-freq]), dim = 1)
         masked_masep_inv = divide_no_nan(mask, masep[:, None])
         return torch.mean(torch.abs(target - forecast) * masked_masep_inv)
+
+
+class MultiTaskMSELoss(paddle.nn.Layer):
+    """
+    设置损失函数, 多任务模型，两个任务MSE的均值做loss输出
+    """
+    
+    def __init__(self):
+        super(MultiTaskMSELoss, self).__init__()
 
 
 
