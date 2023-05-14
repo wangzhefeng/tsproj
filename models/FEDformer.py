@@ -17,17 +17,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers.AutoCorrelation import AutoCorrelationLayer
-from layers.Autoformer_EncDec import (
-    Encoder, EncoderLayer, 
-    Decoder, DecoderLayer, 
-    my_Layernorm, series_decomp
-)
-from layers.Embed import DataEmbedding
+from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
+                                      EncoderLayer, my_Layernorm,
+                                      series_decomp)
+from layers.embed import DataEmbedding
 from layers.FourierCorrelation import FourierBlock, FourierCrossAttention
-from layers.MultiWaveletCorrelation import (
-    MultiWaveletCross,
-    MultiWaveletTransform
-)
+from layers.MultiWaveletCorrelation import (MultiWaveletCross,
+                                            MultiWaveletTransform)
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

@@ -18,12 +18,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from layers.Autoformer_EncDec import (
-    Decoder, DecoderLayer, 
-    Encoder, EncoderLayer, 
-    my_Layernorm, series_decomp
-)
-from layers.Embed import DataEmbedding, DataEmbedding_wo_pos
+from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
+                                      EncoderLayer, my_Layernorm,
+                                      series_decomp)
+from layers.embed import DataEmbedding_wo_pos
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

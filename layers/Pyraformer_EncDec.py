@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : Pyraformer_EncDec.py
 # * Author      : Zhefeng Wang
@@ -12,7 +11,6 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
 import math
 
@@ -21,8 +19,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.linear import Linear
 
-from layers.Embed import DataEmbedding
-from layers.SelfAttention_Family import AttentionLayer, FullAttention
+from layers.embed import DataEmbedding
+from layers.SelfAttention import AttentionLayer, FullAttention
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -167,7 +165,12 @@ class ConvLayer(nn.Module):
 
     def __init__(self, c_in, window_size):
         super(ConvLayer, self).__init__()
-        self.downConv = nn.Conv1d(in_channels = c_in, out_channels = c_in, kernel_size = window_size, stride = window_size)
+        self.downConv = nn.Conv1d(
+            in_channels = c_in, 
+            out_channels = c_in, 
+            kernel_size = window_size, 
+            stride = window_size
+        )
         self.norm = nn.BatchNorm1d(c_in)
         self.activation = nn.ELU()
 

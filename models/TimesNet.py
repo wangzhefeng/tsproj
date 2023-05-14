@@ -16,8 +16,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from layers.embed import DataEmbedding
 from layers.Conv_Blocks import Inception_Block_V1
-from layers.Embed import DataEmbedding
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -49,6 +49,7 @@ def FFT_for_Period(x, k = 2):
 class TimesBlock(nn.Module):
 
     def __init__(self, configs):
+
         super(TimesBlock, self).__init__()
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len

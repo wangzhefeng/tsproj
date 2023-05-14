@@ -17,13 +17,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers.Embed import DataEmbedding
-from layers.SelfAttention_Family import AttentionLayer, FullAttention
-from layers.Transformer_EncDec import (
-    ConvLayer,
-    Decoder, DecoderLayer,
-    Encoder, EncoderLayer
-)
+from layers.embed import DataEmbedding
+from layers.SelfAttention import AttentionLayer, FullAttention
+from layers.Transformer_EncDec import (Decoder, DecoderLayer,
+                                       Encoder, EncoderLayer)
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -40,7 +37,7 @@ class Model(nn.Module):
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq, configs.dropout)
         # Encoder
         self.encoder = Encoder(
-            [
+            attn_layers = [
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, configs.factor, attention_dropout = configs.dropout, output_attention = configs.output_attention), 
@@ -59,7 +56,7 @@ class Model(nn.Module):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.dec_embedding = DataEmbedding(configs.dec_in, configs.d_model, configs.embed, configs.freq, configs.dropout)
             self.decoder = Decoder(
-                [
+                layers =  [
                     DecoderLayer(
                         AttentionLayer(
                             FullAttention(True, configs.factor, attention_dropout = configs.dropout, output_attention = False),

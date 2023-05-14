@@ -16,8 +16,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers.Embed import DataEmbedding
-from layers.SelfAttention_Family import AttentionLayer, DSAttention
+from layers.embed import DataEmbedding
+from layers.SelfAttention import AttentionLayer, DSAttention
 from layers.Transformer_EncDec import (
     Encoder, EncoderLayer,
     Decoder, DecoderLayer,

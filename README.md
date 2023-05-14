@@ -28,3 +28,4 @@
 * [pytorch-ts](https://github.com/zalandoresearch/pytorch-ts)
 * [HF-Time Series Transformer](https://huggingface.co/docs/transformers/main/en/model_doc/time_series_transformer)
 * [时序人3](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzU4NTA1MDk4MA==&action=getalbum&album_id=1401576921242337281&scene=173&from_msgid=2247526075&from_itemidx=2&count=3&nolastread=1#wechat_redirect)
+

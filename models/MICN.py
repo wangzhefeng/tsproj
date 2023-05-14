@@ -16,8 +16,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from layers.embed import DataEmbedding
 from layers.Autoformer_EncDec import series_decomp, series_decomp_multi
-from layers.Embed import DataEmbedding
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

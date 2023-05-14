@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : Crossformer_EncDec.py
 # * Author      : Zhefeng Wang
@@ -12,13 +11,12 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
 import torch
 import torch.nn as nn
 from einops import rearrange
 
-from layers.SelfAttention_Family import TwoStageAttentionLayer
+from layers.SelfAttention import TwoStageAttentionLayer
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -80,6 +78,7 @@ class scale_block(nn.Module):
 
 
 class Encoder(nn.Module):
+
     def __init__(self, attn_layers):
         super(Encoder, self).__init__()
         self.encode_blocks = nn.ModuleList(attn_layers)
@@ -96,6 +95,7 @@ class Encoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
+    
     def __init__(self, self_attention, cross_attention, seg_len, d_model, d_ff = None, dropout = 0.1):
         super(DecoderLayer, self).__init__()
         self.self_attention = self_attention
@@ -103,9 +103,11 @@ class DecoderLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
-        self.MLP1 = nn.Sequential(nn.Linear(d_model, d_model),
-                                  nn.GELU(),
-                                  nn.Linear(d_model, d_model))
+        self.MLP1 = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, d_model)
+        )
         self.linear_pred = nn.Linear(d_model, seg_len)
 
     def forward(self, x, cross):
@@ -123,15 +125,14 @@ class DecoderLayer(nn.Module):
         dec_output = rearrange(dec_output, '(b ts_d) seg_dec_num d_model -> b ts_d seg_dec_num d_model', b = batch)
         layer_predict = self.linear_pred(dec_output)
         layer_predict = rearrange(layer_predict, 'b out_d seg_num seg_len -> b (out_d seg_num) seg_len')
-
         return dec_output, layer_predict
 
 
 class Decoder(nn.Module):
+    
     def __init__(self, layers):
         super(Decoder, self).__init__()
         self.decode_layers = nn.ModuleList(layers)
-
 
     def forward(self, x, cross):
         final_predict = None

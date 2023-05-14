@@ -16,12 +16,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers.Embed import DataEmbedding
-from layers.ETSformer_EncDec import (
-    Encoder, EncoderLayer,
-    Decoder, DecoderLayer, 
-    Transform
-)
+from layers.embed import DataEmbedding
+from layers.ETSformer_EncDec import (Decoder, DecoderLayer, Encoder,
+                                     EncoderLayer, Transform)
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
