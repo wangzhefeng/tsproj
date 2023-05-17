@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : ARMA.py
+# * File        : AR.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2023-05-17
@@ -19,17 +19,18 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 from random import random
 
-from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.ar_model import AR
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 # data
-data = [random() for x in range(1, 100)]
+data = [x + random() for x in range(1, 100)]
 
 # model
-model = ARMA(data, order = (2, 1))
-model_fit = model.fit(disp = False)
+model = AR(data)
+model_fit = model.fit()
 
 # model predict
 y_hat = model_fit.predict(len(data), len(data))
