@@ -19,7 +19,7 @@ import torch
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Normalizer(object):
+class Normalizer:
     """
     Normalizes dataframe across ALL contained rows (time steps). Different from per-sample normalization.
     """
@@ -56,10 +56,10 @@ class Normalizer(object):
                 self.min_val = df.min()
             return (df - self.min_val) / (self.max_val - self.min_val + np.finfo(float).eps)
         elif self.norm_type == "per_sample_std":
-            grouped = df.groupby(by=df.index)
+            grouped = df.groupby(by = df.index)
             return (df - grouped.transform('mean')) / grouped.transform('std')
         elif self.norm_type == "per_sample_minmax":
-            grouped = df.groupby(by=df.index)
+            grouped = df.groupby(by = df.index)
             min_vals = grouped.transform('min')
             return (df - min_vals) / (grouped.transform('max') - min_vals + np.finfo(float).eps)
         else:
@@ -129,16 +129,18 @@ def interpolate_missing(y):
     """
     if y.isna().any():
         y = y.interpolate(method = 'linear', limit_direction = 'both')
+
     return y
 
 
-def subsample(y, limit=256, factor=2):
+def subsample(y, limit = 256, factor = 2):
     """
     If a given Series is longer than `limit`, 
     returns subsampled sequence by the specified integer factor
     """
     if len(y) > limit:
         return y[::factor].reset_index(drop = True)
+
     return y
 
 

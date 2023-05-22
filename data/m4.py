@@ -46,7 +46,7 @@ class M4Dataset:
             groups = m4_info.SP.values,
             frequencies = m4_info.Frequency.values,
             horizons = m4_info.Horizon.values,
-            values = np.load(train_cache_file if training else test_cache_file, allow_pickle=True)
+            values = np.load(train_cache_file if training else test_cache_file, allow_pickle = True)
         )
 
 
