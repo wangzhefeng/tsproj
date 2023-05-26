@@ -25,7 +25,7 @@ else:
 
 import numpy as np
 from typing import Tuple
-from config.config_loader import settings
+from config.yaml_config_loader import settings
 from data_split import data_split
 
 

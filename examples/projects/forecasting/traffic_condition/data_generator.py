@@ -21,7 +21,7 @@ from typing import Tuple
 import numpy as np
 import tensorflow as tf
 
-from config.config_loader import settings
+from config.yaml_config_loader import settings
 
 
 """

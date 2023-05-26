@@ -43,7 +43,7 @@ def get_params(yaml_path: str) -> Dict:
 
 # 测试代码 main 函数
 def main(): 
-    sys_cfg_path = "./sys_cfg.yaml"
+    sys_cfg_path = "config.yaml"
     cfg_params = get_params(sys_cfg_path)
     print(cfg_params)
 

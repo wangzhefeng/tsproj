@@ -22,7 +22,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 
-from config.config_loader import settings
+from config.yaml_config_loader import settings
 
 
 # TODO 下载数据报错
