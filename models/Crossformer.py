@@ -18,11 +18,9 @@ import torch
 import torch.nn as nn
 from einops import rearrange, repeat
 
-from layers.Crossformer_EncDec import (Decoder, DecoderLayer, Encoder,
-                                       scale_block)
+from layers.Crossformer_EncDec import (Decoder, DecoderLayer, Encoder, scale_block)
 from layers.embed import PatchEmbedding
-from layers.SelfAttention import (AttentionLayer, FullAttention,
-                                  TwoStageAttentionLayer)
+from layers.SelfAttention import (AttentionLayer, FullAttention, TwoStageAttentionLayer)
 from models.PatchTST import FlattenHead
 
 # global variable

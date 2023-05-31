@@ -1,19 +1,29 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : cfg_loader.py
+# * File        : yaml_config_loader.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
-# * Date        : 2022-06-29
-# * Version     : 0.1.062914
+# * Date        : 2023-05-31
+# * Version     : 0.1.053122
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
+# python libraries
 import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 from typing import Dict
 import yaml
+
+from loguru import logger
+
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def load_yaml(file_name):
@@ -45,7 +55,7 @@ def get_params(yaml_path: str) -> Dict:
 def main(): 
     sys_cfg_path = "config.yaml"
     cfg_params = get_params(sys_cfg_path)
-    print(cfg_params)
+    logger.info(cfg_params)
 
 if __name__ == "__main__":
     main()

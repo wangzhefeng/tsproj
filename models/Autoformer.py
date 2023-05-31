@@ -18,9 +18,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
-                                      EncoderLayer, my_Layernorm,
-                                      series_decomp)
+from layers.Autoformer_EncDec import (
+    Decoder, DecoderLayer, 
+    Encoder, EncoderLayer, 
+    my_Layernorm, 
+    series_decomp
+)
 from layers.embed import DataEmbedding_wo_pos
 
 # global variable
@@ -40,7 +43,13 @@ class Model(nn.Module):
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
         # Embedding
-        self.enc_embedding = DataEmbedding_wo_pos(configs.enc_in, configs.d_model, configs.embed, configs.freq, configs.dropout)
+        self.enc_embedding = DataEmbedding_wo_pos(
+            configs.enc_in, 
+            configs.d_model, 
+            configs.embed, 
+            configs.freq, 
+            configs.dropout
+        )
         # Encoder
         self.encoder = Encoder(
             [

@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 from datetime import datetime
 
+from loguru import logger
 import pandas as pd 
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -43,7 +44,7 @@ series = pd.read_csv(
     squeeze = True,
     date_parser = lambda dates: datetime.strptime("190" + dates, "%Y-%m")
 )
-print(series)
+logger.info(series)
 series.plot()
 # plt.show()
 
@@ -51,7 +52,7 @@ series.plot()
 values = pd.DataFrame(series.values)
 df = pd.concat([values.shift(1), values], axis = 1)
 df.columns = ["t-1", "t+1"]
-print(df)
+logger.info(df)
 
 # split into train and test sets
 X = df.values
@@ -59,11 +60,11 @@ train_size = int(len(X) * 0.7)
 train, test = X[1:train_size], X[train_size:]
 train_X, train_y = train[:, 0], train[:, 1]
 test_X, test_y = test[:, 0], test[:, 1]
-print(X)
-print(train_X)
-print(train_y)
-print(test_X)
-print(test_y)
+logger.info(X)
+logger.info(train_X)
+logger.info(train_y)
+logger.info(test_X)
+logger.info(test_y)
 
 # ------------------------------
 # model
@@ -81,7 +82,7 @@ for x in test_X:
     yhat = model_persistence(x)
     predictions.append(yhat)
 test_score = mean_squared_error(test_y, predictions)
-print("Test MSE: %.3f" % test_score)
+logger.info("Test MSE: %.3f" % test_score)
 
 # plot predictions and expected results
 plt.plot(train_y)

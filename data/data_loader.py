@@ -12,14 +12,15 @@
 # ***************************************************
 
 # python libraries
+from ast import pattern
 import os
 import sys
-
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import re
 import glob
+import warnings
 from enum import Enum
 
 import numpy as np
@@ -34,7 +35,6 @@ from utils.timefeatures import time_features
 from m4 import M4Dataset, M4Meta
 from uea import Normalizer, interpolate_missing, subsample
 
-import warnings
 warnings.filterwarnings("ignore")
 
 # global variable
@@ -657,6 +657,7 @@ class UEAloader(Dataset):
             data_paths = list(filter(lambda x: re.search(flag, x), data_paths))
         input_paths = [p for p in data_paths if os.path.isfile(p) and p.endswith('.ts')]
         if len(input_paths) == 0:
+            pattern = None  # TODO
             raise Exception("No .ts files found using pattern: '{}'".format(pattern))
 
         all_df, labels_df = self.load_single(input_paths[0])  # a single file contains dataset
