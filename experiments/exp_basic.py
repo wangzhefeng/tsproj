@@ -42,6 +42,24 @@ from models import (
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
+model_dict = {
+    'Autoformer': Autoformer,
+    'Crossformer': Crossformer,
+    'DLinear': DLinear,
+    'ETSformer': ETSformer,
+    'FEDformer': FEDformer,
+    'FiLM': FiLM,
+    'InformerRaw': Informer,
+    'Informer': InformerModel,
+    'LightTS': LightTS,
+    'MICN': MICN,
+    'Nonstationary_Transformer': Nonstationary_Transformer,
+    'PatchTST': PatchTST,
+    'Pyraformer': Pyraformer,
+    'Reformer': Reformer,
+    'TimesNet': TimesNet,
+    'Transformer': Transformer,
+}
 
 
 class Exp_Basic(object):
@@ -49,24 +67,7 @@ class Exp_Basic(object):
     def __init__(self, args):
         self.args = args
         # TODO
-        self.model_dict = {
-            'Autoformer': Autoformer,
-            'Crossformer': Crossformer,
-            'DLinear': DLinear,
-            'ETSformer': ETSformer,
-            'FEDformer': FEDformer,
-            'FiLM': FiLM,
-            'InformerRaw': Informer,
-            'Informer': InformerModel,
-            'LightTS': LightTS,
-            'MICN': MICN,
-            'Nonstationary_Transformer': Nonstationary_Transformer,
-            'PatchTST': PatchTST,
-            'Pyraformer': Pyraformer,
-            'Reformer': Reformer,
-            'TimesNet': TimesNet,
-            'Transformer': Transformer,
-        }
+        self.model_dict = model_dict
         self.device = self._acquire_device()
         self.model = self._build_model().to(self.device)
 

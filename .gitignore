@@ -143,3 +143,8 @@ dmypy.json
 lightning_logs/
 
 .DS_Store
+*.npz
+*.npy
+*.pkl
+*.ts
+*.xlsx

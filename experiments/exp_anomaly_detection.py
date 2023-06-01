@@ -22,7 +22,7 @@ import torch.nn as nn
 from torch import optim
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-from data.data_factory import data_provider
+from data_provider.data_factory import data_provider
 from experiments.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, adjustment
 

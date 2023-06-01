@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : m4_summary.py
 # * Author      : Zhefeng Wang
@@ -12,16 +11,18 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-
 # python libraries
 import os
-from collections import OrderedDict
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from data.m4 import M4Dataset, M4Meta
-
+from data_provider.m4 import M4Dataset, M4Meta
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

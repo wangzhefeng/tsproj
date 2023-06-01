@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 from loguru import logger
 from torch.utils.data import DataLoader
 
-from data.Dataset_Custom import Dataset_Custom
+from data_provider.Dataset_Custom import Dataset_Custom
 from data_loader import (
     Dataset_ETT_hour,
     Dataset_ETT_minute, 
@@ -33,7 +33,7 @@ from data_loader import (
     SWATSegLoader, 
     UEAloader
 )
-from data.uea import collate_fn
+from data_provider.uea import collate_fn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]

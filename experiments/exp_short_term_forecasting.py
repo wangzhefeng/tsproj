@@ -27,12 +27,11 @@ import torch.nn as nn
 from torch import optim
 
 from experiments.exp_basic import Exp_Basic
-from data.data_factory import data_provider
+from data_provider.data_factory import data_provider
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
-# TODO
-from data.m4 import M4Meta
-from utils.m4_summary import M4Summary
+from data_provider.m4 import M4Meta
+from data_provider.m4_summary import M4Summary
 
 warnings.filterwarnings('ignore')
 

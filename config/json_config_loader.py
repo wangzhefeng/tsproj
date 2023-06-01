@@ -13,6 +13,10 @@
 
 # python libraries
 import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 import json
 
 from loguru import logger

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
 # * File        : main.py
 # * Author      : Zhefeng Wang
@@ -11,7 +10,6 @@
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
-
 
 # python libraries
 import os
@@ -27,7 +25,7 @@ from darts import TimeSeries
 from darts.models import ExponentialSmoothing
 from darts.datasets import AirPassengersDataset
 
-from data.timeseries_data.AirPassengers import darts_data
+from data_provider.timeseries_data.AirPassengers import darts_data
 
 
 # data
