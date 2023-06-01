@@ -24,7 +24,7 @@ from tensorflow import keras
 from keras.utils import plot_model
 
 from config.json_config_loader import load_config
-from utils.data_loader import DataLoader
+from data_provider.DataLoader import DataLoader
 from general.train_lstm import Trainer
 from utils.plot_results import plot_results, plot_results_multiple
 

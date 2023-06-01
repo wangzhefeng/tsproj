@@ -12,7 +12,6 @@
 # ***************************************************
 
 # python libraries
-from ast import pattern
 import os
 import sys
 ROOT = os.getcwd()
@@ -39,29 +38,6 @@ warnings.filterwarnings("ignore")
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-
-
-# !未使用
-class TypeFlag(Enum):
-    """
-    数据用途编码
-    """
-    train = 0  # 训练数据
-    val = 1  # 验证数据
-    test = 2  # 测试数据  
-
-
-# !未使用
-def GetEnumInfo(enum_cls, info):
-    """
-    获取枚举类型的
-    """
-    if enum_cls._value2member_map_.get(info) is not None:
-        return enum_cls._value2member_map_[info]
-    elif enum_cls._member_map_.get(info) is not None:
-        return enum_cls._member_map_[info]
-    else:
-        return None
 
 
 class Dataset_ETT_hour(Dataset):
@@ -722,8 +698,7 @@ class UEAloader(Dataset):
 
 # 测试代码 main 函数
 def main():
-    type = GetEnumInfo(TypeFlag, "train")
-    print(type)
+    pass
 
 if __name__ == "__main__":
     main()

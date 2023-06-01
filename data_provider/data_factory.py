@@ -22,7 +22,7 @@ from loguru import logger
 from torch.utils.data import DataLoader
 
 from data_provider.Dataset_Custom import Dataset_Custom
-from data_loader import (
+from data_provider.data_loader import (
     Dataset_ETT_hour,
     Dataset_ETT_minute, 
     Dataset_M4,
@@ -57,29 +57,46 @@ data_dict = {
 
 
 def data_provider(args, flag):
+    """
+    构造 torch 数据集和数据加载器
+
+    Args:
+        args (_type_): 命令行参数
+        flag (_type_):  任务类型, flat: ["train", "test", "val"]
+
+    Returns:
+        _type_: torch Dataset, DataLoader
+    """
+    # ------------------------------
     # 数据集和数据预处理类构造
+    # ------------------------------
     Data = data_dict[args.data]
-    # 日期时间特征编码策略
-    timeenc = 0 if args.embed != 'timeF' else 1
-    # 数据集参数处理
+    # ------------------------------
+    # 数据集和数据加载器参数
+    # ------------------------------
     if flag == 'test':
-        freq = args.freq
+        freq = args.freq  # 序列频率
         if args.task_name == 'anomaly_detection' or args.task_name == 'classification':
-            batch_size = args.batch_size
+            batch_size = args.batch_size  # batch_size for evaluation in ad and clf
         else:
             batch_size = 1  # batch_size=1 for evaluation
-        shuffle_flag = False
-        drop_last = True
+        shuffle_flag = False  # 是否进行 shuffle
+        drop_last = True  # 是否丢掉最后一个点
     else:
-        freq = args.freq
+        freq = args.freq  # 序列频率
         batch_size = args.batch_size  # batch_size for train and valid
-        shuffle_flag = True
-        drop_last = True
+        shuffle_flag = True  # 是否进行 shuffle
+        drop_last = True  # 是否丢掉最后一个点
+    
+    # ------------------------------
     # 构造数据集合数据加载器
+    # ------------------------------
     if args.task_name == 'anomaly_detection':
-        drop_last = False
+        # data set
         data_set = Data(root_path = args.root_path, win_size = args.seq_len, flag = flag)
-        logger.info(flag, len(data_set))
+        logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")
+        # data loader
+        drop_last = False
         data_loader = DataLoader(
             dataset = data_set,
             batch_size = batch_size,
@@ -89,9 +106,11 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     elif args.task_name == 'classification':
-        drop_last = False
+        # data set
         data_set = Data(root_path = args.root_path, flag = flag)
-        logger.info(flag, len(data_set))
+        logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")
+        # data loader
+        drop_last = False
         data_loader = DataLoader(
             dataset = data_set,
             batch_size = batch_size,
@@ -102,10 +121,8 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     else:
-        # TODO M4
-        if args.data == 'm4':
-            drop_last = False
         # 加载数据集
+        timeenc = 0 if args.embed != 'timeF' else 1  # 日期时间特征编码策略
         data_set = Data(
             root_path = args.root_path,
             data_path = args.data_path,
@@ -117,8 +134,10 @@ def data_provider(args, flag):
             freq = freq,
             seasonal_patterns = args.seasonal_patterns
         )
-        logger.info(flag, len(data_set))
+        logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")
         # 构建数据加载器
+        if args.data == 'm4':  # M4 特殊处理
+            drop_last = False
         data_loader = DataLoader(
             dataset = data_set,
             batch_size = batch_size,

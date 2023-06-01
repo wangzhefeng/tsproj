@@ -20,18 +20,19 @@ if str(ROOT) not in sys.path:
 import time
 import warnings
 
+from loguru import logger
 import numpy as np
 import pandas
 import torch
 import torch.nn as nn
 from torch import optim
 
-from experiments.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
-from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.tools import EarlyStopping, adjust_learning_rate, visual
 from data_provider.m4 import M4Meta
 from data_provider.m4_summary import M4Summary
+from experiments.exp_basic import Exp_Basic
+from utils.losses import mape_loss, mase_loss, smape_loss
+from utils.tools import EarlyStopping, adjust_learning_rate, visual
 
 warnings.filterwarnings('ignore')
 
@@ -45,7 +46,10 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         super(Exp_Short_Term_Forecast, self).__init__(args)
 
     def _build_model(self):
-        # TODO
+        """
+        模型构建
+        """
+        # M4 特殊处理
         if self.args.data == 'm4':
             self.args.pred_len = M4Meta.horizons_map[self.args.seasonal_patterns]  # Up to M4 config
             self.args.seq_len = 2 * self.args.pred_len  # input_len = 2*pred_len
@@ -58,11 +62,17 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             model = nn.DataParallel(model, device_ids = self.args.device_ids)
         return model
 
-    def _get_data(self, flag):
+    def _get_data(self, flag: str):
+        """
+        构建数据集、数据加载器
+        """
         data_set, data_loader = data_provider(self.args, flag)
         return data_set, data_loader
 
     def _select_optimizer(self):
+        """
+        创建模型优化器
+        """
         model_optim = optim.Adam(self.model.parameters(), lr = self.args.learning_rate)
         return model_optim
 
@@ -82,12 +92,6 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         # ------------------------------
         train_data, train_loader = self._get_data(flag = 'train')
         vali_data, vali_loader = self._get_data(flag = 'val')
-        # ------------------------------
-        # 早停：保存 checkpoint
-        # ------------------------------
-        path = os.path.join(self.args.checkpoints, setting)
-        if not os.path.exists(path):
-            os.makedirs(path)
         # ------------------------------
         # 训练参数
         # ------------------------------
@@ -111,7 +115,6 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # 训练批次
                 iter_count += 1
-                
                 # ------------------------------
                 # 清空优化器梯度
                 # ------------------------------
@@ -143,10 +146,10 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 train_loss.append(loss.item())
 
                 if (i + 1) % 100 == 0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
+                    logger.info("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
+                    logger.info('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
                     iter_count = 0
                     time_now = time.time()
                 # ------------------------------
@@ -154,20 +157,25 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 # ------------------------------
                 loss.backward()
                 model_optim.step()
-            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
+            logger.info("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             # ------------------------------
             # epoch 损失
             # ------------------------------
             train_loss = np.average(train_loss)
             vali_loss = self.vali(train_loader, vali_loader, criterion)
             test_loss = vali_loss
-            print(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f} Vali Loss: {vali_loss:.7f} Test Loss: {test_loss:.7f}")
+            logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f} Vali Loss: {vali_loss:.7f} Test Loss: {test_loss:.7f}")
             # ------------------------------
             # 早停
             # ------------------------------
+            # 保存 checkpoint
+            path = os.path.join(self.args.checkpoints, setting)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            # 早停
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
-                print("Early stopping")
+                logger.info("Early stopping")
                 break
             # ------------------------------
             # 学习率衰减
@@ -181,18 +189,23 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         return self.model
 
     def vali(self, train_loader, vali_loader, criterion):
+        # ------------------------------
+        # data set
+        # ------------------------------
         x, _ = train_loader.dataset.last_insample_window()
-        y = vali_loader.dataset.timeseries
         x = torch.tensor(x, dtype = torch.float32).to(self.device)
         x = x.unsqueeze(-1)
-
+        y = vali_loader.dataset.timeseries
+        # ------------------------------
+        # 前向传播 
+        # ------------------------------
         self.model.eval()
         with torch.no_grad():
             # decoder input
             B, _, C = x.shape
             dec_inp = torch.zeros((B, self.args.pred_len, C)).float().to(self.device)
             dec_inp = torch.cat([x[:, -self.args.label_len:, :], dec_inp], dim = 1).float()
-            # encoder - decoder
+            # encoder-decoder
             outputs = torch.zeros((B, self.args.pred_len, C)).float()  # .to(self.device)
             id_list = np.arange(0, B, 500)  # validation set size
             id_list = np.append(id_list, B)
@@ -209,21 +222,34 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             true = torch.from_numpy(np.array(y))
             batch_y_mark = torch.ones(true.shape)
 
-            loss = criterion(x.detach().cpu()[:, :, 0], self.args.frequency_map, pred[:, :, 0], true, batch_y_mark)
-
+            loss = criterion(
+                x.detach().cpu()[:, :, 0], 
+                self.args.frequency_map, 
+                pred[:, :, 0], 
+                true, 
+                batch_y_mark
+            )
+        # ------------------------------
+        # TODO
+        # ------------------------------
         self.model.train()
         return loss
 
     def test(self, setting, test = 0):
+        # ------------------------------
+        # dataset and dataloader
+        # ------------------------------
         _, train_loader = self._get_data(flag = 'train')
         _, test_loader = self._get_data(flag = 'test')
         x, _ = train_loader.dataset.last_insample_window()
-        y = test_loader.dataset.timeseries
         x = torch.tensor(x, dtype = torch.float32).to(self.device)
         x = x.unsqueeze(-1)
-
+        y = test_loader.dataset.timeseries
+        # ------------------------------
+        # 
+        # ------------------------------
         if test:
-            print('loading model')
+            logger.info('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
         folder_path = './test_results/' + setting + '/'
@@ -235,7 +261,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             B, _, C = x.shape
             dec_inp = torch.zeros((B, self.args.pred_len, C)).float().to(self.device)
             dec_inp = torch.cat([x[:, -self.args.label_len:, :], dec_inp], dim = 1).float()
-            # encoder - decoder
+            # encoder-decoder
             outputs = torch.zeros((B, self.args.pred_len, C)).float().to(self.device)
             id_list = np.arange(0, B, 1)
             id_list = np.append(id_list, B)
@@ -247,7 +273,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                     None
                 )
                 if id_list[i] % 1000 == 0:
-                    print(id_list[i])
+                    logger.info(id_list[i])
             f_dim = -1 if self.args.features == 'MS' else 0
             outputs = outputs[:, -self.args.pred_len:, f_dim:]
             outputs = outputs.detach().cpu().numpy()
@@ -260,7 +286,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 gt = np.concatenate((x[i, :, 0], trues[i]), axis = 0)
                 pd = np.concatenate((x[i, :, 0], preds[i, :, 0]), axis = 0)
                 visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
-        print('test shape:', preds.shape)
+        logger.info('test shape:', preds.shape)
 
         # result save
         folder_path = './m4_results/' + self.args.model + '/'
@@ -276,7 +302,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         forecasts_df.set_index(forecasts_df.columns[0], inplace = True)
         forecasts_df.to_csv(folder_path + self.args.seasonal_patterns + '_forecast.csv')
 
-        print(self.args.model)
+        logger.info(self.args.model)
         file_path = './m4_results/' + self.args.model + '/'
         if 'Weekly_forecast.csv' in os.listdir(file_path) \
             and 'Monthly_forecast.csv' in os.listdir(file_path) \
@@ -287,12 +313,12 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             m4_summary = M4Summary(file_path, self.args.root_path)
             # m4_forecast.set_index(m4_winner_forecast.columns[0], inplace=True)
             smape_results, owa_results, mape, mase = m4_summary.evaluate()
-            print('smape:', smape_results)
-            print('mape:', mape)
-            print('mase:', mase)
-            print('owa:', owa_results)
+            logger.info('smape:', smape_results)
+            logger.info('mape:', mape)
+            logger.info('mase:', mase)
+            logger.info('owa:', owa_results)
         else:
-            print('After all 6 tasks are finished, you can calculate the averaged index')
+            logger.info('After all 6 tasks are finished, you can calculate the averaged index')
         return
 
 
