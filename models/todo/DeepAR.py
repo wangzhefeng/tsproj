@@ -66,7 +66,7 @@ def main():
     # ------------------------------
     # data
     # ------------------------------
-    from gluonts_utils.GluontsDataset import GluontsDataset
+    from gluonts.util import GluontsDataset
     import pandas as pd 
 
     df = pd.read_csv(

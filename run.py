@@ -38,11 +38,13 @@ def set_seed():
     """
     设置可重复随机数
     """
-    fix_seed = 2021
+    fix_seed = 2023
     random.seed(fix_seed)
     np.random.seed(fix_seed)
     torch.manual_seed(fix_seed)
-
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(fix_seed)
+        
 
 def args_define():
     # ------------------------------

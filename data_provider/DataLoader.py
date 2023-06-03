@@ -26,7 +26,7 @@ from sklearn.preprocessing import MinMaxScaler
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-from data_provider.data_generator import split_data
+from data_provider.Datasplitor import split_data
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
