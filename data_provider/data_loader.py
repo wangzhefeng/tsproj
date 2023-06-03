@@ -20,7 +20,6 @@ if str(ROOT) not in sys.path:
 import re
 import glob
 import warnings
-from enum import Enum
 
 import numpy as np
 import pandas as pd

@@ -18,15 +18,15 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import pickle
+import warnings
 from typing import List
 
-from sklearn.preprocessing import StandardScaler
 import paddle
+from sklearn.preprocessing import StandardScaler
 
-from utils.tools import StandardScaler
 from utils.timestamp_utils import to_unix_time
+from utils.tools import StandardScaler
 
-import warnings
 warnings.filterwarnings("ignore")
 
 # global variable

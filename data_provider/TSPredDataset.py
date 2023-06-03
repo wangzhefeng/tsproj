@@ -17,10 +17,10 @@ import sys
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+import warnings
 
 import paddle
 
-import warnings
 warnings.filterwarnings("ignore")
 
 # global variable

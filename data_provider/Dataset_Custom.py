@@ -17,6 +17,7 @@ import sys
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from utils.tools import StandardScaler
 from utils.timefeatures import time_features
-import warnings
+
 warnings.filterwarnings("ignore")
 
 # global variable
