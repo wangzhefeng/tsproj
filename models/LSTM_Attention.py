@@ -26,7 +26,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Config:
-    data_path = "data/wind_dataset.csv"
+    data_path = "dataset/wind_dataset.csv"
     timestep = 1  # 时间步长，就是利用多少时间窗口
     feature_size = 1  # 每个步长对应的特征数量
     num_heads = 1  # 注意力机制头的数量

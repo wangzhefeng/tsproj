@@ -27,7 +27,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 # config
 class Config:
-    data_path = "data/wind_dataset.csv"
+    data_path = "dataset/wind_dataset.csv"
     timestep = 1  # 时间步长，就是利用多少时间窗口
     feature_size = 1  # 每个步长对应的特征数量
     hidden_size = 256  # GRU 隐藏层大小

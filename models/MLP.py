@@ -29,7 +29,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Config:
-    data_path = "data/wind_dataset.csv"
+    data_path = "dataset/wind_dataset.csv"
     timestep = 20  # 时间步长，就是利用多少时间窗口
     feature_size = 1  # 每个步长对应的特征数量
     # num_layers = 2  # 网络的层数

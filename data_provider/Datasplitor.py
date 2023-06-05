@@ -42,31 +42,6 @@ class Datasplitor:
         self.target_index = target_index
         self.split_ratio = split_ratio
 
-    # !Informer
-    def split_data(self):
-        """
-        # TODO
-        例如：123456789 => 12345-67、23456-78、34567-89...
-        """
-        dataX = []  # 保存 X
-        dataY = []  # 保存 Y
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(self.data) - self.timestep):
-            dataX.append(self.data[index:(index + self.timestep)])
-            dataY.append(self.data[index + self.timestep][self.target_index])
-        dataX = np.array(dataX)
-        dataY = np.array(dataY)
-        # 训练集大
-        train_size = int(np.round(self.split_ratio * dataX.shape[0]))
-        # 划分训练集、测试集
-        x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
-        y_train = dataY[:train_size].reshape(-1, 1)
-
-        x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
-        y_test = dataY[train_size:].reshape(-1, 1)
-
-        return [x_train, y_train, x_test, y_test]
-
     def DirectMultiStepOutput(self):
         """
         直接多输出预测
@@ -83,37 +58,42 @@ class Datasplitor:
         # 训练集大
         train_size = int(np.round(self.split_ratio * dataX.shape[0]))
         # 划分训练集、测试集
-        x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
-        y_train = dataY[:train_size].reshape(-1, self.output_size)
+        self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
+        self.y_train = dataY[:train_size].reshape(-1, self.output_size)
 
-        x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
-        y_test = dataY[train_size:].reshape(-1, self.output_size)
+        self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
+        self.y_test = dataY[train_size:].reshape(-1, self.output_size)
 
-        return [x_train, y_train, x_test, y_test]
+        return [self.x_train, self.y_train, self.x_test, self.y_test]
 
+    #! 推荐
     def RecursiveMultiStep(self):
         """
         递归多步预测(单步滚动预测)
-        例如：123456789 => 123-4、234-5、345-6...
+        例如：多变量：123456789 => 12345-67、23456-78、34567-89...
+        例如：单变量：123456789 => 123-4、234-5、345-6...
         """
         dataX = []  # 保存 X
         dataY = []  # 保存 Y
         # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
         for index in range(len(self.data) - self.timestep):
-            dataX.append(self.data[index:(index + self.timestep)][:, self.target_index])
+            if self.target_index is not None:
+                dataX.append(self.data[index:(index + self.timestep)][:, self.target_index])  # 单变量特征
+            else:
+                dataX.append(self.data[index:(index + self.timestep)][:, :])  # 多变量特征
             dataY.append(self.data[index + self.timestep][self.target_index])
         dataX = np.array(dataX)
         dataY = np.array(dataY)
         # 训练集大
         train_size = int(np.round(self.split_ratio * dataX.shape[0]))
         # 划分训练集、测试集
-        x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)  # (batch_size, timestep, feature_size)
-        y_train = dataY[:train_size].reshape(-1, 1)  # (batch_size, num_target)
+        self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)  # (batch_size, timestep, feature_size)
+        self.y_train = dataY[:train_size].reshape(-1, 1)  # (batch_size, num_target)
 
-        x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
-        y_test = dataY[train_size:].reshape(-1, 1)
+        self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
+        self.y_test = dataY[train_size:].reshape(-1, 1)
 
-        return [x_train, y_train, x_test, y_test]
+        return [self.x_train, self.y_train, self.x_test, self.y_test]
 
     def DirectRecursiveMix(self):
         """
@@ -131,37 +111,37 @@ class Datasplitor:
         # 训练集大
         train_size = int(np.round(self.split_ratio * dataX.shape[0]))
         # 划分训练集、测试集
-        x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
-        y_train = dataY[:train_size].reshape(-1, self.output_size)
+        self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
+        self.y_train = dataY[:train_size].reshape(-1, self.output_size)
 
-        x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
-        y_test = dataY[train_size:].reshape(-1, self.output_size)
+        self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
+        self.y_test = dataY[train_size:].reshape(-1, self.output_size)
 
-        return [x_train, y_train, x_test, y_test]
+        return [self.x_train, self.y_train, self.x_test, self.y_test]
 
-    @staticmethod
-    def numpy2tensor(x_train, y_train, x_test, y_test):
+    def _numpy2tensor(self):
         """
         将 numpy.ndarray 类型数据转换成 torch.Tensor 类型数据
         """
-        x_train_tensor = torch.from_numpy(x_train).to(torch.float32)
-        y_train_tensor = torch.from_numpy(y_train).to(torch.float32)
-        x_test_tensor = torch.from_numpy(x_test).to(torch.float32)
-        y_test_tensor = torch.from_numpy(y_test).to(torch.float32)
+        x_train_tensor = torch.from_numpy(self.x_train).to(torch.float32)
+        y_train_tensor = torch.from_numpy(self.y_train).to(torch.float32)
+        x_test_tensor = torch.from_numpy(self.x_test).to(torch.float32)
+        y_test_tensor = torch.from_numpy(self.y_test).to(torch.float32)
         return [x_train_tensor, y_train_tensor, x_test_tensor, y_test_tensor]
 
-    @staticmethod
-    def dataset_dataloader(x_train_tensor, y_train_tensor, x_test_tensor, y_test_tensor, batch_size):
+    def dataset_dataloader(self, batch_size):
         """
         创建 torch Dataset 和 DataLoader
         """
+        x_train_tensor, y_train_tensor, \
+        x_test_tensor, y_test_tensor = self._numpy2tensor()
         # data set
         train_data = TensorDataset(x_train_tensor, y_train_tensor)
         test_data = TensorDataset(x_test_tensor, y_test_tensor)
         # data loader
         train_loader = DataLoader(train_data, batch_size, False)
         test_loader = DataLoader(test_data, batch_size, False)
-        return train_data, train_loader, test_data, test_loader
+        return [train_data, train_loader, test_data, test_loader]
 
 
 
@@ -187,27 +167,20 @@ def main():
     
     data_split = Datasplitor(
         data = data.values, 
-        timestep = 2,
+        timestep = 1,
         feature_size = 1, 
-        output_size = 1, 
+        output_size = 2, 
         target_index = 0,
-        split_ratio = 0.8
+        split_ratio = 0.8,
     )
     x_train, y_train, \
-    x_test, y_test = data_split.RecursiveMultiStep()
+    x_test, y_test = data_split.DirectMultiStepOutput()
     print(f"x_train: {x_train}, x_train.shape: {x_train.shape}")
     print(f"y_train: {y_train}, y_train.shape: {y_train.shape}")
     print(f"x_test: {x_test}, x_test.shape: {x_test.shape}")
     print(f"y_test: {y_test}, y_test.shape: {y_test.shape}")
-    x_train_tensor, y_train_tensor, \
-    x_test_tensor, y_test_tensor = data_split.numpy2tensor(
-        x_train, y_train, 
-        x_test, y_test
-    )
     train_data, train_loader, \
     test_data, test_loader = data_split.dataset_dataloader(
-        x_train_tensor, y_train_tensor, 
-        x_test_tensor, y_test_tensor, 
         batch_size = 32
     )
 
