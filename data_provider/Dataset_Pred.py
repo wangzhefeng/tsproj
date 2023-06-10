@@ -36,7 +36,7 @@ class Dataset_Pred(Dataset):
     def __init__(self, 
                  root_path, 
                  flag = "pred", 
-                 size = None,  # size [seq_len, label_len, pred_len]
+                 size = None,
                  features = "S", 
                  data_path = "ETTh1.csv",
                  target = "OT", 
@@ -45,7 +45,7 @@ class Dataset_Pred(Dataset):
                  timeenc = 0,
                  freq = "15min",
                  cols = None) -> None:
-        # size info
+        # size [seq_len, label_len, pred_len]
         if size is None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -54,14 +54,16 @@ class Dataset_Pred(Dataset):
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
-        # init
+        # data type
         assert flag in ["pred"]
-
-        self.features = features  # TODO 'S': 单序列, "M": 多序列, "MS": 多序列
+        # data feature and target
+        self.features = features  # 'S': 单序列, "M": 多序列, "MS": 多序列
         self.target = target  # 预测目标标签
+        # data preprocess
         self.scale = scale  # 是否进行标准化
-        self.inverse = inverse  # ???
-        self.timeenc = timeenc  # ???
+        self.inverse = inverse
+        self.timeenc = timeenc
+        # 其他
         self.freq = freq  # 频率
         self.cols = cols  # 表列名
         self.root_path = root_path  # 根路径
@@ -77,8 +79,7 @@ class Dataset_Pred(Dataset):
         """
         # data read(df_raw.columns: ["date", ...(other features), target feature])
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-
-        # data columns
+        # data columns sort
         if self.cols:
             cols = self.cols.copy()
             cols.remove(self.target)
@@ -87,7 +88,6 @@ class Dataset_Pred(Dataset):
             cols.remove(self.target)
             cols.remove("date")
         df_raw = df_raw["date"] + cols + [self.target]
-
         # 根据数据格式进行数据处理
         if self.features == "M" or self.features == "MS":
             cols_data = df_raw.columns[1:]
@@ -119,7 +119,7 @@ class Dataset_Pred(Dataset):
         self.data_stamp = data_stamp
         # 预测特征和预测标签(不包含日期时间特征、'date' 列)
         self.data_x = data[border1:border2]
-        # ???
+        # ?
         if self.inverse:
             self.data_y = df_data.values[border1:border2]  # 不包含 'date' 列的预测特征列或预测标签
         else:

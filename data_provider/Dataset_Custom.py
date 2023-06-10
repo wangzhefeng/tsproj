@@ -38,16 +38,17 @@ class Dataset_Custom(Dataset):
     def __init__(self, 
                  root_path, 
                  flag = "train", 
-                 size = None,  # size [seq_len, label_len, pred_len]
-                 features = "S", 
+                 size = None,  
+                 features = "S",
                  data_path = "ETTh1.csv",
-                 target = "OT", 
+                 target = "OT",
                  scale = True, 
                  inverse = False,
                  timeenc = 0,
                  freq = "h",
-                 cols = None) -> None:
-        # size info
+                 cols = None,
+                 seasonal_patterns = "Yearly") -> None:
+        # size: [seq_len, label_len, pred_len]
         if size is None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -56,19 +57,22 @@ class Dataset_Custom(Dataset):
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
-        # init
+        # data type
         assert flag in ["train", "test", "val"]
         type_map = {"train": 0, "val": 1, "test": 2}
-        self.set_type = type_map[flag]  # data type
-        self.features = features  # TODO 'S': 单序列, "M": 多序列, "MS": 多序列
+        self.set_type = type_map[flag]
+        # data feature and target
+        self.features = features  # 特征类型 'S': 单序列, "M": 多序列, "MS": 多序列
         self.target = target  # 预测目标标签
+        # data preprocess
         self.scale = scale  # 是否进行标准化
-        self.inverse = inverse  # ???
-        self.timeenc = timeenc  # ???
+        self.inverse = inverse  # ?
+        self.timeenc = timeenc  # ?
         self.freq = freq  # 频率
         self.cols = cols  # 表列名
-        self.root_path = root_path  # 根路径
-        self.data_path = data_path  # 数据路径
+        self.seasonal_patterns = seasonal_patterns
+        self.root_path = root_path  # 数据根路径
+        self.data_path = data_path  # 数据文件路径
         self.__read_data__()  # 数据读取
     
     def __read_data__(self):
@@ -80,7 +84,8 @@ class Dataset_Custom(Dataset):
         """
         # data read(df_raw.columns: ["date", ...(other features), target feature])
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        # data columns
+
+        # data column sort
         if self.cols:
             cols = self.cols.copy()
             cols.remove(self.target)
@@ -89,6 +94,7 @@ class Dataset_Custom(Dataset):
             cols.remove(self.target)
             cols.remove("date")
         df_raw = df_raw["date"] + cols + [self.target]
+
         # train/val/test 分割
         '''
         train: 0:num_train
@@ -105,9 +111,18 @@ class Dataset_Custom(Dataset):
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_val = len(df_raw) - num_train - num_test
-        # ??? train/val/test 索引
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_val, len(df_raw)]
+        # train/val/test 索引
+        border1s = [
+            0, 
+            num_train - self.seq_len, 
+            len(df_raw) - num_test - self.seq_len
+        ]
+        border2s = [
+            num_train, 
+            num_train + num_val, 
+            len(df_raw)
+        ]
+        
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
         # 特征和预测标签标准化(不包含 'date' 列)
@@ -128,12 +143,12 @@ class Dataset_Custom(Dataset):
         self.data_stamp = data_stamp
         # 预测特征和预测标签(不包含日期时间特征、'date' 列)
         self.data_x = data[border1:border2]
-        # ???
+        # ?
         if self.inverse:
             self.data_y = df_data.values[border1:border2]  # 不包含 'date' 列的预测特征列或预测标签
         else:
-            self.data_y = data[border1:border2]  # ???
-        
+            self.data_y = data[border1:border2]
+    
     def __getitem__(self, index):
         # history
         s_begin = index
@@ -161,7 +176,6 @@ class Dataset_Custom(Dataset):
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
- 
 
 
 

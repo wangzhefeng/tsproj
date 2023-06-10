@@ -34,14 +34,17 @@ class Datasplitor:
                  feature_size: int, 
                  output_size: int = None, 
                  target_index: int = 0,
-                 split_ratio: float = 0.8) -> None:
+                 split_ratio: float = 0.8,
+                 batch_size: int = 32) -> None:
         self.data = data
         self.timestep = timestep
         self.feature_size = feature_size
         self.output_size = output_size
         self.target_index = target_index
         self.split_ratio = split_ratio
+        self.batch_size = batch_size
 
+    # TODO
     def DirectMultiStepOutput(self):
         """
         直接多输出预测
@@ -60,11 +63,11 @@ class Datasplitor:
         # 划分训练集、测试集
         self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
         self.y_train = dataY[:train_size].reshape(-1, self.output_size)
-
         self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
         self.y_test = dataY[train_size:].reshape(-1, self.output_size)
-
-        return [self.x_train, self.y_train, self.x_test, self.y_test]
+        # 创建 torch Dataset 和 DataLoader 
+        [train_data, train_loader, test_data, test_loader] = self._dataset_dataloader()
+        return [train_data, train_loader, test_data, test_loader]
 
     #! 推荐
     def RecursiveMultiStep(self):
@@ -89,12 +92,13 @@ class Datasplitor:
         # 划分训练集、测试集
         self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)  # (batch_size, timestep, feature_size)
         self.y_train = dataY[:train_size].reshape(-1, 1)  # (batch_size, num_target)
-
         self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
         self.y_test = dataY[train_size:].reshape(-1, 1)
+        # 创建 torch Dataset 和 DataLoader 
+        [train_data, train_loader, test_data, test_loader] = self._dataset_dataloader()
+        return [train_data, train_loader, test_data, test_loader]
 
-        return [self.x_train, self.y_train, self.x_test, self.y_test]
-
+    # TODO
     def DirectRecursiveMix(self):
         """
         直接递归混合预测(多模型滚动预测)
@@ -113,35 +117,28 @@ class Datasplitor:
         # 划分训练集、测试集
         self.x_train = dataX[:train_size, :].reshape(-1, self.timestep, self.feature_size)
         self.y_train = dataY[:train_size].reshape(-1, self.output_size)
-
         self.x_test = dataX[train_size:, :].reshape(-1, self.timestep, self.feature_size)
         self.y_test = dataY[train_size:].reshape(-1, self.output_size)
+        # 创建 torch Dataset 和 DataLoader 
+        [train_data, train_loader, test_data, test_loader] = self._dataset_dataloader()
+        return [train_data, train_loader, test_data, test_loader]
 
-        return [self.x_train, self.y_train, self.x_test, self.y_test]
-
-    def _numpy2tensor(self):
+    def _dataset_dataloader(self):
         """
-        将 numpy.ndarray 类型数据转换成 torch.Tensor 类型数据
+        # 创建 torch Dataset 和 DataLoader
         """
+        # 将 numpy.ndarray 类型数据转换成 torch.Tensor 类型数据
         x_train_tensor = torch.from_numpy(self.x_train).to(torch.float32)
         y_train_tensor = torch.from_numpy(self.y_train).to(torch.float32)
         x_test_tensor = torch.from_numpy(self.x_test).to(torch.float32)
         y_test_tensor = torch.from_numpy(self.y_test).to(torch.float32)
-        return [x_train_tensor, y_train_tensor, x_test_tensor, y_test_tensor]
-
-    def dataset_dataloader(self, batch_size):
-        """
-        创建 torch Dataset 和 DataLoader
-        """
-        x_train_tensor, y_train_tensor, \
-        x_test_tensor, y_test_tensor = self._numpy2tensor()
         # data set
         train_data = TensorDataset(x_train_tensor, y_train_tensor)
         test_data = TensorDataset(x_test_tensor, y_test_tensor)
         # data loader
-        train_loader = DataLoader(train_data, batch_size, False)
-        test_loader = DataLoader(test_data, batch_size, False)
-        return [train_data, train_loader, test_data, test_loader]
+        train_loader = DataLoader(dataset = train_data, batch_size = self.batch_size, shuffle = False)
+        test_loader = DataLoader(dataset = test_data, batch_size = self.batch_size, shuffle = False)
+        return [x_train_tensor, y_train_tensor, train_data, train_loader, x_test_tensor, y_test_tensor, test_data, test_loader]
 
 
 
@@ -150,7 +147,9 @@ class Datasplitor:
 def main():
     import pandas as pd
 
+    # ------------------------------
     # data
+    # ------------------------------
     data = pd.DataFrame({
         "Date": pd.to_datetime([
             "1961-01-01", "1961-01-02", "1961-01-03", "1961-01-04", "1961-01-05",
@@ -161,28 +160,23 @@ def main():
         "Rain": [134, 234, 157, 192, 260, 167, 281, 120, 111, 223],
     })
     data.set_index("Date", inplace = True)
-    # print(data)
+    print(data)
     # print(data.values)
-    # print(data.shape)
-    
+    print(data.shape)
+    # ------------------------------
+    # data split
+    # ------------------------------
     data_split = Datasplitor(
         data = data.values, 
         timestep = 1,
         feature_size = 1, 
-        output_size = 2, 
+        output_size = 1, 
         target_index = 0,
         split_ratio = 0.8,
+        batch_size = 32,
     )
-    x_train, y_train, \
-    x_test, y_test = data_split.DirectMultiStepOutput()
-    print(f"x_train: {x_train}, x_train.shape: {x_train.shape}")
-    print(f"y_train: {y_train}, y_train.shape: {y_train.shape}")
-    print(f"x_test: {x_test}, x_test.shape: {x_test.shape}")
-    print(f"y_test: {y_test}, y_test.shape: {y_test.shape}")
     train_data, train_loader, \
-    test_data, test_loader = data_split.dataset_dataloader(
-        batch_size = 32
-    )
+    test_data, test_loader = data_split.RecursiveMultiStep()
 
 if __name__ == "__main__":
     main()

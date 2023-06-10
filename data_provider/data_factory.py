@@ -33,27 +33,9 @@ from data_provider.data_loader import (
     SWATSegLoader, 
     UEAloader
 )
-from data_provider.uea import collate_fn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-
-
-# data and preprocess class 
-data_dict = {
-    'custom': Dataset_Custom,
-    'ETTh1': Dataset_ETT_hour,
-    'ETTh2': Dataset_ETT_hour,
-    'ETTm1': Dataset_ETT_minute,
-    'ETTm2': Dataset_ETT_minute,
-    'm4': Dataset_M4,
-    'MSL': MSLSegLoader,
-    'PSM': PSMSegLoader,
-    'SMAP': SMAPSegLoader,
-    'SMD': SMDSegLoader,
-    'SWAT': SWATSegLoader,
-    'UEA': UEAloader
-}
 
 
 def data_provider(args, flag):
@@ -61,12 +43,27 @@ def data_provider(args, flag):
     构造 torch 数据集和数据加载器
 
     Args:
-        args (_type_): 命令行参数
+        args (_type_): 命令行参数，或者配置参数字典
         flag (_type_):  任务类型, flat: ["train", "test", "val"]
 
     Returns:
         _type_: torch Dataset, DataLoader
     """
+    # data and preprocess class 
+    data_dict = {
+        'custom': Dataset_Custom,
+        'ETTh1': Dataset_ETT_hour,
+        'ETTh2': Dataset_ETT_hour,
+        'ETTm1': Dataset_ETT_minute,
+        'ETTm2': Dataset_ETT_minute,
+        'm4': Dataset_M4,
+        'MSL': MSLSegLoader,
+        'PSM': PSMSegLoader,
+        'SMAP': SMAPSegLoader,
+        'SMD': SMDSegLoader,
+        'SWAT': SWATSegLoader,
+        'UEA': UEAloader,
+    }
     # ------------------------------
     # 数据集和数据预处理类构造
     # ------------------------------
@@ -87,7 +84,6 @@ def data_provider(args, flag):
         batch_size = args.batch_size  # batch_size for train and valid
         shuffle_flag = True  # 是否进行 shuffle
         drop_last = True  # 是否丢掉最后一个点
-    
     # ------------------------------
     # 构造数据集合数据加载器
     # ------------------------------
@@ -106,6 +102,7 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     elif args.task_name == 'classification':
+        from data_provider.uea import collate_fn
         # data set
         data_set = Data(root_path = args.root_path, flag = flag)
         logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")

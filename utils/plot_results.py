@@ -71,16 +71,13 @@ def plot_results_multiple(predicted_data,
         plt.savefig(f'images/{title}_results_multiple.png')
 
 
-def plot_train_results(scaler, pred, true):
+def plot_train_results(pred, true):
     plot_size = 200
     plt.figure(figsize = (12, 8))
     plt.plot(pred, "b")
     plt.plot(true, "r")
     plt.legend()
     plt.show()
-
-
-
 
 
 

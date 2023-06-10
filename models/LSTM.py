@@ -18,6 +18,7 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
+import torch
 from torch import nn
 
 # global variable
@@ -25,7 +26,25 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 # 单变量-单输出
-class Config_Univariate_SingleOutput:
+class Config_Univariate_SingleOutput_V1:
+    data_path = "dataset/wind_dataset.csv"
+    timestep = 1  # 时间步长，就是利用多少时间窗口
+    feature_size = 1  # 每个步长对应的特征数量
+    num_layers = 2  # LSTM 的层数
+    hidden_size = 256  # 隐藏层大小
+    output_size = 1  # 由于是单输出任务，最终输出层大小为 1，预测未来 1 个时刻的目标值
+    split_ratio = 0.8  # 训练测试数据分割比例
+    target_index = 0  # 预测特征的列索引
+    epochs = 10  # 迭代轮数
+    batch_size = 32  # 批次大小
+    learning_rate = 3e-4  # 学习率
+    best_loss = 0  # 记录损失
+    model_name = "LSTM-Univariate-SingleOutput-V1"  # 模型名称
+    save_path = f"saved_models/{model_name}.pth"  # 最优模型保存路径
+
+
+# TODO
+class Config_Univariate_SingleOutput_V2:
     data_path = "dataset/wind_dataset.csv"
     timestep = 20  # 时间步长，就是利用多少时间窗口
     feature_size = 1  # 每个步长对应的特征数量
@@ -51,12 +70,12 @@ class Config_MultiVariate_SingleOutput:
     hidden_size = 256  # 隐藏层大小
     output_size = 1  # 由于是单输出任务，最终输出层大小为 1，预测未来 1 个时刻的目标值
     split_ratio = 0.8  # 训练测试数据分割比例
-    target_index = 0  # 预测特征的列索引
+    target_index = None  # 预测特征的列索引
     epochs = 10  # 迭代轮数
     batch_size = 32  # 批次大小
     learning_rate = 3e-4  # 学习率
     best_loss = 0  # 记录损失
-    model_name = "TODO"  # 模型名称
+    model_name = "Config_MultiVariate_SingleOutput"  # 模型名称
     save_path = f"saved_models/{model_name}.pth"  # 最优模型保存路径
 
 
@@ -76,9 +95,6 @@ class Config_MultiVariate_MultiOutput:
     best_loss = 0  # 记录损失
     model_name = "TODO"  # 模型名称
     save_path = f"saved_models/{model_name}.pth"  # 最优模型保存路径
-
-
-config = Config_Univariate_SingleOutput()
 
 
 class Model(nn.Module):
@@ -139,42 +155,65 @@ def main():
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
     from data_provider.Datasplitor import Datasplitor
+    from experiments.exp_csdn import model_train
+    from utils.plot_results import plot_train_results
 
+    # ------------------------------
+    # config
+    # ------------------------------
+    config = Config_MultiVariate_SingleOutput()
+    # ------------------------------
     # data
+    # ------------------------------
     df = pd.read_csv(config.data_path, index_col = 0)
     print(df.head())
-
+    # ------------------------------
     # data preprocess
+    # ------------------------------
     scaler = MinMaxScaler()
     scaler.fit_transform(np.array(df["WIND"]).reshape(-1, 1))
     scaler_model = MinMaxScaler()
     data = scaler_model.fit_transform(np.array(df))
-
+    # ------------------------------
     # data split
+    # ------------------------------ 
     data_split = Datasplitor(
         data = data,
         timestep = config.timestep,
         feature_size = config.feature_size, 
         output_size = config.output_size, 
         target_index = config.target_index,
-        split_ratio = config.split_ratio
+        split_ratio = config.split_ratio,
+        batch_size = config.batch_size,
     )
-    x_train, y_train, \
-    x_test, y_test = data_split.DirectMultiStepOutput()
-    # x_train, y_train, \
-    # x_test, y_test = data_split.RecursiveMultiStep()
-    # x_train, y_train, \
-    # x_test, y_test = data_split.RecursiveMultiStep()
     train_data, train_loader, \
-    test_data, test_loader = data_split.dataset_dataloader(batch_size = config.batch_size)
-    # print(f"x_train: {x_train}")``
-    print(f"x_train.shape: {x_train.shape}")
-    # print(f"y_train: {y_train}")
-    print(f"y_train.shape: {y_train.shape}")
-    # print(f"x_test: {x_test}")
-    print(f"x_test.shape: {x_test.shape}")
-    # print(f"y_test: {y_test}")
-    print(f"y_test.shape: {y_test.shape}")
+    test_data, test_loader = data_split.RecursiveMultiStep()
+    # ------------------------------
+    # model
+    # ------------------------------
+    # model = Model(
+    #     feature_size = config.feature_size,
+    #     hidden_size = config.hidden_size,
+    #     num_layers = config.num_layers,
+    #     output_size = config.output_size,
+    # )
+    # loss_func = nn.MSELoss()
+    # optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
+    # y_train_pred, y_test_pred = model_train(
+    #     config = config,
+    #     train_loader = train_loader, 
+    #     test_loader = test_loader, 
+    #     model = model, 
+    #     loss_func = loss_func, 
+    #     optimizer = optimizer
+    # )
+
+    # train_pred = scaler.inverse_transform(model(y_test_pred).detach().numpy()[:plot_size]).reshape(-1, 1)
+    # train_true = scaler.inverse_transform(y_train_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
+    # test_pred = scaler.inverse_transform(y_test_pred.detach().numpy()[:plot_size])
+    # test_true = scaler.inverse_transform(y_test_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
+    # plot_train_results(pred = train_pred, true = train_true)
+    # plot_test_results(pred = test_pred, true = test_true)
 
 if __name__ == "__main__":
     main()

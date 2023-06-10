@@ -44,7 +44,7 @@ class Dataset_ETT_hour(Dataset):
     def __init__(self, 
                  root_path, 
                  flag = "train", 
-                 size = None,  # size [seq_len, label_len, pred_len]
+                 size = None,
                  features = "S", 
                  data_path = "ETTh1.csv",
                  target = "OT", 
@@ -66,14 +66,12 @@ class Dataset_ETT_hour(Dataset):
         assert flag in ["train", "test", "val"]
         type_map = {"train": 0, "val": 1, "test": 2}
         self.set_type = type_map[flag]  # data type
-        
-        self.features = features  # TODO 'S': 单序列, "M": 多序列, "MS": 多序列
+        self.features = features  # 'S': 单序列, "M": 多序列, "MS": 多序列
         self.target = target  # 预测目标标签
         self.scale = scale  # 是否进行标准化
-        self.inverse = inverse  # TODO
-        self.timeenc = timeenc  # TODO
+        self.inverse = inverse 
+        self.timeenc = timeenc
         self.freq = freq  # 频率
-        
         self.cols = cols  # 表列名
         self.root_path = root_path  # 根路径
         self.data_path = data_path  # 数据路径
@@ -91,8 +89,11 @@ class Dataset_ETT_hour(Dataset):
             df_data = df_raw[[self.target]]  # 不包含 'date' 列的预测标签列
         
         # ??? train/val/test 索引
-        border1s = [0, 12*30*24 - self.seq_len, 12*30*24 + 4*30*24]
-        border2s = [12*30*24, 12*30*24 + 4*30*24, 12*30*24 + 8*30*24]
+        num_train = 12*30*24
+        num_test = None
+        num_val = 4*30*24
+        border1s = [0, num_train - self.seq_len, 12*30*24 + 4*30*24]
+        border2s = [num_train, num_train + num_val, 12*30*24 + 8*30*24]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
         
@@ -147,14 +148,14 @@ class Dataset_ETT_hour(Dataset):
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
- 
+
 
 class Dataset_ETT_minute(Dataset):
     
     def __init__(self, 
                  root_path, 
                  flag = "train", 
-                 size = None,  # size [seq_len, label_len, pred_len]
+                 size = None,
                  features = "S", 
                  data_path = "ETTm1.csv",
                  target = "OT", 
@@ -176,14 +177,12 @@ class Dataset_ETT_minute(Dataset):
         assert flag in ["train", "test", "val"]
         type_map = {"train": 0, "val": 1, "test": 2}
         self.set_type = type_map[flag]  # data type
-
-        self.features = features  # TODO 'S': 单序列, "M": 多序列, "MS": 多序列
+        self.features = features  # 'S': 单序列, "M": 多序列, "MS": 多序列
         self.target = target  # 预测目标标签
         self.scale = scale  # 是否进行标准化
-        self.inverse = inverse  # ???
-        self.timeenc = timeenc  # ???
+        self.inverse = inverse
+        self.timeenc = timeenc
         self.freq = freq  # 频率
-
         self.cols = cols  # 表列名
         self.root_path = root_path  # 根路径
         self.data_path = data_path  # 数据路径
@@ -270,9 +269,18 @@ class Dataset_ETT_minute(Dataset):
 
 
 class Dataset_M4(Dataset):
-    def __init__(self, root_path, flag = 'pred', size = None,
-                 features = 'S', data_path = 'ETTh1.csv',
-                 target = 'OT', scale = False, inverse=False, timeenc = 0, freq = '15min',
+
+    def __init__(self, 
+                 root_path, 
+                 flag = 'pred', 
+                 size = None,
+                 features = 'S', 
+                 data_path = 'ETTh1.csv',
+                 target = 'OT', 
+                 scale = False, 
+                 inverse = False, 
+                 timeenc = 0, 
+                 freq = '15min',
                  seasonal_patterns = 'Yearly'):
         # size [seq_len, label_len, pred_len]
         # init
@@ -349,6 +357,7 @@ class Dataset_M4(Dataset):
 
 
 class PSMSegLoader(Dataset):
+
     def __init__(self, root_path, win_size, step = 1, flag = "train"):
         self.flag = flag
         self.step = step
@@ -480,6 +489,7 @@ class SMAPSegLoader(Dataset):
 
 
 class SMDSegLoader(Dataset):
+
     def __init__(self, root_path, win_size, step = 100, flag = "train"):
         self.flag = flag
         self.step = step

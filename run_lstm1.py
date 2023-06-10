@@ -25,7 +25,7 @@ from keras.utils import plot_model
 
 from config.json_config_loader import load_config
 from data_provider.DataLoader import DataLoader
-from general.train_lstm import Trainer
+from experiments.train_lstm import Trainer
 from utils.plot_results import plot_results, plot_results_multiple
 
 # global variable
