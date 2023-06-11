@@ -52,7 +52,7 @@ def load_yaml(yaml_path: str):
 
 # 测试代码 main 函数
 def main(): 
-    sys_cfg_path = "config.yaml"
+    sys_cfg_path = "config_wind.yaml"
     cfg_params = load_yaml(sys_cfg_path)
     logger.info(cfg_params)
 

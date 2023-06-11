@@ -24,7 +24,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models.LSTM import Config, LSTM
+from models.csdn.LSTM import Config, LSTM
 from utils.timer import Timer
 
 # global variable

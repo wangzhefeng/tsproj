@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 import torch
 import torch.nn as nn
 
-from layers.embed import DataEmbedding
+from layers.Embed import DataEmbedding
 from layers.Informer_EncDec import (ConvLayer, Decoder, DecoderLayer, Encoder,
                                     EncoderLayer, EncoderStack)
 from layers.SelfAttention import AttentionLayer, FullAttention, ProbAttention

@@ -30,7 +30,7 @@ import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 
-from models.LSTM import LSTMRegressor
+from models.csdn.LSTM import LSTMRegressor
 
 # global variable
 LOGGING_LABEL = __file__.split("/")[-1][:-3]

@@ -15,7 +15,7 @@
 import torch
 from torch import nn
 
-from layers.embed import PatchEmbedding
+from layers.Embed import PatchEmbedding
 from layers.SelfAttention import AttentionLayer, FullAttention
 from layers.Transformer_EncDec import Encoder, EncoderLayer
 

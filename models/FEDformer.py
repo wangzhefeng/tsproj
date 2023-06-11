@@ -20,7 +20,7 @@ from layers.AutoCorrelation import AutoCorrelationLayer
 from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
                                       EncoderLayer, my_Layernorm,
                                       series_decomp)
-from layers.embed import DataEmbedding
+from layers.Embed import DataEmbedding
 from layers.FourierCorrelation import FourierBlock, FourierCrossAttention
 from layers.MultiWaveletCorrelation import (MultiWaveletCross,
                                             MultiWaveletTransform)

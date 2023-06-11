@@ -41,7 +41,7 @@ def load_config(config_filename):
 
 # 测试代码 main 函数
 def main():
-    configs = load_config("config_sp500_2.json")
+    configs = load_config("lstm/config_sp500_2.json")
     logger.info(configs)
 
 if __name__ == "__main__":

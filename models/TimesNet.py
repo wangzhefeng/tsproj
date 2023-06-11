@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers.embed import DataEmbedding
+from layers.Embed import DataEmbedding
 from layers.Conv_Blocks import Inception_Block_V1
 
 # global variable

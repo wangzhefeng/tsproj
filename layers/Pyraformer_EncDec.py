@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.linear import Linear
 
-from layers.embed import DataEmbedding
+from layers.Embed import DataEmbedding
 from layers.SelfAttention import AttentionLayer, FullAttention
 
 # global variable

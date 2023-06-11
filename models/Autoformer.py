@@ -24,7 +24,7 @@ from layers.Autoformer_EncDec import (
     my_Layernorm, 
     series_decomp
 )
-from layers.embed import DataEmbedding_wo_pos
+from layers.Embed import DataEmbedding_wo_pos
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
