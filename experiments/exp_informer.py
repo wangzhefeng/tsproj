@@ -54,8 +54,8 @@ class Exp_Informer(Exp_Basic):
         模型构建
         """
         model_dict = {
-            'informer':Informer,
-            'informerstack':InformerStack,
+            'informer': Informer,
+            'informerstack': InformerStack,
         }
         if self.args.model == 'informer' or self.args.model == 'informerstack':
             e_layers = self.args.e_layers if self.args.model == 'informer' else self.args.s_layers

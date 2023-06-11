@@ -33,7 +33,7 @@ def data_provider(args, flag):
 
     Args:
         args (_type_): 命令行参数，或者配置参数字典
-        flag (_type_):  任务类型, flat: ["train", "test", "val"]
+        flag (_type_):  任务类型, ["train", "test", "val"]
 
     Returns:
         _type_: torch Dataset, DataLoader
@@ -47,6 +47,7 @@ def data_provider(args, flag):
     # ------------------------------
     if flag == 'test':
         freq = args.freq  # 序列频率
+        # batch_size
         if args.task_name == 'anomaly_detection' or args.task_name == 'classification':
             batch_size = args.batch_size  # batch_size for evaluation in ad and clf
         else:
@@ -92,8 +93,9 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     else:
-        # 加载数据集
+        # time features
         timeenc = 0 if args.embed != 'timeF' else 1  # 日期时间特征编码策略
+        # data set
         data_set = Data(
             root_path = args.root_path,
             data_path = args.data_path,
@@ -106,9 +108,10 @@ def data_provider(args, flag):
             seasonal_patterns = args.seasonal_patterns
         )
         logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")
-        # 构建数据加载器
+        # data loader
         if args.data == 'm4':  # M4 特殊处理
             drop_last = False
+        
         data_loader = DataLoader(
             dataset = data_set,
             batch_size = batch_size,

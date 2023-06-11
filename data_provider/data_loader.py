@@ -26,15 +26,10 @@ from typing import List
 from loguru import logger
 import numpy as np
 import pandas as pd
-from pandas.tseries import to_offset
-import paddle
 import torch
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sktime.datasets import load_from_tsfile_to_dataframe
 
-from m4 import M4Dataset, M4Meta
-from uea import Normalizer, interpolate_missing, subsample
 from data_provider.data_splitor import split_data
 from utils.timefeatures import time_features
 from utils.timestamp_utils import to_unix_time
@@ -50,18 +45,27 @@ class Dataset_Custom(Dataset):
     
     def __init__(self, 
                  root_path, 
-                 flag = "train", 
-                 size = None,  
-                 features = "S",
                  data_path = "ETTh1.csv",
-                 target = "OT",
-                 scale = True, 
-                 inverse = False,
-                 timeenc = 0,
+                 flag = "train", 
+                 size = None,  # [seq_len, label_len, pred_len]
                  freq = "h",
+                 features = "S",
                  cols = None,
+                 timeenc = 0,
+                 target = "OT",
+                 train_ratio = 0.7,
+                 test_ratio = 0.2,
+                 scale = True, 
+                 inverse = False, 
                  seasonal_patterns = "Yearly") -> None:
-        # size: [seq_len, label_len, pred_len]
+        # data file path
+        self.root_path = root_path  # 数据根路径
+        self.data_path = data_path  # 数据文件路径
+        # data type
+        assert flag in ["train", "test", "val"]
+        type_map = {"train": 0, "val": 1, "test": 2}
+        self.set_type = type_map[flag]
+        # data size
         if size is None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -70,23 +74,20 @@ class Dataset_Custom(Dataset):
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
-        # data type
-        assert flag in ["train", "test", "val"]
-        type_map = {"train": 0, "val": 1, "test": 2}
-        self.set_type = type_map[flag]
-        # data feature and target
-        self.features = features  # 特征类型 'S': 单序列, "M": 多序列, "MS": 多序列
-        self.target = target  # 预测目标标签
-        # data preprocess
-        self.scale = scale  # 是否进行标准化
-        self.inverse = inverse  # ?
-        self.timeenc = timeenc  # ?
+        # data freq, feature columns, and target
         self.freq = freq  # 频率
+        self.features = features  # 特征类型 'S': 单序列, "M": 多序列, "MS": 多序列
         self.cols = cols  # 表列名
-        self.seasonal_patterns = seasonal_patterns
-        self.root_path = root_path  # 数据根路径
-        self.data_path = data_path  # 数据文件路径
-        self.__read_data__()  # 数据读取
+        self.timeenc = timeenc  # 时间特征
+        self.target = target  # 预测目标标签
+        self.train_ratio = train_ratio
+        self.test_ratio = test_ratio
+        # data preprocess 
+        self.scale = scale # 是否进行标准化
+        self.inverse = inverse  # 是否逆转换
+        self.seasonal_patterns = seasonal_patterns  # 季节模式
+        # data read
+        self.__read_data__()
     
     def __read_data__(self):
         """
@@ -95,9 +96,13 @@ class Dataset_Custom(Dataset):
             data_x: # TODO
             data_y: # TODO
         """
+        # ------------------------------
+        # data read
+        # df_raw: (date, features, target)
+        # df_data: (features, target) or (target)
+        # ------------------------------
         # data read(df_raw.columns: ["date", ...(other features), target feature])
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-
         # data column sort
         if self.cols:
             cols = self.cols.copy()
@@ -107,38 +112,31 @@ class Dataset_Custom(Dataset):
             cols.remove(self.target)
             cols.remove("date")
         df_raw = df_raw["date"] + cols + [self.target]
-
-        # train/val/test 分割
-        '''
-        train: 0:num_train
-        val: (num_train-self.seq_len):(num_train+num_val)
-        test: (len(df_raw)-num_test-self.seq_len):len(df_raw)
-        '''
         # 根据数据格式进行数据处理
-        if self.features == "M" or self.features == "MS":
+        if self.features == "M" or self.features == "MS":  # 多序列(date, feature1, feature2, feature3, ..., target)
             cols_data = df_raw.columns[1:]
-            df_data = df_raw[cols_data]  # 不包含 'date' 列的预测特征列
-        elif self.features == "S":
-            df_data = df_raw[[self.target]]  # 不包含 'date' 列的预测标签列
+            df_data = df_raw[cols_data]  # 不包含 'date' 列的预测特征列(包含 target)
+        elif self.features == "S":  # 单序列(date, target)
+            df_data = df_raw[[self.target]]  # 不包含 'date' 列的预测标签列(target)
+        # ------------------------------
+        # train/val/test split
+        # ------------------------------
         # train/val/test 长度
-        num_train = int(len(df_raw) * 0.7)
-        num_test = int(len(df_raw) * 0.2)
-        num_val = len(df_raw) - num_train - num_test
-        # train/val/test 索引
-        border1s = [
-            0, 
-            num_train - self.seq_len, 
-            len(df_raw) - num_test - self.seq_len
-        ]
-        border2s = [
-            num_train, 
-            num_train + num_val, 
-            len(df_raw)
-        ]
-        
+        num_df_raw = len(df_raw)
+        num_train = int(num_df_raw * self.train_ratio)
+        num_test = int(num_df_raw * self.test_ratio)
+        num_val = num_df_raw - num_train - num_test
+        #   - train: 0 : num_train
+        #   - val: (num_train - seq_len) : (num_train + num_val)
+        #   - test: (len_df_raw - num_test - seq_len) : len_df_raw
+        border1s = [0, num_train - self.seq_len, num_df_raw - num_test - self.seq_len]
+        border2s = [num_train, num_train + num_val, num_df_raw]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
-        # 特征和预测标签标准化(不包含 'date' 列)
+        # ------------------------------
+        # 预测特征(features)和预测标签(target)标准化
+        # data: (features, target) or (target)
+        # ------------------------------
         self.scaler = StandardScaler()
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -147,7 +145,8 @@ class Dataset_Custom(Dataset):
         else:
             data = df_data.values  # 非标准化
         # ------------------------------
-        # 特征构造
+        # 特征构造(train/test/val)
+        # [self.data_stamp:, self.data_x] -> [time_features, features, target]
         # ------------------------------
         # 日期时间动态特征
         df_stamp = df_raw[["date"]][border1:border2]
@@ -156,11 +155,13 @@ class Dataset_Custom(Dataset):
         self.data_stamp = data_stamp
         # 预测特征和预测标签(不包含日期时间特征、'date' 列)
         self.data_x = data[border1:border2]
-        # ?
+        # ------------------------------
+        # 根据是否进行标准化逆转换返回数据
+        # ------------------------------
         if self.inverse:
-            self.data_y = df_data.values[border1:border2]  # 不包含 'date' 列的预测特征列或预测标签
+            self.data_y = df_data.values[border1:border2]  # 非标准化
         else:
-            self.data_y = data[border1:border2]
+            self.data_y = data[border1:border2]  # 标准化
     
     def __getitem__(self, index):
         # history
@@ -195,10 +196,10 @@ class Dataset_Pred(Dataset):
     
     def __init__(self, 
                  root_path, 
+                 data_path = "ETTh1.csv",
                  flag = "pred", 
                  size = None,
                  features = "S", 
-                 data_path = "ETTh1.csv",
                  target = "OT", 
                  scale = True, 
                  inverse = False,
@@ -316,10 +317,10 @@ class Dataset_ETT_hour(Dataset):
     
     def __init__(self, 
                  root_path, 
+                 data_path = "ETTh1.csv",
                  flag = "train", 
                  size = None,
                  features = "S", 
-                 data_path = "ETTh1.csv",
                  target = "OT", 
                  scale = True, 
                  inverse = False,
@@ -428,10 +429,10 @@ class Dataset_ETT_minute(Dataset):
     
     def __init__(self, 
                  root_path, 
+                 data_path = "ETTm1.csv",
                  flag = "train", 
                  size = None,
                  features = "S", 
-                 data_path = "ETTm1.csv",
                  target = "OT", 
                  scale = True, 
                  inverse = False,
@@ -543,21 +544,21 @@ class Dataset_ETT_minute(Dataset):
 
 
 # short-term forecasting
+from m4 import M4Dataset, M4Meta
 class Dataset_M4(Dataset):
-
+    
     def __init__(self, 
                  root_path, 
+                 # data_path = 'ETTh1.csv',
                  flag = 'pred', 
                  size = None,
                  features = 'S', 
-                 data_path = 'ETTh1.csv',
                  target = 'OT', 
                  scale = False, 
                  inverse = False, 
                  timeenc = 0, 
-                 freq = '15min',
+                 # freq = '15min',
                  seasonal_patterns = 'Yearly'):
-        # size [seq_len, label_len, pred_len]
         # init
         self.features = features
         self.target = target
@@ -565,7 +566,7 @@ class Dataset_M4(Dataset):
         self.inverse = inverse
         self.timeenc = timeenc
         self.root_path = root_path
-        # TODO
+        # size [seq_len, label_len, pred_len]
         self.seq_len = size[0]
         self.label_len = size[1]
         self.pred_len = size[2]
@@ -854,6 +855,8 @@ class SWATSegLoader(Dataset):
 
 
 # classification
+from sktime.datasets import load_from_tsfile_to_dataframe
+from uea import Normalizer, interpolate_missing, subsample
 class UEAloader(Dataset):
     """
     Dataset class for datasets included in:
@@ -984,6 +987,7 @@ class UEAloader(Dataset):
 
 
 # !paddlepaddle
+import paddle
 class TSDataset(paddle.io.Dataset):
     """
     时序 Dataset
@@ -1063,6 +1067,7 @@ class TSDataset(paddle.io.Dataset):
 
 
 # !paddlepaddle
+import paddle
 class TSPredDataset(paddle.io.Dataset):
     """
     时序预测 Dataset 
@@ -1314,6 +1319,7 @@ class Data_LoaderV2:
 
 
 # TODO
+from pandas.tseries import to_offset
 def data_preprocess(df):
     """
     数据预处理
