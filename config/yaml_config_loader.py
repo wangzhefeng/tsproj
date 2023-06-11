@@ -26,17 +26,12 @@ from loguru import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def load_yaml(file_name):
-    with open(file_name, 'r', encoding = "utf-8") as infile:
-        return yaml.load(
-            infile, 
-            Loader = yaml.FullLoader
-        )
-
-
-def get_params(yaml_path: str) -> Dict:
+def load_yaml(yaml_path: str):
     """
     读取项目配置参数
+
+    Args:
+        yaml_path (str): _description_
 
     Returns:
         Dict: 项目配置参数
@@ -44,8 +39,12 @@ def get_params(yaml_path: str) -> Dict:
     # 配置文件读取
     cfg_dir = os.path.dirname(__file__)
     # 项目配置 yaml 文件
-    cfg_params = load_yaml(os.path.join(cfg_dir, yaml_path))
-
+    with open(os.path.join(cfg_dir, yaml_path), 'r', encoding = "utf-8") as infile:
+        cfg_params = yaml.load(
+            infile, 
+            Loader = yaml.FullLoader
+        )
+    
     return cfg_params
 
 
@@ -54,7 +53,7 @@ def get_params(yaml_path: str) -> Dict:
 # 测试代码 main 函数
 def main(): 
     sys_cfg_path = "config.yaml"
-    cfg_params = get_params(sys_cfg_path)
+    cfg_params = load_yaml(sys_cfg_path)
     logger.info(cfg_params)
 
 if __name__ == "__main__":

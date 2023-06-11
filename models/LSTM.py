@@ -154,7 +154,7 @@ def main():
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import MinMaxScaler
-    from data_provider.Datasplitor import Datasplitor
+    from data_provider.data_splitor import Datasplitor
     from experiments.exp_csdn import model_train
     from utils.plot_results import plot_train_results
 

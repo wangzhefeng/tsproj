@@ -21,18 +21,7 @@ if str(ROOT) not in sys.path:
 from loguru import logger
 from torch.utils.data import DataLoader
 
-from data_provider.Dataset_Custom import Dataset_Custom
-from data_provider.data_loader import (
-    Dataset_ETT_hour,
-    Dataset_ETT_minute, 
-    Dataset_M4,
-    MSLSegLoader, 
-    PSMSegLoader,
-    SMAPSegLoader, 
-    SMDSegLoader,
-    SWATSegLoader, 
-    UEAloader
-)
+from data_provider.data_loader import data_dict
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -49,21 +38,6 @@ def data_provider(args, flag):
     Returns:
         _type_: torch Dataset, DataLoader
     """
-    # data and preprocess class 
-    data_dict = {
-        'custom': Dataset_Custom,
-        'ETTh1': Dataset_ETT_hour,
-        'ETTh2': Dataset_ETT_hour,
-        'ETTm1': Dataset_ETT_minute,
-        'ETTm2': Dataset_ETT_minute,
-        'm4': Dataset_M4,
-        'MSL': MSLSegLoader,
-        'PSM': PSMSegLoader,
-        'SMAP': SMAPSegLoader,
-        'SMD': SMDSegLoader,
-        'SWAT': SWATSegLoader,
-        'UEA': UEAloader,
-    }
     # ------------------------------
     # 数据集和数据预处理类构造
     # ------------------------------
