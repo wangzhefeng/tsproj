@@ -21,15 +21,40 @@ import sys
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+import random
+import tqdm
+import warnings
+import pickle
 from datetime import datetime
 
 from loguru import logger
+import numpy as np
 import pandas as pd 
+from pandas.tseries.frequencies import to_offset
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+import paddle
+import paddle.fluid as fluid
+import torch
+import torch.nn as nn
+
+plt.rcParams["font.sans-serif"] = ["SimHei"]
+warnings.filterwarnings("ignore")
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
+# 设置随机数种子
+fix_seed = 42
+random.seed(fix_seed)
+np.random.seed(fix_seed)
+# torch
+torch.manual_seed(fix_seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(fix_seed)
+# paddle
+paddle.seed(fix_seed)
 
 
 # ------------------------------
