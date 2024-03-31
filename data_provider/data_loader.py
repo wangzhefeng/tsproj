@@ -1220,10 +1220,40 @@ class TSPredDataset(paddle.io.Dataset):
         return len(self.data_x) - self.input_len - self.stride - self.pred_len  + 1
 
 
-class Data_Loader:
+# !paddlepaddle
+from pandas.tseries import to_offset
+def data_preprocess(df):
     """
-    A class for loading and transforming data for the lstm model
+    数据预处理
+    1. 数据排序
+    2. 去除重复值
+    3. 重采样（ 可选）
+    4. 缺失值处理
+    5. 异常值处理
+    proj: https://aistudio.baidu.com/aistudio/projectdetail/5911966
     """
+    # 排序
+    df = df.sort_values(by = "DATATIME", ascending = True)
+    logger.info(f"df.shape: {df.shape}")
+    logger.info(f"Time range from {df['DATATIME'].values[0]} to {df['DATATIME'].values[-1]}")
+    # 去除重复值
+    df = df.drop_duplicates(subset = "DATATIME", keep = "first")
+    logger.info(f"After dropping dulicates: {df.shape}")
+    # 重采样（可选）+ 缺失值处(理线性插值)：比如 04 风机缺少 2022-04-10 和 2022-07-25 两天的数据，重采样会把这两天数据补充进来
+    # TODO 尝试一些其他缺失值处理方式，比如，用同时刻附近风机的值求均值填补缺失值
+    df = df.set_index("DATATIME")
+    df = df.resample(rule = to_offset('15T').freqstr, label = 'right', closed = 'right')
+    df = df.interpolate(method = 'linear', limit_direction = 'both').reset_index()
+    # 异常值处理
+    # 当实际风速为 0 时，功率设置为 0
+    df.loc[df["ROUND(A.WS,1)"] == 0, "YD15"] = 0
+    # TODO 风速过大但功率为 0 的异常：先设计函数拟合出：实际功率=f(风速)，然后代入异常功率的风速获取理想功率，替换原异常功率
+    # TODO 对于在特定风速下的离群功率（同时刻用 IQR 检测出来），做功率修正（如均值修正）
+
+    return df
+
+
+class Data_Loader_V1:
 
     def __init__(self, filename: str, split_ratio: float, cols: List):
         """
@@ -1259,7 +1289,10 @@ class Data_Loader:
             data_windows.append(self.data_test[i:i+seq_len])
         data_windows = np.array(data_windows).astype(float)
         # 归一化
-        data_windows = self.normalise_windows(window_data = data_windows, single_window = False) if normalise else data_windows
+        data_windows = self.normalise_windows(
+            window_data = data_windows, 
+            single_window = False
+        ) if normalise else data_windows
         # 数据分割
         x = data_windows[:, :-1]
         y = data_windows[:, -1, [0]]
@@ -1332,7 +1365,10 @@ class Data_Loader:
         # sliding windows
         window = self.data_train[i:i+seq_len]
         # normalize
-        window = self.normalise_windows(window_data = window, single_window = True)[0] if normalise else window
+        window = self.normalise_windows(
+            window_data = window, 
+            single_window = True
+        )[0] if normalise else window
         # window split
         x = window[:-1]
         y = window[-1, [0]]
@@ -1364,22 +1400,26 @@ class Data_Loader:
 
 
 # TODO
-class Data_LoaderV2:
+class Data_Loader_V2:
  
-    def __init__(self, config) -> None:
-        self.config = config
-    
-    def __init__(self, config,  cols: List):
+    def __init__(self, data_path: str,  split_ratio: float, cols: List):
         """
         Args:
-            filename (str): 时序数据文件路径
+            data_path (str): 时序数据文件路径
             split_ratio (float): 训练集、测试集分割比例
             cols (List): 时序数据的特征名称
         """
-        dataframe = pd.read_csv(config.data_path, index_col = 0)
-        i_split = int(len(dataframe) * config.split_ratio)
-        self.data_train = dataframe.get(cols).values[:i_split]
-        self.data_test  = dataframe.get(cols).values[i_split:]
+        self.data_path = data_path
+        self.split_ratio = split_ratio
+        self.cols = cols
+        self.__read_data__()
+    
+    def __read_data__(self):
+        dataframe = pd.read_csv(self.data_path, index_col = 0)
+        i_split = int(len(dataframe) * self.split_ratio)
+        self.data_train = dataframe.get(self.cols).values[:i_split]
+        self.data_test  = dataframe.get(self.cols).values[i_split:]
+
         self.len_train  = len(self.data_train)
         self.len_test   = len(self.data_test)
         self.len_train_windows = None
@@ -1389,7 +1429,7 @@ class Data_LoaderV2:
         wind_array = np.array(self.dataframe["WIND"]).reshape(-1, 1)
         scaler = MinMaxScaler()
         scaler.fit_transform(wind_array)
-
+        # 
         scaler_model = MinMaxScaler()
         data = scaler_model.fit_transform(np.array(self.dataframe))
 
@@ -1415,7 +1455,7 @@ class Data_LoaderV2:
         )
         train_loader = DataLoader(dataset = train_data, batch_size = config.batch_size, shuffle = False)
         test_loader = DataLoader(dataset = test_data, batch_size = config.batch_size, shuffle = False)
-  
+ 
     def split_data(self, data, timestep: int, input_size: int, split_ratio: float = 0.8):
         """
         形成训练数据
@@ -1459,37 +1499,6 @@ class Data_LoaderV2:
         test_true = self.scaler.inverse_transform(test_true)
 
 
-# TODO
-from pandas.tseries import to_offset
-def data_preprocess(df):
-    """
-    数据预处理
-    1. 数据排序
-    2. 去除重复值
-    3. 重采样（ 可选）
-    4. 缺失值处理
-    5. 异常值处理
-    proj: https://aistudio.baidu.com/aistudio/projectdetail/5911966
-    """
-    # 排序
-    df = df.sort_values(by = "DATATIME", ascending = True)
-    logger.info(f"df.shape: {df.shape}")
-    logger.info(f"Time range from {df['DATATIME'].values[0]} to {df['DATATIME'].values[-1]}")
-    # 去除重复值
-    df = df.drop_duplicates(subset = "DATATIME", keep = "first")
-    logger.info(f"After dropping dulicates: {df.shape}")
-    # 重采样（可选）+ 缺失值处(理线性插值)：比如 04 风机缺少 2022-04-10 和 2022-07-25 两天的数据，重采样会把这两天数据补充进来
-    # TODO 尝试一些其他缺失值处理方式，比如，用同时刻附近风机的值求均值填补缺失值
-    df = df.set_index("DATATIME")
-    df = df.resample(rule = to_offset('15T').freqstr, label = 'right', closed = 'right')
-    df = df.interpolate(method = 'linear', limit_direction = 'both').reset_index()
-    # 异常值处理
-    # 当实际风速为 0 时，功率设置为 0
-    df.loc[df["ROUND(A.WS,1)"] == 0, "YD15"] = 0
-    # TODO 风速过大但功率为 0 的异常：先设计函数拟合出：实际功率=f(风速)，然后代入异常功率的风速获取理想功率，替换原异常功率
-    # TODO 对于在特定风速下的离群功率（同时刻用 IQR 检测出来），做功率修正（如均值修正）
-
-    return df
 
 
 # data and preprocess class 
