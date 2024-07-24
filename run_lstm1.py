@@ -23,7 +23,7 @@ import numpy as np
 from tensorflow import keras
 from keras.utils import plot_model
 
-from config.json_config_loader import load_config
+from data_provider.json_config_loader import load_config
 from data_provider.DataLoader import DataLoader
 from experiments.train_lstm import Trainer
 from utils.plot_results import plot_results, plot_results_multiple

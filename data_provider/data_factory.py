@@ -77,7 +77,7 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     elif args.task_name == 'classification':
-        from data_provider.uea import collate_fn
+        from data.uea import collate_fn
         # data set
         data_set = Data(root_path = args.root_path, flag = flag)
         logger.info(f"{LOGGING_LABEL}.data_provider, {flag}: {len(data_set)}")

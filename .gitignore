@@ -148,3 +148,5 @@ lightning_logs/
 *.pkl
 *.ts
 *.xlsx
+
+data/

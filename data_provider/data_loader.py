@@ -590,7 +590,7 @@ class Dataset_ETT_minute(Dataset):
 
 
 # short-term forecasting
-from m4 import M4Dataset, M4Meta
+from data.m4 import M4Dataset, M4Meta
 class Dataset_M4(Dataset):
     
     def __init__(self, 
@@ -916,7 +916,7 @@ class SWATSegLoader(Dataset):
 
 # classification
 from sktime.datasets import load_from_tsfile_to_dataframe
-from uea import Normalizer, interpolate_missing, subsample
+from data.uea import Normalizer, interpolate_missing, subsample
 class UEAloader(Dataset):
     """
     Dataset class for datasets included in:
