@@ -6,6 +6,11 @@
 - [步骤2：定义命令行解析](#步骤2定义命令行解析)
 - [步骤3：确定调参工具](#步骤3确定调参工具)
 - [步骤4：减少随机性](#步骤4减少随机性)
+- [data](#data)
+    - [Module](#module)
+    - [TODO](#todo)
+- [model](#model)
+- [model train and test](#model-train-and-test)
 </p></details><p></p>
 
 # 文章
@@ -122,3 +127,26 @@ random.seed(SEED)
 np.random.seed(SEED)
 tf.random.set_seed(SEED)
 ```
+
+# data
+
+## Module
+
+* data
+
+## TODO
+
+参数：
+
+* `seq_len` -> `timestep`
+* `lable_len` -> ``
+* `pred_len` -> ``
+
+# model
+
+* 统计模型预测
+* 机器学习模型预测
+* 深度学习模型预测
+* 分层预测
+
+# model train and test

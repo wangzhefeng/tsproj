@@ -14,21 +14,21 @@
 # python libraries
 import os
 import sys
+
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import gc
 
-from loguru import logger
-from tqdm import tqdm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score, mean_squared_error
-
 import torch
+from loguru import logger
+from sklearn.metrics import mean_squared_error, r2_score
 from torch import nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from models.csdn.LSTM import LSTMRegressor
 
