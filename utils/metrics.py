@@ -1,27 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# ***************************************************
-# * File        : metrics.py
-# * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2023-04-19
-# * Version     : 0.1.041900
-# * Description : description
-# * Link        : link
-# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# ***************************************************
-
-# python libraries
-import os
-import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
-
 import numpy as np
-
-# global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def RSE(pred, true):
@@ -35,11 +12,11 @@ def CORR(pred, true):
 
 
 def MAE(pred, true):
-    return np.mean(np.abs(pred - true))
+    return np.mean(np.abs(true - pred))
 
 
 def MSE(pred, true):
-    return np.mean((pred - true) ** 2)
+    return np.mean((true - pred) ** 2)
 
 
 def RMSE(pred, true):
@@ -47,11 +24,11 @@ def RMSE(pred, true):
 
 
 def MAPE(pred, true):
-    return np.mean(np.abs((pred - true) / true))
+    return np.mean(np.abs((true - pred) / true))
 
 
 def MSPE(pred, true):
-    return np.mean(np.square((pred - true) / true))
+    return np.mean(np.square((true - pred) / true))
 
 
 def metric(pred, true):
@@ -62,13 +39,3 @@ def metric(pred, true):
     mspe = MSPE(pred, true)
 
     return mae, mse, rmse, mape, mspe
-
-
-
-
-# 测试代码 main 函数
-def main():
-    pass
-
-if __name__ == "__main__":
-    main()
