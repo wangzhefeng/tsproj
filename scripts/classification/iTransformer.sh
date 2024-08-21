@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=0
 
-model_name=FiLM
+model_name=iTransformer
 
 python -u run.py \
   --task_name classification \
@@ -11,16 +11,15 @@ python -u run.py \
   --data UEA \
   --e_layers 3 \
   --batch_size 16 \
-  --d_model 128 \
+  --d_model 2048 \
   --d_ff 256 \
   --top_k 3 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --seq_len 1751 \
-  --pred_len 1751 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -38,7 +37,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -56,7 +56,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -74,7 +75,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -92,7 +94,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -110,7 +113,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -128,7 +132,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -146,7 +151,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -164,7 +170,8 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3
 
 python -u run.py \
   --task_name classification \
@@ -182,4 +189,5 @@ python -u run.py \
   --itr 1 \
   --learning_rate 0.001 \
   --train_epochs 100 \
-  --patience 10
+  --patience 10 \
+  --enc_in 3

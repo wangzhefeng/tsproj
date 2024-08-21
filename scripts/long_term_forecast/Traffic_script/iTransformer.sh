@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=5
+export CUDA_VISIBLE_DEVICES=0
 
-model_name=Transformer
+model_name=iTransformer
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -14,15 +14,18 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 96 \
-  --e_layers 2 \
+  --e_layers 4 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 862 \
   --dec_in 862 \
   --c_out 862 \
   --des 'Exp' \
-  --itr 1 \
-  --train_epochs 3
+  --d_model 512 \
+  --d_ff 512 \
+  --batch_size 16 \
+  --learning_rate 0.001 \
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -36,15 +39,18 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 192 \
-  --e_layers 2 \
+  --e_layers 4 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 862 \
   --dec_in 862 \
   --c_out 862 \
   --des 'Exp' \
-  --itr 1 \
-  --train_epochs 3
+  --d_model 512 \
+  --d_ff 512 \
+  --batch_size 16 \
+  --learning_rate 0.001 \
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -58,15 +64,18 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 336 \
-  --e_layers 2 \
+  --e_layers 4 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 862 \
   --dec_in 862 \
   --c_out 862 \
   --des 'Exp' \
-  --itr 1 \
-  --train_epochs 3
+  --d_model 512 \
+  --d_ff 512 \
+  --batch_size 16 \
+  --learning_rate 0.001 \
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -80,12 +89,15 @@ python -u run.py \
   --seq_len 96 \
   --label_len 48 \
   --pred_len 720 \
-  --e_layers 2 \
+  --e_layers 4 \
   --d_layers 1 \
   --factor 3 \
   --enc_in 862 \
   --dec_in 862 \
   --c_out 862 \
   --des 'Exp' \
-  --itr 1 \
-  --train_epochs 3
+  --d_model 512 \
+  --d_ff 512 \
+  --batch_size 16 \
+  --learning_rate 0.001 \
+  --itr 1

@@ -1,6 +1,5 @@
-export CUDA_VISIBLE_DEVICES=0
 
-model_name=Nonstationary_Transformer
+model_name=TSMixer
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -12,7 +11,7 @@ python -u run.py \
   --data custom \
   --features M \
   --seq_len 96 \
-  --label_len 48 \
+  --label_len 96 \
   --pred_len 96 \
   --e_layers 2 \
   --d_layers 1 \
@@ -20,11 +19,11 @@ python -u run.py \
   --enc_in 321 \
   --dec_in 321 \
   --c_out 321 \
+  --d_model 256 \
+  --d_ff 512 \
+  --top_k 5 \
   --des 'Exp' \
-  --itr 1 \
-  --p_hidden_dims 256 256 \
-  --p_hidden_layers 2 \
-  --d_model 2048
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -36,7 +35,7 @@ python -u run.py \
   --data custom \
   --features M \
   --seq_len 96 \
-  --label_len 48 \
+  --label_len 96 \
   --pred_len 192 \
   --e_layers 2 \
   --d_layers 1 \
@@ -44,11 +43,11 @@ python -u run.py \
   --enc_in 321 \
   --dec_in 321 \
   --c_out 321 \
+  --d_model 256 \
+  --d_ff 512 \
+  --top_k 5 \
   --des 'Exp' \
-  --itr 1 \
-  --p_hidden_dims 256 256 \
-  --p_hidden_layers 2 \
-  --d_model 2048
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -60,7 +59,7 @@ python -u run.py \
   --data custom \
   --features M \
   --seq_len 96 \
-  --label_len 48 \
+  --label_len 96 \
   --pred_len 336 \
   --e_layers 2 \
   --d_layers 1 \
@@ -68,11 +67,11 @@ python -u run.py \
   --enc_in 321 \
   --dec_in 321 \
   --c_out 321 \
+  --d_model 256 \
+  --d_ff 512 \
+  --top_k 5 \
   --des 'Exp' \
-  --itr 1 \
-  --p_hidden_dims 256 256 \
-  --p_hidden_layers 2 \
-  --d_model 2048
+  --itr 1
 
 python -u run.py \
   --task_name long_term_forecast \
@@ -84,7 +83,7 @@ python -u run.py \
   --data custom \
   --features M \
   --seq_len 96 \
-  --label_len 48 \
+  --label_len 96 \
   --pred_len 720 \
   --e_layers 2 \
   --d_layers 1 \
@@ -92,8 +91,8 @@ python -u run.py \
   --enc_in 321 \
   --dec_in 321 \
   --c_out 321 \
+  --d_model 256 \
+  --d_ff 512 \
+  --top_k 5 \
   --des 'Exp' \
-  --itr 1 \
-  --p_hidden_dims 256 256 \
-  --p_hidden_layers 2 \
-  --d_model 2048
+  --itr 1

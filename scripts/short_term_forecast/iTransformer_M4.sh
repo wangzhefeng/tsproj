@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=0
 
-model_name=FiLM
+model_name=iTransformer
 
 python -u run.py \
   --task_name short_term_forecast \
@@ -18,9 +18,7 @@ python -u run.py \
   --dec_in 1 \
   --c_out 1 \
   --batch_size 16 \
-  --d_model 32 \
-  --d_ff 32 \
-  --top_k 5 \
+  --d_model 512 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
@@ -42,9 +40,7 @@ python -u run.py \
   --dec_in 1 \
   --c_out 1 \
   --batch_size 16 \
-  --d_model 16 \
-  --d_ff 32 \
-  --top_k 5 \
+  --d_model 512 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
@@ -66,33 +62,7 @@ python -u run.py \
   --dec_in 1 \
   --c_out 1 \
   --batch_size 16 \
-  --d_model 64 \
-  --d_ff 64 \
-  --top_k 5 \
-  --des 'Exp' \
-  --itr 1 \
-  --learning_rate 0.001 \
-  --loss 'SMAPE'
-
-python -u run.py \
-  --task_name short_term_forecast \
-  --is_training 1 \
-  --root_path ./dataset/m4 \
-  --seasonal_patterns 'Daily' \
-  --model_id m4_Daily \
-  --model $model_name \
-  --data m4 \
-  --features M \
-  --e_layers 2 \
-  --d_layers 1 \
-  --factor 3 \
-  --enc_in 1 \
-  --dec_in 1 \
-  --c_out 1 \
-  --batch_size 16 \
-  --d_model 16 \
-  --d_ff 16 \
-  --top_k 5 \
+  --d_model 512 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
@@ -114,9 +84,29 @@ python -u run.py \
   --dec_in 1 \
   --c_out 1 \
   --batch_size 16 \
-  --d_model 32 \
-  --d_ff 32 \
-  --top_k 5 \
+  --d_model 512 \
+  --des 'Exp' \
+  --itr 1 \
+  --learning_rate 0.001 \
+  --loss 'SMAPE'
+
+python -u run.py \
+  --task_name short_term_forecast \
+  --is_training 1 \
+  --root_path ./dataset/m4 \
+  --seasonal_patterns 'Daily' \
+  --model_id m4_Daily \
+  --model $model_name \
+  --data m4 \
+  --features M \
+  --e_layers 2 \
+  --d_layers 1 \
+  --factor 3 \
+  --enc_in 1 \
+  --dec_in 1 \
+  --c_out 1 \
+  --batch_size 16 \
+  --d_model 512 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
@@ -138,9 +128,7 @@ python -u run.py \
   --dec_in 1 \
   --c_out 1 \
   --batch_size 16 \
-  --d_model 32 \
-  --d_ff 32 \
-  --top_k 5 \
+  --d_model 512 \
   --des 'Exp' \
   --itr 1 \
   --learning_rate 0.001 \
