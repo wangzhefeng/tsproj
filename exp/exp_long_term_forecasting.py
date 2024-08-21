@@ -23,12 +23,27 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         super(Exp_Long_Term_Forecast, self).__init__(args)
 
     def _build_model(self):
-        # 模型构建
+        """
+        模型构建
+        """ 
         model = self.model_dict[self.args.model].Model(self.args).float()
         # 多 GPU 训练
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids = self.args.device_ids)
         return model
+
+    def _get_data(self, flag):
+        """
+        数据集构建
+
+        Args:
+            flag (_type_): 任务类型, ["train", "val", "test"]
+
+        Returns:
+            _type_: Dataset, DataLoader
+        """
+        data_set, data_loader = data_provider(self.args, flag)
+        return data_set, data_loader
 
     def _select_optimizer(self):
         """
@@ -42,20 +57,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         评价指标
         """
         criterion = nn.MSELoss()
-        return criterion
-    
-    def _get_data(self, flag):
-        """
-        数据集构建
-
-        Args:
-            flag (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        data_set, data_loader = data_provider(self.args, flag)
-        return data_set, data_loader 
+        return criterion 
 
     def train(self, setting):
         # ------------------------------
@@ -77,7 +79,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 训练步数
         train_steps = len(train_loader)
         # 早停
-        early_stopping = EarlyStopping(patience = self.args.patience, verbose=True)
+        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
         # 优化器
         model_optim = self._select_optimizer()
         # 损失函数
@@ -166,7 +168,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # ------------------------------
         # 最优模型保存
         # ------------------------------
-        best_model_path = path + '/' + 'checkpoint.pth'
+        best_model_path = f"{path}/checkpoint.pth"
         self.model.load_state_dict(torch.load(best_model_path))
 
         return self.model

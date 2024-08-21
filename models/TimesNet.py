@@ -145,11 +145,10 @@ class Model(nn.Module):
         self.seq_len = configs.seq_len
         self.label_len = configs.label_len
         self.pred_len = configs.pred_len
+
         # stack TimesBlock for e_layers times to form the main part of TimesNet, named model
-        self.model = nn.ModuleList([
-            TimesBlock(configs)
-            for _ in range(configs.e_layers)
-        ])
+        self.model = nn.ModuleList([TimesBlock(configs) for _ in range(configs.e_layers)])
+
         # embedding & normalization
         # enc_in is the encoder input size, the number of features for a piece of data
         # d_model is the dimension of embedding
@@ -162,12 +161,15 @@ class Model(nn.Module):
         )
         self.layer = configs.e_layers  # num of encoder layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
+
         # define the some layers for different tasks
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.predict_linear = nn.Linear(self.seq_len, self.pred_len + self.seq_len)
             self.projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
+        
         if self.task_name == 'imputation' or self.task_name == 'anomaly_detection':
             self.projection = nn.Linear(configs.d_model, configs.c_out, bias=True)
+
         if self.task_name == 'classification':
             self.act = F.gelu
             self.dropout = nn.Dropout(configs.dropout)
