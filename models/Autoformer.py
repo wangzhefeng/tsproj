@@ -18,12 +18,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from layers.Autoformer_EncDec import (
-    Decoder, DecoderLayer, 
-    Encoder, EncoderLayer, 
-    my_Layernorm, 
-    series_decomp
-)
+from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
+                                      EncoderLayer, my_Layernorm,
+                                      series_decomp)
 from layers.Embed import DataEmbedding_wo_pos
 
 # global variable
