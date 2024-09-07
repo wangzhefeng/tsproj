@@ -1,14 +1,7 @@
 import os
 
 import torch
-
-# from models import (MICN, Autoformer, Crossformer, DLinear, ETSformer,
-#                     FEDformer, FiLM, FreTS, Informer, Koopa, LightTS,
-#                     MambaSimple, Nonstationary_Transformer, PatchTST,
-#                     Pyraformer, Reformer, SegRNN, TemporalFusionTransformer,
-#                     TiDE, TimeMixer, TimesNet, Transformer, TSMixer,
-#                     iTransformer)
-from models import TimesNet
+from models import TimesNet, Autoformer, DLinear, FEDformer
 
 
 class Exp_Basic(object):
@@ -19,11 +12,11 @@ class Exp_Basic(object):
         # 模型集
         self.model_dict = {
             'TimesNet': TimesNet,
-            # 'Autoformer': Autoformer,
+            'Autoformer': Autoformer,
             # 'Transformer': Transformer,
             # 'Nonstationary_Transformer': Nonstationary_Transformer,
-            # 'DLinear': DLinear,
-            # 'FEDformer': FEDformer,
+            'DLinear': DLinear,
+            'FEDformer': FEDformer,
             # 'Informer': Informer,
             # 'LightTS': LightTS,
             # 'Reformer': Reformer,
@@ -55,8 +48,8 @@ class Exp_Basic(object):
     def _acquire_device(self):
         if self.args.use_gpu:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu) if not self.args.use_multi_gpu else self.args.devices
-            device = torch.device('cuda:{}'.format(self.args.gpu))
-            print('Use GPU: cuda:{}'.format(self.args.gpu))
+            device = torch.device(f'cuda:{self.args.gpu}')
+            print(f'Use GPU: cuda:{self.args.gpu}')
         else:
             device = torch.device('cpu')
             print('Use CPU')

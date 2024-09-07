@@ -19,15 +19,11 @@ import logging
 import os
 import pathlib
 import sys
-from collections import OrderedDict
 from dataclasses import dataclass
-from glob import glob
 from urllib import request
 
 import numpy as np
 import pandas as pd
-import patoolib
-from tqdm import tqdm
 
 
 def url_file_name(url: str) -> str:

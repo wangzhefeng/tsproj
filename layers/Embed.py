@@ -65,14 +65,13 @@ class FixedEmbedding(nn.Module):
         w.require_grad = False
 
         position = torch.arange(0, c_in).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float()
-                    * -(math.log(10000.0) / d_model)).exp()
+        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
 
         w[:, 0::2] = torch.sin(position * div_term)
         w[:, 1::2] = torch.cos(position * div_term)
 
         self.emb = nn.Embedding(c_in, d_model)
-        self.emb.weight = nn.Parameter(w, requires_grad=False)
+        self.emb.weight = nn.Parameter(w, requires_grad = False)
 
     def forward(self, x):
         return self.emb(x).detach()
@@ -102,7 +101,7 @@ class TemporalEmbedding(nn.Module):
 
     def forward(self, x):
         x = x.long()
-        minute_x = self.minute_embed(x[:, :, 4]) if hasattr(self, 'minute_embed') else 0.
+        minute_x = self.minute_embed(x[:, :, 4]) if hasattr(self, 'minute_embed') else 0.0
         hour_x = self.hour_embed(x[:, :, 3])
         weekday_x = self.weekday_embed(x[:, :, 2])
         day_x = self.day_embed(x[:, :, 1])
@@ -127,7 +126,7 @@ class TimeFeatureEmbedding(nn.Module):
             'a': 1,
             'w': 2, 
             'd': 3, 
-            'b': 3
+            'b': 3,
         }
         d_inp = freq_map[freq]
         self.embed = nn.Linear(d_inp, d_model, bias = False)
@@ -216,6 +215,9 @@ class DataEmbedding_wo_pos(nn.Module):
 
 
 class PatchEmbedding(nn.Module):
+    """
+    TODO
+    """
     
     def __init__(self, d_model, patch_len, stride, padding, dropout):
         super(PatchEmbedding, self).__init__()

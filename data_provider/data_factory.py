@@ -24,32 +24,29 @@ data_dict = {
 }
 
 
-def data_provider(args, flag):
+def data_provider(args, flag: str):
     """
     数据集准备
 
     Args:
-        args (_type_): 参数集
-        flag (_type_): 任务标签
+        args (Dcit): 参数集
+        flag (str): 任务标签, "train", "val", "test"
 
     Returns:
         _type_: data_set, data_loader
     """
     # 数据集类
     Data = data_dict[args.data]
-    # TODO
+    # 是否对时间戳进行编码
     timeenc = 0 if args.embed != 'timeF' else 1
     # 区别在 test 和 train/valid 任务下是否进行 shuffle 数据
     shuffle_flag = False if (flag == 'test' or flag == 'TEST') else True
-    # TODO
+    # 是否丢弃最后一个 batch
     drop_last = False
     # batch size
     batch_size = args.batch_size
-    # 数据频率
-    freq = args.freq
     # 构建 Dataset 和 DataLoader
     if args.task_name == 'anomaly_detection':
-        drop_last = False
         # Dataset
         data_set = Data(
             args = args,
@@ -67,13 +64,13 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     elif args.task_name == 'classification':
-        drop_last = False
         # Dataset
         data_set = Data(
             args = args,
             root_path = args.root_path,
             flag = flag,
         )
+        print(flag, len(data_set))
         # DataLoader
         data_loader = DataLoader(
             data_set,
@@ -85,9 +82,6 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     else:
-        # TODO
-        if args.data == 'm4':
-            drop_last = False
         # Dataset
         data_set = Data(
             args = args,
@@ -97,9 +91,10 @@ def data_provider(args, flag):
             size = [args.seq_len, args.label_len, args.pred_len],
             features = args.features,
             target = args.target,
+            freq = args.freq,
+            seasonal_patterns = args.seasonal_patterns,
+            scale = args.scale,
             timeenc = timeenc,
-            freq = freq,
-            seasonal_patterns = args.seasonal_patterns
         )
         print(flag, len(data_set))
         # DataLoader
@@ -108,6 +103,6 @@ def data_provider(args, flag):
             batch_size = batch_size,
             shuffle = shuffle_flag,
             num_workers = args.num_workers,
-            drop_last = drop_last
+            drop_last = drop_last,
         )
         return data_set, data_loader

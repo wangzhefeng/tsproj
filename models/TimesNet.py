@@ -147,11 +147,13 @@ class Model(nn.Module):
         self.pred_len = configs.pred_len
 
         # stack TimesBlock for e_layers times to form the main part of TimesNet, named model
-        self.model = nn.ModuleList([TimesBlock(configs) for _ in range(configs.e_layers)])
+        self.model = nn.ModuleList([
+            TimesBlock(configs) for _ in range(configs.e_layers)
+        ])
 
         # embedding & normalization
-        # enc_in is the encoder input size, the number of features for a piece of data
-        # d_model is the dimension of embedding
+        # * enc_in is the encoder input size, the number of features for a piece of data
+        # * d_model is the dimension of embedding
         self.enc_embedding = DataEmbedding(
             configs.enc_in, 
             configs.d_model, 
@@ -166,10 +168,8 @@ class Model(nn.Module):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.predict_linear = nn.Linear(self.seq_len, self.pred_len + self.seq_len)
             self.projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
-        
         if self.task_name == 'imputation' or self.task_name == 'anomaly_detection':
-            self.projection = nn.Linear(configs.d_model, configs.c_out, bias=True)
-
+            self.projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
         if self.task_name == 'classification':
             self.act = F.gelu
             self.dropout = nn.Dropout(configs.dropout)
@@ -177,21 +177,28 @@ class Model(nn.Module):
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
         # Normalization from Non-stationary Transformer
-        means = x_enc.mean(1, keepdim=True).detach()
+        means = x_enc.mean(1, keepdim = True).detach()
         x_enc = x_enc - means
-        stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
+        
+        stdev = torch.sqrt(torch.var(x_enc, dim = 1, keepdim = True, unbiased = False) + 1e-5)
+        
         x_enc /= stdev
+        
         # embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
         enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # align temporal dimension
+        
         # TimesNet
         for i in range(self.layer):
             enc_out = self.layer_norm(self.model[i](enc_out))
+        
         # porject back
         dec_out = self.projection(enc_out)
+        
         # De-Normalization from Non-stationary Transformer
         dec_out = dec_out * (stdev[:, 0, :].unsqueeze(1).repeat(1, self.pred_len + self.seq_len, 1))
         dec_out = dec_out + (means[:, 0, :].unsqueeze(1).repeat(1, self.pred_len + self.seq_len, 1))
+        
         return dec_out
 
     def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):
@@ -250,7 +257,7 @@ class Model(nn.Module):
         output = self.projection(output)  # (batch_size, num_classes)
         return output
 
-    def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
+    def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask = None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             dec_out = self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
             return dec_out[:, -self.pred_len:, :]  # [B, L, D]

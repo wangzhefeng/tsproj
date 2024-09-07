@@ -28,16 +28,36 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def legendreDer(k, x):
+    """
+    TODO
+
+    Args:
+        k (_type_): _description_
+        x (_type_): _description_
+    """
     def _legendre(k, x):
         return (2 * k + 1) * eval_legendre(k, x)
 
     out = 0
     for i in np.arange(k - 1, -1, -2):
         out += _legendre(i, x)
+    
     return out
 
 
 def phi_(phi_c, x, lb = 0, ub = 1):
+    """
+    TODO
+
+    Args:
+        phi_c (_type_): _description_
+        x (_type_): _description_
+        lb (int, optional): _description_. Defaults to 0.
+        ub (int, optional): _description_. Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
     mask = np.logical_or(x < lb, x > ub) * 1.0
     return np.polynomial.polynomial.Polynomial(phi_c)(x) * (1 - mask)
 

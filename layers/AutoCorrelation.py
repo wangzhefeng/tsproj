@@ -31,9 +31,9 @@ class AutoCorrelation(nn.Module):
 
     def __init__(self, mask_flag = True, factor = 1, scale = None, attention_dropout = 0.1, output_attention = False):
         super(AutoCorrelation, self).__init__()
-        self.factor = factor
-        self.scale = scale
         self.mask_flag = mask_flag
+        self.factor = factor
+        self.scale = scale 
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 
@@ -58,6 +58,7 @@ class AutoCorrelation(nn.Module):
         for i in range(top_k):
             pattern = torch.roll(tmp_values, -int(index[i]), -1)
             delays_agg = delays_agg + pattern * (tmp_corr[:, i].unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1, head, channel, length))
+        
         return delays_agg
 
     def time_delay_agg_inference(self, values, corr):

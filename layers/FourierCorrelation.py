@@ -23,8 +23,8 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 def get_frequency_modes(seq_len, modes = 64, mode_select_method = 'random'):
     """
     get modes on frequency domain:
-    'random' means sampling randomly;
-    'else' means sampling the lowest modes;
+    * 'random' means sampling randomly;
+    * 'else' means sampling the lowest modes;
     """
     modes = min(modes, seq_len // 2)
     if mode_select_method == 'random':

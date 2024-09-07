@@ -18,7 +18,7 @@ class Model(nn.Module):
     Paper link: https://proceedings.mlr.press/v162/zhou22g.html
     """
 
-    def __init__(self, configs, version='fourier', mode_select='random', modes=32):
+    def __init__(self, configs, version = 'fourier', mode_select = 'random', modes = 32):
         """
         version: str, for FEDformer, there are two versions to choose, options: [Fourier, Wavelets].
         mode_select: str, for FEDformer, there are two mode selection method, options: [random, low].
@@ -86,7 +86,9 @@ class Model(nn.Module):
                 EncoderLayer(
                     AutoCorrelationLayer(
                         encoder_self_att,  # instead of multi-head attention in transformer
-                        configs.d_model, configs.n_heads),
+                        configs.d_model, 
+                        configs.n_heads
+                    ),
                     configs.d_model,
                     configs.d_ff,
                     moving_avg=configs.moving_avg,
@@ -102,10 +104,14 @@ class Model(nn.Module):
                 DecoderLayer(
                     AutoCorrelationLayer(
                         decoder_self_att,
-                        configs.d_model, configs.n_heads),
+                        configs.d_model, 
+                        configs.n_heads
+                    ),
                     AutoCorrelationLayer(
                         decoder_cross_att,
-                        configs.d_model, configs.n_heads),
+                        configs.d_model, 
+                        configs.n_heads
+                    ),
                     configs.d_model,
                     configs.c_out,
                     configs.d_ff,

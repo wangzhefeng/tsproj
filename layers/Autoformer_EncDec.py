@@ -12,6 +12,8 @@
 # ***************************************************
 
 # python libraries
+from typing import List
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,13 +37,14 @@ class my_Layernorm(nn.Module):
         return x_hat - bias
 
 
-class moving_avg(nn.Module):
+class __moving_avg(nn.Module):
     """
     Moving average block to highlight the trend of time series
     """
 
     def __init__(self, kernel_size, stride):
-        super(moving_avg, self).__init__()
+        super(__moving_avg, self).__init__()
+        
         self.kernel_size = kernel_size
         self.avg = nn.AvgPool1d(kernel_size = kernel_size, stride = stride, padding = 0)
 
@@ -50,8 +53,10 @@ class moving_avg(nn.Module):
         front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         x = torch.cat([front, x, end], dim = 1)
+        # avgpool1d
         x = self.avg(x.permute(0, 2, 1))
         x = x.permute(0, 2, 1)
+
         return x
 
 
@@ -62,7 +67,7 @@ class series_decomp(nn.Module):
 
     def __init__(self, kernel_size):
         super(series_decomp, self).__init__()
-        self.moving_avg = moving_avg(kernel_size, stride = 1)
+        self.moving_avg = __moving_avg(kernel_size, stride = 1)
 
     def forward(self, x):
         moving_mean = self.moving_avg(x)
@@ -75,14 +80,12 @@ class series_decomp_multi(nn.Module):
     Multiple Series decomposition block from FEDformer
     """
 
-    def __init__(self, kernel_size):
+    def __init__(self, kernel_size: List):
         super(series_decomp_multi, self).__init__()
-        self.kernel_size = kernel_size
         self.series_decomp = [series_decomp(kernel) for kernel in kernel_size]
 
     def forward(self, x):
-        moving_mean = []
-        res = []
+        res, moving_mean = [], []
         for func in self.series_decomp:
             sea, moving_avg = func(x)
             moving_mean.append(moving_avg)
@@ -90,6 +93,7 @@ class series_decomp_multi(nn.Module):
 
         sea = sum(res) / len(res)
         moving_mean = sum(moving_mean) / len(moving_mean)
+
         return sea, moving_mean
 
 
@@ -230,10 +234,14 @@ class Decoder(nn.Module):
 
 
 
-
 # 测试代码 main 函数
 def main():
-    pass
+    x = torch.randn(1, 2, 15)
+    print(x)
+
+    mv = __moving_avg(kernel_size=3, stride=1)
+    x_mean = mv(x)
+    # print(x)
 
 if __name__ == "__main__":
     main()
