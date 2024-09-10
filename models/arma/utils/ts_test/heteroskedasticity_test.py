@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : heteroskedasticity.py
+# * File        : heteroskedasticity_test.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2024-09-08
@@ -98,8 +98,6 @@ class Heteroskedasticity:
         }
  
         return test_results
-
-
 
 
 # 测试代码 main 函数

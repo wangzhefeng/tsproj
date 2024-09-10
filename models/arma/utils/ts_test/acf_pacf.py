@@ -37,11 +37,11 @@ def get_acf(series: pd.Series, is_visual: bool = True):
         series (pd.Series): _description_
         is_visual (bool): _description_
     """
-    data = pm.c(series.values)
-    acf_value = pm.acf(data)
+    series = pm.c(series.values) if isinstance(series, pd.Series) else series
+    acf_value = pm.acf(series)
 
     if is_visual:
-        pm.plot_acf(data)
+        pm.plot_acf(series)
      
     return acf_value
 
@@ -54,53 +54,40 @@ def get_pacf(series: pd.Series, is_visual: bool = True):
         series (pd.Series): _description_
         is_visual (bool): _description_
     """
-    data = pm.c(series.values)
-    pacf_value = pm.pacf(data)
+    series = pm.c(series.values) if isinstance(series, pd.Series) else series
+    pacf_value = pm.pacf(series)
 
     if is_visual:
-        pm.plot_pacf(data)
+        pm.plot_pacf(series)
     
     return pacf_value
 
 
-def acf_pacf(series: pd.Series, nlags: int = 20):
-    lag_acf = sm.tsa.stattools.acf(series, nlags = nlags, adjust = True)
+def get_acf_pacf(series: pd.Series, nlags: int = 3):
+    """
+    ACF，PACF
+    """
+    lag_acf = sm.tsa.stattools.acf(series, nlags = nlags)
     lag_pacf = sm.tsa.stattools.pacf(series, nlags = nlags, method = "ols")
 
     plt.subplot(121)
     plt.plot(lag_acf)
     plt.axhline(y = 0, linestyle = "--", color = "gray")
-    plt.axhline(y = - 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
-    plt.axhline(y = 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
+    # plt.axhline(y = - 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
+    # plt.axhline(y = 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
     plt.title("Autocorrelation Function")
 
     plt.subplot(122)
     plt.plot(lag_pacf)
     plt.axhline(y = 0, linestyle = "--", color = "gray")
-    plt.axhline(y = - 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
-    plt.axhline(y = 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
+    # plt.axhline(y = - 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
+    # plt.axhline(y = 1.96 / np.sqrt(len(series)), linestyle = "", color = "gray")
     plt.title("Partial Autocorrelation Function")
 
     plt.tight_layout()
+    plt.show()
 
     return lag_acf, lag_pacf
-
-
-def acf_pacf_plot(series):
-    """
-    # acf, pacf plot
-
-    Args:
-        series (_type_): _description_
-    """
-    fig, ax = plt.subplots(4, 2)
-    fig.subplots_adjust(hspace = 0.5)
-
-    plot_acf(series, ax = ax[0][0])
-    ax[0][0].set_title('ACF')
-
-    plot_pacf(series, ax = ax[0][1])
-    ax[0][1].set_title('PACF')
 
 
 
@@ -152,13 +139,19 @@ def main():
     plt.show()
     """
     # vecvor
-    x = pm.c(1, 2, 3, 4, 5, 6, 7)
-    print(x)
-    acf_value = get_acf(x)
-    print(acf_value)
+    # x = pm.c(1, 2, 3, 4, 5, 6, 7)
+    # print(x)
+    # acf_value = get_acf(x)
+    # print(acf_value)
 
-    pacf_value = get_acf(x)
-    print(pacf_value)
+    # pacf_value = get_pacf(x)
+    # print(pacf_value)
+    
+    # ------------------------------
+    # 
+    # ------------------------------
+    x = pd.Series([1, 2, 3, 4, 5, 6, 7])
+    get_acf_pacf(x)
 
 if __name__ == "__main__":
     main()

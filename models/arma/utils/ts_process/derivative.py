@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
-# * File        : data_processing.py
+# * File        : derivative.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2022-07-17
@@ -16,9 +15,9 @@
 import pysindy as ps
 
 
-def GetSeriesDerivative(x_data, y_data, dev_method="Spline"):
+def GetSeriesDerivative(x_data, y_data, dev_method = "Spline"):
     """
-    依据给定方法求y_data序列对x_data的导数
+    依据给定方法求 y_data 序列对 x_data 的导数
     Parameters:
         x_data: 变量x序列
         y_data: 因变量序列

@@ -1,40 +1,28 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
-# * File        : main.py
+# * File        : statsforecast_fit.py
 # * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2022-10-29
-# * Version     : 0.1.102923
+# * Email       : zfwang7@gmail.com
+# * Date        : 2024-09-11
+# * Version     : 1.0.091102
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
 # ***************************************************
 
+__all__ = []
 
 # python libraries
 import os
 import sys
-
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn
-seaborn.set()
-from cesium import datasets
-
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-PYTHONHTTPSVERIFY = 0
-
-
-eeg = datasets.fetch_andrzejak()
-# print(eeg)
-print(eeg.keys())
-
-
-
 
 
 
@@ -46,7 +34,5 @@ print(eeg.keys())
 def main():
     pass
 
-
 if __name__ == "__main__":
     main()
-

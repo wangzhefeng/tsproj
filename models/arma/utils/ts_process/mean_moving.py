@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
-# * File        : average_smoothing.py
+# * File        : mean_moving.py
 # * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2022-11-10
-# * Version     : 0.1.111023
-# * Description : Average Moving Smoothing(移动平均)
+# * Email       : zfwang7@gmail.com
+# * Date        : 2024-09-10
+# * Version     : 1.0.091023
+# * Description : Mean Moving Smoothing(移动平均)
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
 # ***************************************************
 
+__all__ = []
+
+# python libraries
+import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
 import numpy as np
+
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def average_moving_smoothing(signal, kernel_size = 3, stride = 1):
@@ -34,10 +45,10 @@ def weight_average_moving_smoothing(signal, kernel_size = 3, stride = 1):
 
 
 
+
 # 测试代码 main 函数
 def main():
     pass
 
 if __name__ == "__main__":
     main()
-

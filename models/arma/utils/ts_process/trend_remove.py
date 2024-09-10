@@ -27,15 +27,17 @@ def trend_remove(ts: pd.DataFrame, method: str, chart: bool = False) -> None:
     """
     趋势性去除
     """
+    # 平方跟活 N 次根变换
+    # 差分
+    # 对数转换
     if method == "log":
-        # 对数转换消除趋势
         ts_log = np.log(ts)
         if chart:
             plt.plot(ts_log)
             plt.show()
         return ts_log
+    # 移动平均消除趋势
     elif method == "moving":
-        # 移动平均消除趋势
         ts_log = np.log(ts)
         moving_avg = ts_log.rolling(window = 12).mean()
         if chart:
@@ -49,7 +51,8 @@ def trend_remove(ts: pd.DataFrame, method: str, chart: bool = False) -> None:
 
 # 测试代码 main 函数
 def main():
-    pass
+    ts = None
+    trend_remove(ts, method = "log", chart = False)
 
 if __name__ == "__main__":
     main()

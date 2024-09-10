@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : Theta_model.py
+# * File        : var_model.py
 # * Author      : Zhefeng Wang
 # * Email       : zfwang7@gmail.com
 # * Date        : 2024-09-10
 # * Version     : 1.0.091022
 # * Description : description
-# * Link        : link
+# * Link        : 向量自回归模型(VAR)
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # * TODO        : 1.
 # ***************************************************

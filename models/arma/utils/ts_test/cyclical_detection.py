@@ -1,32 +1,38 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
-# * File        : timeseries_fft.py
+# * File        : cyclical_detection.py
 # * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2022-02-13
-# * Version     : 0.1.021320
-# * Description : description
+# * Email       : zfwang7@gmail.com
+# * Date        : 2024-09-11
+# * Version     : 1.0.091100
+# * Description : 周期检测
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
 # ***************************************************
 
+__all__ = []
 
 # python libraries
-from itertools import cycle
 import os
 import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+import logging
+from datetime import timedelta
+from typing import List, Dict
+
 import numpy as np
 import pandas as pd
-from datetime import timedelta
-import logging
-from typing import List, Dict
 # 傅里叶变换
 from scipy.fftpack import fft, fftfreq
 # 自相关系数
 from statsmodels.tsa.stattools import acf
 
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def get_cycle_fft(data):
@@ -103,4 +109,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

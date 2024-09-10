@@ -1,29 +1,31 @@
 # -*- coding: utf-8 -*-
 
-
 # ***************************************************
-# * File        : guid.py
+# * File        : neuralprophet_fit.py
 # * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2023-03-09
-# * Version     : 0.1.030922
+# * Email       : zfwang7@gmail.com
+# * Date        : 2024-09-10
+# * Version     : 1.0.091022
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
 # ***************************************************
 
+__all__ = []
 
 # python libraries
 import os
 import sys
-
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+    
 import pandas as pd
-
 from neuralprophet import NeuralProphet
 from neuralprophet import set_random_seed
+
 set_random_seed(0)
-
-
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
@@ -72,4 +74,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
