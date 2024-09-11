@@ -29,6 +29,9 @@ from datasetsforecast.m4 import M4
 from utilsforecast.plotting import plot_series
 from mlforecast import MLForecast
 from mlforecast.target_transforms import Differences
+from mlforecast.lag_transforms import ExpandingMean, RollingMean
+from numba import njit
+from window_ops.rolling import rolling_mean
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -83,6 +86,25 @@ prep = fcst.preprocess(df)
 print(prep)
 # lags features 与预测变量的相关性
 print(prep.drop(columns=["unique_id", "ds"]).corr()["y"])
+
+# Lag transforms
+@njit
+def rolling_mean_48(x):
+    return rolling_mean(x, window_size = 48)
+
+fcst = MLForecast(
+    model = [],
+    freq = 1,
+    target_transforms = [Differences([24])],
+    lag_transforms = {
+        1: [ExpandingMean()],
+        24: [RollingMean(window_size = 48), rolling_mean_48]
+    },
+)
+prep = fcst.preprocess(df)
+print(prep)
+
+# Date features
 
 
 # ------------------------------
