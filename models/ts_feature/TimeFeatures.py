@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : timefeatures.py
+# * File        : TimeFeatures.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2023-04-19
@@ -31,98 +31,83 @@ from models.ts_feature.tools import is_weekend
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def feature_engineer(df):
-    """
-    特征工程
-    1. 时间戳特征
-    2. 差分序列
-    3. 同时刻风场、邻近风机的特均值、标准差
-    """
-    df["month"] = df.DATATIME.apply(lambda x: x.month, 1)
-    df["day"] = df.DATATIME.apply(lambda x: x.day, 1)
-    df["weekday"] = df.DATATIME.apply(lambda x: x.weekday(), 1)
-    df["hour"] = df.DATATIME.apply(lambda x: x.hour, 1)
-    df["minute"] = df.DATATIME.apply(lambda x: x.minute, 1)
-
-    return df
-
-
-def time_static_features(series, 
-                         datetime_format: str = '%Y-%m-%d %H:%M:%S', 
-                         datetime_is_index: bool = False, 
-                         datetime_name: str = None, 
-                         target_name: str = None,
+def time_static_features(df,  
+                         dt_is_index: bool = False, 
+                         dt_name: str = None,
+                         dt_format: str = "%Y-%m-%d %H:%M:%S", 
                          features: List = []) -> pd.DataFrame:
     """
     时间特征提取
 
     Args:
-        data ([type]): 时间序列
+        df ([type]): 时间序列
         datetime_format ([type]): 时间特征日期时间格式
         datetime_is_index (bool, optional): 时间特征是否为索引. Defaults to False.
         datetime_name ([type], optional): 时间特征名称. Defaults to None.
         features: 最后返回的特征名称列表
     """
-    data = series.copy()
+    # 数据备份
+    df = df.copy()
+    
     # 日期时间特征处理
-    if datetime_is_index:
-        data["DT"] = data.index
-        data["DT"] = pd.to_datetime(data["DT"], format = datetime_format)
-    else:
-        data[datetime_name] = pd.to_datetime(data[datetime_name], format = datetime_format)
-        data["DT"] = data[datetime_name]
+    dt_col = df.index if dt_is_index else df[dt_name]
+    df["ds"] = pd.to_datetime(dt_col, format = dt_format)
+    
     # 时间日期特征
-    data["date"] = data["DT"].apply(lambda x: x.date)  # 日期
-    data["time"] = data["DT"].apply(lambda x: x.time)  # 时间
-    data["year"] = data["DT"].apply(lambda x: x.year)  # 年
-    data["is_year_start"] = data["DT"].apply(lambda x: x.is_year_start)  # 是否年初
-    data["is_year_end"] = data["DT"].apply(lambda x: x.is_year_end)  # 是否年末
-    data["is_leap_year"] = data["DT"].apply(lambda x: x.is_leap_year)  # 是否是闰年
-    data["quarter"] = data["DT"].apply(lambda x: x.quarter)  # 季度
-    data["is_quarter_start"] = data["DT"].apply(lambda x: x.is_quarter_start)  # 是否季度初
-    data["is_quarter_end"] = data["DT"].apply(lambda x: x.is_quarter_end)  # 是否季度末
+    df["date"] = df["ds"].dt.date  # 日期
+    df["time"] = df["ds"].dt.time  # 时间
+    df["year"] = df["ds"].dt.year  # 年
+    df["is_year_start"] = df["ds"].dt.is_year_start  # 是否年初
+    df["is_year_end"] = df["ds"].dt.is_year_end  # 是否年末
+    df["is_leap_year"] = df["ds"].dt.is_leap_year  # 是否是闰年
+    df["quarter"] = df["ds"].dt.quarter  # 季度
+    df["is_quarter_start"] = df["ds"].dt.is_quarter_start  # 是否季度初
+    df["is_quarter_end"] = df["ds"].dt.is_quarter_end  # 是否季度末
     # TODO 季节
     # TODO 业务季度
-    data["month"] = data["DT"].apply(lambda x: x.month)  # 月
-    data["is_month_start"] = data["DT"].apply(lambda x: x.is_month_start)  # 是否月初
-    data["is_month_end"] = data["DT"].apply(lambda x: x.is_month_end)  # 是否月末
-    data["daysinmonth"] = data["DT"].apply(lambda x: x.daysinmonth)  # 每个月的天数
+    df["month"] = df["ds"].dt.month  # 月
+    df["is_month_start"] = df["ds"].dt.is_month_start  # 是否月初
+    df["is_month_end"] = df["ds"].dt.is_month_end  # 是否月末
+    df["daysinmonth"] = df["ds"].dt.daysinmonth  # 每个月的天数
     # TODO 每个月中的工作日天数
     # TODO 每个月中的休假天数
     # TODO 是否夏时制
-    data["weekofyear"] = data["DT"].apply(lambda x: x.isocalendar().week)  # 一年的第几周
-    # TODO 一月中的第几周
-    data["dayofyear"] = data["DT"].apply(lambda x: x.dayofyear)  # 一年的第几天
-    data["dayofmonth"] = data["DT"].apply(lambda x: x.day)  # 日(一月中的第几天)
-    data["dayofweek"] = data["DT"].apply(lambda x: x.dayofweek)  # 一周的第几天
-    data["is_weekend"] = data['dayofweek'].apply(is_weekend)  # 是否周末
-    # TODO data["is_holiday"] = data["DT"].apply(is_holiday)  # 是否放假/是否工作日/是否节假日
+    df["weekofyear"] = df["ds"].dt.isocalendar().week  # 一年的第几周
+    # TODO df["weekofmonth"] = df["ds"].apply(lambda x: x.weekofmonth(), 1)  # 一月中的第几周
+    df["dayofyear"] = df["ds"].dt.dayofyear  # 一年的第几天
+    df["dayofmonth"] = df["ds"].dt.day  # 日(一月中的第几天)
+    df["dayofweek"] = df["ds"].dt.dayofweek  # 一周的第几天
+    df["weekday"] = df["ds"].apply(lambda x: x.weekday(), 1)  # 周几
+    df["is_weekend"] = df['dayofweek'].apply(is_weekend, 1)  # 是否周末
+    # TODO df["is_holiday"] = df["ds"].apply(is_holiday, 1)  # 是否放假/是否工作日/是否节假日 
     # TODO 节假日连续天数
     # TODO 节假日前第 n 天
     # TODO 节假日第 n 天
     # TODO 节假日后第 n 天
-    # TODOdata["is_tiaoxiu"] = data["DT"].apply(is_tiaoxiu)  # 是否调休
-    data["hour"] = data["DT"].apply(lambda x: x.hour)  # 时(一天过去了几分钟)
-    data["minute"] = data["DT"].apply(lambda x: x.minute)  # 分
-    # TODO data["past_minutes"] = data["DT"].apply(past_minutes)  # 一天过去了几分钟
-    data["second"] = data["DT"].apply(lambda x: x.second)  # 秒
-    data["microsecond"] = data["DT"].apply(lambda x: x.microsecond)  # 微妙
-    data["nanosecond"] = data["DT"].apply(lambda x: x.nanosecond)  # 纳秒
-
-    # TODO data["time_period"] = data["DT"].apply(time_period)  # 一天的哪个时间段
-    data["day_high"] = data["hour"].apply(lambda x: 0 if 0 < x < 8 else 1)  # 是否为高峰期
-    # TODO data["is_work"] = data["hour"].apply(is_work)  # 该时间点是否营业/上班
+    # TODO df["is_tiaoxiu"] = df["ds"].apply(is_tiaoxiu, 1)  # 是否调休
+    df["hour"] = df["ds"].dt.hour  # 时(一天过去了几小时)
+    df["minute"] = df["ds"].dt.minute  # 分
+    # TODO df["past_minutes"] = df["ds"].apply(past_minutes, 1)  # 一天过去了几分钟
+    df["second"] = df["ds"].dt.second  # 秒
+    df["microsecond"] = df["ds"].dt.microsecond  # 微妙
+    df["nanosecond"] = df["ds"].dt.nanosecond  # 纳秒
+    # TODO df["time_period"] = df["ds"].apply(time_period, 1)  # 一天的哪个时间段
+    # TODO df["day_high"] = df["hour"].apply(lambda x: 0 if 0 < x < 8 else 1, 1)  # 是否为高峰期
+    # TODO df["is_work"] = df["hour"].apply(is_work, 1)  # 该时间点是否营业/上班
     
-    del data["DT"]
+    # 删除时间列
+    del df["ds"]
+    
+    # 数据特征筛选
     if features == []:
-        selected_features = data
+        selected_df = df
     else:
-        selected_features = data[features]
-        
-    return selected_features
+        selected_df = df[features]
+     
+    return selected_df
 
 
-def time_dynamic_features(series, 
+def time_dynamic_features(df, 
                           n_lag: int = 1, 
                           n_fut: int = 1, 
                           selLag = None, 
@@ -149,11 +134,15 @@ def time_dynamic_features(series,
                 (t+1) is from the next period.
         (3) This is an extension of Jason Brownlee's series_to_supervised() function, customized for MFI use
     """
-    data = series.copy()
-
-    n_vars = 1 if type(data) is list else data.shape[1]
-    df = pd.DataFrame(data)
+    # 数据备份
+    df = df.copy()
+    # 特征个数
+    n_vars = 1 if type(df) is list else df.shape[1]
+    # 转换为 pandas.DataFrame
+    df = pd.DataFrame(df)
+    # 特征名称
     origNames = df.columns
+
     cols, names = list(), list()
     # include all current period attributes
     cols.append(df.shift(0))
@@ -200,7 +189,6 @@ def time_dynamic_features(series,
     return agg
 
 
-# TODO
 def get_time_sin_cos(data: pd.DataFrame, col: str, n: int, one_hot: bool = False, drop: bool = True):
     """
     构造时间特征
@@ -229,24 +217,56 @@ def get_time_sin_cos(data: pd.DataFrame, col: str, n: int, one_hot: bool = False
     return data
 
 
-# TODO
-def gen_lag_features(data, cycle):
+# ------------------------------
+# 
+# ------------------------------
+def time_features(df, timeenc = 1, freq = "h"):
     """
-    时间序列滞后性特征
-        - 二阶差分
-    Args:
-        data ([type]): 时间序列
-        cycle ([type]): 时间序列周期
+    > `time_features` takes in a `df` dataframe with a 'date' column 
+    > and extracts the date down to `freq` where freq can be any of the 
+    > following if `timeenc` is 0: 
+    > * m - [month]
+    > * w - [month]
+    > * d - [month, day, weekday]
+    > * b - [month, day, weekday]
+    > * h - [month, day, weekday, hour]
+    > * t - [month, day, weekday, hour, *minute]
+    > 
+    > If `timeenc` is 1, a similar, but different list of `freq` values 
+    > are supported (all encoded between [-0.5 and 0.5]): 
+    > * Q - [month]
+    > * M - [month]
+    > * W - [Day of month, week of year]
+    > * D - [Day of week, day of month, day of year]
+    > * B - [Day of week, day of month, day of year]
+    > * H - [Hour of day, day of week, day of month, day of year]
+    > * T - [Minute of hour*, hour of day, day of week, day of month, day of year]
+    > * S - [Second of minute, minute of hour, hour of day, day of week, day of month, day of year]
+
+    *minute returns a number from 0-3 corresponding to the 15 minute period it falls into.
     """
-    # 序列平稳化, 季节性差分
-    series_diff = data.diff(cycle)
-    series_diff = series_diff[cycle:]
-    # 监督学习的特征
-    for i in range(cycle, 0, -1):
-        series_diff["t-" + str(i)] = series_diff.shift(i).values[:, 0]
-    series_diff["t"] = series_diff.values[:, 0]
-    series_diff = series_diff[cycle + 1:]
-    return series_diff
+    if timeenc == 0:
+        df['month'] = df.date.apply(lambda row: row.month, 1)
+        df['day'] = df.date.apply(lambda row: row.day, 1)
+        df['weekday'] = df.date.apply(lambda row: row.weekday(), 1)
+        df['hour'] = df.date.apply(lambda row: row.hour, 1)
+        df['minute'] = df.date.apply(lambda row: row.minute, 1)
+        df['minute'] = df.minute.map(lambda x: x // 15)
+        freq_map = {
+            'y': [],
+            'm': ['month'],
+            'w': ['month', "day"],
+            'd': ['month', 'day', 'weekday'],
+            'b': ['month', 'day', 'weekday'],
+            'h': ['month', 'day', 'weekday', 'hour'],
+            't': ['month', 'day', 'weekday', 'hour', 'minute'],
+        }
+        return df[freq_map[freq.lower()]].values
+    elif timeenc == 1:
+        df = pd.to_datetime(df.date.values)
+        return np.vstack([
+            feat(df) for feat in time_features_from_frequency_str(freq)
+        ]).transpose(1, 0)
 
 
 class TimeFeature:
@@ -392,69 +412,33 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     raise RuntimeError(supported_freq_msg)
 
 
-def time_features(dates, timeenc = 1, freq = "h"):
-    """
-    > `time_features` takes in a `dates` dataframe with a 'dates' column 
-    > and extracts the date down to `freq` where freq can be any of the 
-    > following if `timeenc` is 0: 
-    > * m - [month]
-    > * w - [month]
-    > * d - [month, day, weekday]
-    > * b - [month, day, weekday]
-    > * h - [month, day, weekday, hour]
-    > * t - [month, day, weekday, hour, *minute]
-    > 
-    > If `timeenc` is 1, a similar, but different list of `freq` values 
-    > are supported (all encoded between [-0.5 and 0.5]): 
-    > * Q - [month]
-    > * M - [month]
-    > * W - [Day of month, week of year]
-    > * D - [Day of week, day of month, day of year]
-    > * B - [Day of week, day of month, day of year]
-    > * H - [Hour of day, day of week, day of month, day of year]
-    > * T - [Minute of hour*, hour of day, day of week, day of month, day of year]
-    > * S - [Second of minute, minute of hour, hour of day, day of week, day of month, day of year]
-
-    *minute returns a number from 0-3 corresponding to the 15 minute period it falls into.
-    """
-    if timeenc == 0:
-        dates['month'] = dates.date.apply(lambda row: row.month, 1)
-        dates['day'] = dates.date.apply(lambda row: row.day, 1)
-        dates['weekday'] = dates.date.apply(lambda row: row.weekday(), 1)
-        dates['hour'] = dates.date.apply(lambda row: row.hour, 1)
-        dates['minute'] = dates.date.apply(lambda row: row.minute, 1)
-        dates['minute'] = dates.minute.map(lambda x: x // 15)
-        freq_map = {
-            'y':[],
-            'm':['month'],
-            'w':['month'],
-            'd':['month', 'day', 'weekday'],
-            'b':['month', 'day', 'weekday'],
-            'h':['month', 'day', 'weekday', 'hour'],
-            't':['month', 'day', 'weekday', 'hour', 'minute'],
-        }
-        return dates[freq_map[freq.lower()]].values
-    if timeenc == 1:
-        dates = pd.to_datetime(dates.date.values)
-        return np.vstack([
-            feat(dates) for feat in time_features_from_frequency_str(freq)
-        ]).transpose(1, 0)
-
-
-
 
 # 测试代码 main 函数
-def main():
-    # dates = pd.to_datetime([
-    #     "2023-01-01 01:01:05", "2023-01-01 01:01:10", 
-    #     "2023-01-01 01:01:15", "2023-01-01 01:01:20", 
-    #     "2023-01-01 01:01:25"
-    # ])
-    # res = time_features(dates, freq = "5s")
-    # print(res)
-    # res2 = time_features_from_frequency_str("5s")
+def main(): 
+    df = pd.DataFrame({
+        "date": pd.to_datetime([
+            "2023-01-01 01:01:05", 
+            "2023-01-01 01:01:10", 
+            "2023-01-01 01:01:15", 
+            "2023-01-01 01:01:20", 
+            "2023-01-01 01:01:25"
+        ]),
+        "y": range(5),
+    })
+    print(df)
+    res1 = time_static_features(df, dt_is_index=False, dt_name= "date", dt_format="%Y-%m-%d %H:%M:%S", features=[])
+    print()
+    print(res1)
+    print(res1.columns)
+    
+    res2 = time_features(df, timeenc = 1, freq = "t")
     # print(res2)
-
+    
+    res3 = time_features_from_frequency_str("t")
+    # print(res3)
+    # ------------------------------
+    # 
+    # ------------------------------
     # data = None
     # data_df = gen_time_features(data)
     # data_df = get_time_fe(data_df, 'hour', n = 24, one_hot = False, drop = False)
@@ -463,7 +447,9 @@ def main():
     # data_df = get_time_fe(data_df, 'season', n = 4, one_hot = True, drop = True)
     # data_df = get_time_fe(data_df, 'month', n = 12, one_hot = True, drop = True)
     # data_df = get_time_fe(data_df, 'weekofyear', n = 53, one_hot = False, drop = True)
-
+    # ------------------------------
+    # 
+    # ------------------------------
     # # data
     # series = pd.read_csv(
     #     "/Users/zfwang/machinelearning/datasets/car-sales.csv", 
@@ -482,7 +468,7 @@ def main():
     # )
     # ts2df.analysis_features_select(series, "Sales")
     # ts2df.features_select(series, "Sales")
-    pass
+    # pass
 
 if __name__ == "__main__":
     main()

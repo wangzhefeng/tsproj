@@ -38,6 +38,25 @@ class LagFeatures:
         self.data = self.data[data_columns]
 
 
+def gen_lag_features(data, cycle):
+    """
+    时间序列滞后性特征
+        - 二阶差分
+    Args:
+        data ([type]): 时间序列
+        cycle ([type]): 时间序列周期
+    """
+    # 序列平稳化, 季节性差分
+    series_diff = data.diff(cycle)
+    series_diff = series_diff[cycle:]
+    # 监督学习的特征
+    for i in range(cycle, 0, -1):
+        series_diff["t-" + str(i)] = series_diff.shift(i).values[:, 0]
+    series_diff["t"] = series_diff.values[:, 0]
+    series_diff = series_diff[cycle + 1:]
+    return series_diff
+
+
 
 
 # 测试代码 main 函数
