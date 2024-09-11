@@ -27,9 +27,25 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 plt.style.use("fivethirtyeight")
+color_pal = [
+    "#F8766D", "#D39200", "#93AA00",
+    "#00BA38", "#00C19F", "#00B9E3",
+    "#619CFF", "#DB72FB"
+]
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
+
+# ------------------------------
+# data
+# ------------------------------
+# data load
+df = pd.read_csv("PJME_hourly.csv", index_col=[0], parse_dates=[0])
+df.columns = ["y"]
+df.index.name = "ds"
+# data visual
+df.plot(style='.', figsize=(15,5), color=color_pal[1], title='PJM East')
+plt.show()
 
 
 
