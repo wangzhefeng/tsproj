@@ -38,36 +38,6 @@ plt.rcParams["figure.figsize"] = 15, 6
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def stationarity_test(ts):
-    """
-    ADFuller 平稳性检验
-
-    Args:
-        ts (_type_): _description_
-    """
-    # rolling statistics
-    rollmean = pd.Series.rolling(ts, window = 12).mean()
-    rollstd = pd.Series.rolling(ts, window = 12).std()
-
-    orig = plt.plot(ts, color = "blue", label = "Original")
-    mean = plt.plot(rollmean, color = "red", label = "Rolling mean")
-    std = plt.plot(rollstd, color = "black", label = "Rolling std")
-    plt.legend(loc = "best")
-    plt.title("Rolling mean & Standard Deviation")
-    plt.show()
-
-    # Dickey Fuller test
-    print("Results of Dickey-Fuller Test:")
-    dftest = adfuller(ts, autolag = "AIC")
-    dfountput = pd.Series(dftest[0:4], 
-                        index = ["Test Statistic", 
-                                "p-value", 
-                                "#lag used", 
-                                "Number of observation used"])
-    for key, value in dftest[4].items():
-        dfountput["Critical Value(%s)" % key] = value
-
-
 def arima_performance(data, order1):
     model = ARIMA(data, order = order1)
     results_arima = model.fit(disp = -1)

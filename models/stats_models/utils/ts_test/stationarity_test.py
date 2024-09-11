@@ -118,7 +118,6 @@ def stationarity_test(series):
     assert n_adf == n_kpss == n_pp == 0
 
 
-# TODO
 def stationarity_test(timeseries, window: int = 12):
     """
     平稳性检验
@@ -127,6 +126,8 @@ def stationarity_test(timeseries, window: int = 12):
     # determing rolling statistics
     rolmean = timeseries.rolling(window = window).mean()
     rolstd = timeseries.rolling(window = window).std()
+    # rollmean = pd.Series.rolling(ts, window = 12).mean()
+    # rollstd = pd.Series.rolling(ts, window = 12).std()
     
     # plot rolling statistics
     orig = plt.plot(timeseries, color = "blue", label = "Original")
@@ -153,16 +154,9 @@ def stationarity_test(timeseries, window: int = 12):
     print(dfoutput)
 
 
-
-
-
-
-
-
 __all__ = [
     stationarity_test,
 ]
-
 
 
 # 测试代码 main 函数
