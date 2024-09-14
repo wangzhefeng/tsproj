@@ -38,21 +38,28 @@ print(df.shape)
 
 # model
 m = NeuralProphet()
+m.set_plotting_backend("plotly-static")
 
 # train and test data
 df_train, df_test = m.split_df(df, valid_p = 0.2)
 
 # model train
 metrics = m.fit(df_train, validation_df = df_test)
+with pd.option_context("display.max_rows", None, "display.max_columns", None):
+    print(metrics)
 
+'''
 # model validation
-# m = NeuralProphet()
-# train_metrics = m.fit(df_trian)
-# test_metrics = m.fit(df_test)
+m = NeuralProphet()
+train_metrics = m.fit(df_train)
+test_metrics = m.fit(df_test)
 
 # model validation metrics
 with pd.option_context("display.max_rows", None, "display.max_columns", None):
     print(metrics)
+    print(train_metrics)
+    print(test_metrics)
+
 
 # model predict
 predicted = m.predict(df)
@@ -64,9 +71,7 @@ print(forecast)
 forecast_plot = m.plot(forecast)
 fig_comp = m.plot_components((forecast))
 fig_param = m.plot_parameters()
-
-
-
+'''
 
 # 测试代码 main 函数
 def main():

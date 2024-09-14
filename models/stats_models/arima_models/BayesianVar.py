@@ -19,7 +19,6 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from loguru import logger
 import numpy as np
 from scipy.stats import invwishart
 from numpy.linalg import inv
@@ -149,7 +148,7 @@ def main():
     X2 = np.sin(1.5 * x) + np.random.rand(100, 1) * 0.2
     X3 = 1.5 * X1
     X = np.hstack([X1, X2, X3])
-    logger.info(X.shape)
+    print(X.shape)
 
     # model
     model = BayesianVar(var_num = X.shape[1], time_lags = np.asarray([1, 5, 10, 20, 50]))
@@ -157,11 +156,11 @@ def main():
     model.Train(X, burn_iter = 1000)
     # model predict
     X_predict = model.Predict(X, predict_steps = 20, gibbs_iter = 100)
-    logger.info(X_predict.shape)
+    print(X_predict.shape)
 
     # result plot
     X_all = np.vstack([X, X_predict])
-    logger.info(X_all.shape)
+    print(X_all.shape)
     for i in range(3):
         x_i = X_all[:, i].tolist()
         plt.plot(x_i)

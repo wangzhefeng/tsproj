@@ -18,7 +18,6 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from loguru import logger
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -113,15 +112,15 @@ def main():
     # model
     var_model = LinearVAR(predict_n=3)
     var_model.AddTargetFea(x)
-    logger.info(var_model.fea_x, var_model.pred_x)
+    print(var_model.fea_x, var_model.pred_x)
     var_model.AddFeature(y, time_lags = [0])
-    logger.info(var_model.fea_list)
+    print(var_model.fea_list)
     # model training
     var_model.Fit()
     # model predict
     pred_x = np.asarray([[4, 2, 1, 5]])
     pred_y = var_model.Predict(pred_x)
-    logger.info(type(pred_y), pred_y)
+    print(type(pred_y), pred_y)
 
 if __name__ == "__main__":
     main()
