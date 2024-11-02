@@ -24,8 +24,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models.csdn.LSTM import Config, LSTM
-from utils.timer import Timer
+from models_dl.LSTM import LSTM
+from models_dl.config.config_wind_lstm import (
+    Config_Univariate_SingleOutput_V1,
+    Config_Univariate_SingleOutput_V2,
+    Config_MultiVariate_SingleOutput,
+    Config_MultiVariate_MultiOutput,
+)
+from models_dl.utils.timer import Timer
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -37,7 +43,7 @@ class Model:
     """
 
     def __init__(self):
-        self.config = Config()
+        self.config = Config_Univariate_SingleOutput_V1()
 
     def load_model(self, weights: str = False):
         logger.info(f'[Model] Loading model from file {self.config.save_path}')

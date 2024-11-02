@@ -18,16 +18,28 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 from typing import Dict
+
 from tqdm import tqdm
 from loguru import logger
-
+import matplotlib.pyplot as plt
 import torch
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def model_train(config: Dict, train_loader, test_loader, model, loss_func, optimizer, scaler = None):
+def train(config: Dict, 
+          train_loader, test_loader, 
+          model, loss_func, optimizer, 
+          x_train_tensor,
+          y_train_tensor,
+          x_test_tensor,
+          y_test_tensor,
+          plot_size = 200,
+          scaler = None):
+    """
+    模型训练
+    """
     for epoch in range(config.epochs):
         # ------------------------------
         # model train
@@ -49,7 +61,7 @@ def model_train(config: Dict, train_loader, test_loader, model, loss_func, optim
             optimizer.step()
             # loss cumsum
             running_loss += loss.item()
-            train_bar.desc = f"train epoch[{epoch+1}/{config.epochs} loss:{loss}]"
+            train_bar.desc = f"train epoch[{epoch+1}/{config.epochs:.3f} loss:{loss}]"
         # ------------------------------
         # model validate
         # ------------------------------
@@ -64,29 +76,35 @@ def model_train(config: Dict, train_loader, test_loader, model, loss_func, optim
                 # forward
                 y_test_pred = model(x_test)
                 test_loss = loss_func(y_test_pred, y_test.reshape(-1, 1))
+        print("Finished Training.")
         # ------------------------------
         # 保存模型
         # ------------------------------
+        print(test_loss)
         if test_loss < config.best_loss:
             config.best_loss = test_loss
             torch.save(model.state_dict(), config.save_path)
             logger.info(f"model saved in {config.save_path}")
-    
-    # y_train_pred = scaler.inverse_transform(
-    #     (model(x_train_tensor).detach().numpy()[:plot_size]).reshape(-1, 1)
-    # )
-    # y_train_true = scaler.inverse_transform(
-    #     y_train_tensor.detach().numpy().reshape(-1, 1)[:plot_size]
-    # )
-    # y_test_pred = scaler.inverse_transform(
-    #     y_test_pred.detach().numpy()[:plot_size]
-    # )
-    # y_test_true = scaler.inverse_transform(
-    #     y_test_tensor.detach().numpy().reshape(-1, 1)[:plot_size]
-    # )
+    # ------------------------------
+    # result inverse transform 
+    # ------------------------------  
+    # train result
+    y_train_pred = scaler.inverse_transform((model(x_train_tensor).detach().numpy()[:plot_size]).reshape(-1, 1))
+    y_train_true = scaler.inverse_transform(y_train_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
+    # test result
+    y_test_pred = model(x_test_tensor)
+    y_test_pred = scaler.inverse_transform(y_test_pred.detach().numpy()[:plot_size])
+    y_test_true = scaler.inverse_transform(y_test_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
 
-    return y_train_pred, y_test_pred
-            
+    return (y_train_pred, y_train_true), (y_test_pred, y_test_true)
+
+
+def plot_train_results(pred, true):
+    plt.figure(figsize = (12, 8))
+    plt.plot(pred, "b")
+    plt.plot(true, "r")
+    # plt.legend()
+    plt.show();
 
 
 

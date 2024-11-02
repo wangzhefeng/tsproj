@@ -7,7 +7,7 @@
 # * Date        : 2023-05-27
 # * Version     : 0.1.052722
 # * Description : description
-# * Link        : link
+# * Link        : https://weibaohang.blog.csdn.net/article/details/128605806
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
@@ -18,24 +18,29 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from torch import nn
+import torch
+import torch.nn as nn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device {device}.")
 
 
 class Model(nn.Module):
     
     def __init__(self, feature_size: int, hidden_size: int, num_layers: int, output_size: int):
         super(Model, self).__init__()
-        self.hidden_size = hidden_size  # 影藏层大小
-        self.num_layers = num_layers  # LSTM 层数
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        # lstm
         self.lstm = nn.LSTM(
             input_size = feature_size, 
             hidden_size = hidden_size, 
             num_layers = num_layers, 
             batch_first = True
         )
+        # fc layer
         self.linear = nn.Linear(
             in_features = hidden_size, 
             out_features = output_size,
@@ -44,7 +49,6 @@ class Model(nn.Module):
     def forward(self, x, hidden = None):
         # 获取批次大小
         batch_size = x.shape[0]  # x.shape=(batch_size, timestep, feature_size)
-
         # 初始化隐藏状态
         if hidden is None:
             h_0 = x.data.new(
@@ -66,11 +70,13 @@ class Model(nn.Module):
 
         # 全连接层
         output = self.linear(output)  # (batch_size * timestep, 1)
-        output = output.reshape(timestep, batch_size, -1)  # 转换维度用于输出
+        # TODO output = output.reshape(timestep, batch_size, -1)  # 转换维度用于输出
+        output = output.reshape(batch_size, timestep, -1).permute(1, 0, 2)  # 转换维度用于输出
 
         # 返回最后一个时间片的数据
         # output = output[: -1, :]
         output = output[-1]
+
         return output
 
 
@@ -78,71 +84,50 @@ class Model(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    import numpy as np
-    import pandas as pd
-    from sklearn.preprocessing import MinMaxScaler
-    import torch
-    from data_provider.data_splitor import Datasplitor
-    from experiments.exp_csdn import model_train
-    from utils.plot_results import plot_train_results
-    from config.config_wind_lstm import Config_Univariate_SingleOutput_V1
+    from models_dl.config.config_wind_lstm import Config_Univariate_SingleOutput_V1
+    from data_provider.data_loader import Data_Loader
+    from exp.exp_models_dl import train, plot_train_results
 
-    # ------------------------------
     # config
-    # ------------------------------
     config = Config_Univariate_SingleOutput_V1()
-    # ------------------------------
+    
     # data
-    # ------------------------------
-    df = pd.read_csv(config.data_path, index_col = 0)
-    print(df.head())
-    # ------------------------------
-    # data preprocess
-    # ------------------------------
-    scaler = MinMaxScaler()
-    scaler.fit_transform(np.array(df["WIND"]).reshape(-1, 1))
-    scaler_model = MinMaxScaler()
-    data = scaler_model.fit_transform(np.array(df))
-    # ------------------------------
-    # data split
-    # ------------------------------ 
-    data_split = Datasplitor(
-        data = data,
-        timestep = config.timestep,
-        feature_size = config.feature_size, 
-        output_size = config.output_size, 
-        target_index = config.target_index,
-        split_ratio = config.split_ratio,
-        batch_size = config.batch_size,
-    )
-    train_data, train_loader, \
-    test_data, test_loader = data_split.RecursiveMultiStep()
-    # ------------------------------
-    # model
-    # ------------------------------
-    # model = Model(
-    #     feature_size = config.feature_size,
-    #     hidden_size = config.hidden_size,
-    #     num_layers = config.num_layers,
-    #     output_size = config.output_size,
-    # )
-    # loss_func = nn.MSELoss()
-    # optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
-    # y_train_pred, y_test_pred = model_train(
-    #     config = config,
-    #     train_loader = train_loader, 
-    #     test_loader = test_loader, 
-    #     model = model, 
-    #     loss_func = loss_func, 
-    #     optimizer = optimizer
-    # )
+    data_loader = Data_Loader(cfg = config)
+    train_dataloader, test_dataloader = data_loader.build_dataloader()
 
-    # train_pred = scaler.inverse_transform(model(y_test_pred).detach().numpy()[:plot_size]).reshape(-1, 1)
-    # train_true = scaler.inverse_transform(y_train_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
-    # test_pred = scaler.inverse_transform(y_test_pred.detach().numpy()[:plot_size])
-    # test_true = scaler.inverse_transform(y_test_tensor.detach().numpy().reshape(-1, 1)[:plot_size])
-    # plot_train_results(pred = train_pred, true = train_true)
-    # plot_test_results(pred = test_pred, true = test_true)
+    # model
+    model = Model(
+        feature_size = config.feature_size,
+        hidden_size = config.hidden_size,
+        num_layers = config.num_layers,
+        output_size = config.output_size,
+    )
+    
+    # loss
+    loss_func = nn.MSELoss()
+    
+    # optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
+    
+    # model train
+    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = train(
+        config = config,
+        train_loader = train_dataloader,
+        test_loader = test_dataloader,
+        model = model,
+        loss_func = loss_func,
+        optimizer = optimizer,
+        x_train_tensor = data_loader.x_train_tensor, 
+        y_train_tensor = data_loader.y_train_tensor,
+        x_test_tensor = data_loader.x_test_tensor,
+        y_test_tensor = data_loader.y_test_tensor,
+        plot_size = 200,
+        scaler = data_loader.scaler,
+    )
+    
+    # result plot
+    plot_train_results(y_train_pred, y_train_true)
+    plot_train_results(y_test_pred, y_test_true)  
 
 if __name__ == "__main__":
     main()

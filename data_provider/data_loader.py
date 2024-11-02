@@ -6,9 +6,9 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sktime.datasets import load_from_tsfile_to_dataframe
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from data_provider.m4 import M4Dataset, M4Meta
 from data_provider.uea import Normalizer, interpolate_missing, subsample
@@ -815,3 +815,99 @@ class UEAloader(Dataset):
 
     def __len__(self):
         return len(self.all_IDs)
+
+
+# ------------------------------
+# custom [CSDN]
+# ------------------------------
+class Data_Loader:
+ 
+    def __init__(self, 
+                 cfg, 
+                #  cols: List
+                ):
+        self.cfg = cfg
+        # self.cols = cols
+    
+    def _read_data(self):
+        """
+        data read
+        """
+        data = pd.read_csv(self.cfg.data_path, index_col = 0)
+        
+        return data
+
+    def transform_data(self, df):
+        """
+        data scaler
+        """
+        # TODO
+        scaler_model = MinMaxScaler()
+        data = scaler_model.fit_transform(np.array(df))
+        # TODO
+        self.scaler = MinMaxScaler()
+        self.scaler.fit_transform(np.array(df["WIND"]).reshape(-1, 1))
+        
+        return data
+
+    @staticmethod
+    def _split_data(data, timestep: int, input_size: int, split_ratio: float = 0.8):
+        """
+        形成训练数据
+        例如：123456789 => 12-3、23-4、34-5...
+        """ 
+        # ------------------------------
+        # 
+        # ------------------------------
+        dataX = []  # 保存 X
+        dataY = []  # 保存 Y
+        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
+        for index in range(len(data) - timestep):
+            dataX.append(data[index:(index + timestep)][:, 0:input_size])
+            dataY.append(data[index + timestep][0])
+        dataX = np.array(dataX)
+        dataY = np.array(dataY)
+        print(dataX)
+        # print(dataY)
+        # 获取训练数据集大小
+        train_size = int(np.round(split_ratio * dataX.shape[0]))
+        # 划分训练集、测试集
+        # train data
+        x_train = dataX[:train_size, :].reshape(-1, timestep, input_size)
+        y_train = dataY[:train_size].reshape(-1, 1)
+        # test data
+        x_test = dataX[train_size:, :].reshape(-1, timestep, input_size)
+        y_test = dataY[train_size:].reshape(-1, 1)
+
+        return [x_train, y_train, x_test, y_test]
+    
+    def build_dataloader(self):
+        # data load
+        df = self._read_data()
+        # df = df.iloc[0:5, :]
+        print(df)
+        
+        # data transform
+        data = self.transform_data(df)
+        print(data)
+        print(data.shape)
+        
+        # data split
+        x_train, y_train, x_test, y_test = self._split_data(
+            data = data,
+            timestep = self.cfg.timestep, 
+            input_size = self.cfg.feature_size,
+            split_ratio = self.cfg.split_ratio,
+        )
+        self.x_train_tensor = torch.from_numpy(x_train).to(torch.float32)
+        self.y_train_tensor = torch.from_numpy(y_train).to(torch.float32)
+        self.x_test_tensor = torch.from_numpy(x_test).to(torch.float32)
+        self.y_test_tensor = torch.from_numpy(y_test).to(torch.float32)
+        
+        # data loader
+        train_data = TensorDataset(self.x_train_tensor, self.y_train_tensor)
+        test_data = TensorDataset(self.x_test_tensor, self.y_test_tensor)
+        train_loader = DataLoader(train_data, batch_size = self.cfg.batch_size, shuffle = False)
+        test_loader = DataLoader(test_data, batch_size = self.cfg.batch_size, shuffle = False)
+
+        return train_loader, test_loader

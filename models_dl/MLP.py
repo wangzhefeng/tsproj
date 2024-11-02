@@ -30,7 +30,7 @@ print(f"Using device {device}.")
 
 class Model(nn.Module):
 
-    def __init__(self,feature_size, timestep, hidden_size, output_size):
+    def __init__(self, feature_size, timestep, hidden_size, output_size):
         super(Model, self).__init__()
         # 全连接层
         self.linear1 = nn.Linear(in_features = feature_size * timestep, out_features = hidden_size[0])
@@ -60,7 +60,51 @@ class Model(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    pass
+    from models_dl.config.config_wind_mlp import Config
+    from data_provider.data_loader import Data_Loader
+    from exp.exp_models_dl import train, plot_train_results
+
+    # config
+    config = Config()
+    
+    # data
+    data_loader = Data_Loader(cfg = config)
+    train_dataloader, test_dataloader = data_loader.build_dataloader()
+
+    # model
+    model = Model(
+        feature_size = config.feature_size,
+        timestep = config.timestep,
+        hidden_size = config.hidden_size,
+        # num_layers = config.num_layers,
+        output_size = config.output_size,
+    )
+    
+    # loss
+    loss_func = nn.MSELoss()
+    
+    # optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
+    
+    # model train
+    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = train(
+        config = config,
+        train_loader = train_dataloader,
+        test_loader = test_dataloader,
+        model = model,
+        loss_func = loss_func,
+        optimizer = optimizer,
+        x_train_tensor = data_loader.x_train_tensor, 
+        y_train_tensor = data_loader.y_train_tensor,
+        x_test_tensor = data_loader.x_test_tensor,
+        y_test_tensor = data_loader.y_test_tensor,
+        plot_size = 200,
+        scaler = data_loader.scaler,
+    )
+    
+    # result plot
+    plot_train_results(y_train_pred, y_train_true)
+    plot_train_results(y_test_pred, y_test_true)
 
 if __name__ == "__main__":
     main()

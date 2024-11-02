@@ -30,7 +30,6 @@ import torch
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-from data_provider.data_splitor import split_data
 from utils.timefeatures import time_features
 from utils.timestamp_utils import to_unix_time
 # from utils.tools import StandardScaler
@@ -1397,108 +1396,6 @@ class Data_Loader_V1:
             normalised_window = np.array(normalised_window).T
             normalised_data.append(normalised_window)
         return np.array(normalised_data)
-
-
-# TODO
-class Data_Loader_V2:
- 
-    def __init__(self, data_path: str,  split_ratio: float, cols: List):
-        """
-        Args:
-            data_path (str): 时序数据文件路径
-            split_ratio (float): 训练集、测试集分割比例
-            cols (List): 时序数据的特征名称
-        """
-        self.data_path = data_path
-        self.split_ratio = split_ratio
-        self.cols = cols
-        self.__read_data__()
-    
-    def __read_data__(self):
-        dataframe = pd.read_csv(self.data_path, index_col = 0)
-        i_split = int(len(dataframe) * self.split_ratio)
-        self.data_train = dataframe.get(self.cols).values[:i_split]
-        self.data_test  = dataframe.get(self.cols).values[i_split:]
-
-        self.len_train  = len(self.data_train)
-        self.len_test   = len(self.data_test)
-        self.len_train_windows = None
-
-    def minmaxscale_windows(self):
-        # data scaler
-        wind_array = np.array(self.dataframe["WIND"]).reshape(-1, 1)
-        scaler = MinMaxScaler()
-        scaler.fit_transform(wind_array)
-        # 
-        scaler_model = MinMaxScaler()
-        data = scaler_model.fit_transform(np.array(self.dataframe))
-
-    def build_dataloader(self, data, config):
-        # data split
-        x_train, y_train, x_test, y_test = split_data(
-            data = data, 
-            timestep = config.timestep, 
-            input_size = config.feature_size,
-            split_ratio = 0.8,
-        )
-        logger.info(f"\nx_train: \n{x_train}")
-        logger.info(f"\ny_train: \n{y_train}")
-
-        # data loader
-        train_data = TensorDataset(
-            torch.from_numpy(x_train).to(torch.float32), 
-            torch.from_numpy(y_train).to(torch.float32)
-        )
-        test_data = TensorDataset(
-            torch.from_numpy(x_test).to(torch.float32), 
-            torch.from_numpy(y_test).to(torch.float32)
-        )
-        train_loader = DataLoader(dataset = train_data, batch_size = config.batch_size, shuffle = False)
-        test_loader = DataLoader(dataset = test_data, batch_size = config.batch_size, shuffle = False)
- 
-    def split_data(self, data, timestep: int, input_size: int, split_ratio: float = 0.8):
-        """
-        形成训练数据
-        例如：123456789 => 12-3、23-4、34-5...
-
-        Args:
-            data (_type_): _description_
-            timestep (int): _description_
-            input_size (int): _description_
-            split_ratio (float, optional): _description_. Defaults to 0.8.
-
-        Returns:
-            _type_: _description_
-        """
-        dataX = []  # 保存 X
-        dataY = []  # 保存 Y
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(data) - timestep):
-            dataX.append(data[index:index + timestep][:, 0])
-            dataY.append(data[index + timestep][0])
-        dataX = np.array(dataX)
-        dataY = np.array(dataY)
-        # 训练集大
-        train_size = int(np.round(split_ratio * dataX.shape[0]))
-        # 划分训练集、测试集
-        logger.info(dataX)
-        logger.info(dataX[:2, :])
-        x_train = dataX[:train_size, :].reshape(-1, timestep, input_size)
-        y_train = dataY[:train_size].reshape(-1, 1)
-
-        x_test = dataX[train_size:, :].reshape(-1, timestep, input_size)
-        y_test = dataY[train_size:].reshape(-1, 1)
-
-        return [x_train, y_train, x_test, y_test]
-
-    # TODO
-    def test(self):
-        train_preds = self.scaler.inverse_transform(train_preds)
-        train_true = self.scaler.inverse_transform(train_true)
-        test_preds = self.scaler.inverse_transform(test_preds)
-        test_true = self.scaler.inverse_transform(test_true)
-
-
 
 
 # data and preprocess class 
