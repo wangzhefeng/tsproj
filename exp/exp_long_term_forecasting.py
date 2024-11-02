@@ -29,34 +29,41 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 多 GPU 训练
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids = self.args.device_ids)
+        
         return model
 
-    def _get_data(self, flag):
+    def _get_data(self, flag: str):
         """
         数据集构建
 
         Args:
-            flag (_type_): 任务类型, ["train", "val", "test"]
+            flag (str): 任务类型, ["train", "val", "test"]
 
         Returns:
             _type_: Dataset, DataLoader
         """
         data_set, data_loader = data_provider(self.args, flag)
-        return data_set, data_loader
 
-    def _select_optimizer(self):
-        """
-        优化器
-        """
-        model_optim = torch.optim.Adam(self.model.parameters(), lr = self.args.learning_rate)
-        return model_optim
+        return data_set, data_loader
 
     def _select_criterion(self):
         """
         评价指标
         """
         criterion = nn.MSELoss()
+        
         return criterion
+
+    def _select_optimizer(self):
+        """
+        优化器
+        """
+        model_optim = torch.optim.Adam(
+            self.model.parameters(), 
+            lr = self.args.learning_rate
+        )
+        
+        return model_optim 
 
     def train(self, setting):
         # ------------------------------

@@ -45,7 +45,6 @@ def train(config: Dict,
         # model train
         # ------------------------------
         model.train()
-
         running_loss = 0
         train_bar = tqdm(train_loader)
         for data in train_bar:
@@ -66,7 +65,6 @@ def train(config: Dict,
         # model validate
         # ------------------------------
         model.eval()
-
         test_loss = 0
         with torch.no_grad():
             test_bar = tqdm(test_loader)

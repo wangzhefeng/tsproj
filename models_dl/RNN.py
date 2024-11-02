@@ -66,7 +66,7 @@ class Model(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from models_dl.config.config_wind_rnn import Config
+    from scripts.config.config_wind_rnn import Config
     from data_provider.data_loader import Data_Loader
     from exp.exp_models_dl import train, plot_train_results
 

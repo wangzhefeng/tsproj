@@ -100,6 +100,7 @@ class Model(nn.Module):
         # Output
         output = enc_out.reshape(enc_out.shape[0], -1)  # (batch_size, seq_length * d_model)
         output = self.projection(output)  # (batch_size, num_classes)
+
         return output
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask = None):
@@ -115,4 +116,5 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc)
             return dec_out  # [B, N]
+
         return None

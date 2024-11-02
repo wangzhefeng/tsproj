@@ -25,6 +25,7 @@ from exp.exp_classification import Exp_Classification
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
+
 # 设置随机数
 fix_seed = 2021
 random.seed(fix_seed)
@@ -32,6 +33,7 @@ np.random.seed(fix_seed)
 torch.manual_seed(fix_seed)
 torch.cuda.manual_seed_all(fix_seed)
 torch.backends.cudnn.deterministic = True
+
 
 # 设备配置
 use_gpu = True if torch.cuda.is_available() else False
@@ -121,28 +123,23 @@ else:
 # 模型训练、验证
 if args.is_training:
     for ii in range(args.iters):
-        # TODO
+        # 迭代轮数
         args.ii = ii
         # 创建任务实例
         exp = Exp(args)
         setting = f"{args.task_name}_{args.model_id}"
-
         # 模型训练、验证
         exp.train(setting)
-
         # 模型验证
         exp.test(setting)
-
         # 清除 CUDA 缓存
         torch.cuda.empty_cache()
 else:
     # 创建任务实例
     exp = Exp(args)
     setting = f"{args.task_name}_{args.model_id}"
-    
     # 模型测试
     exp.test(setting, test = 1)
-    
     # 清除 CUDA 缓存
     torch.cuda.empty_cache()
 
