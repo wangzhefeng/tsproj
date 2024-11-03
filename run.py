@@ -153,7 +153,7 @@ def main():
     # metrics (dtw)
     parser.add_argument('--use_dtw', type=bool, default = False, 
                         help = 'the controller of using dtw metric (dtw is time consuming, not suggested unless necessary)')
-    parser.add_argument('--test_results', type = str, default = './test_results/',
+    parser.add_argument('--test_results', type = str, default = './saved_models/test_results/',
                         help = 'location of model test results')
     # Augmentation
     parser.add_argument('--augmentation_ratio', type = int, default = 0, help="How many times to augment")
