@@ -22,6 +22,8 @@ from typing import Union, List
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error 
 
+from utils.dtw_metric import accelerated_dtw
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
@@ -56,14 +58,30 @@ def MSPE(pred, true):
     return np.mean(np.square((true - pred) / true))
 
 
+def DTW(preds, trues):
+    dtw_list = []
+    manhattan_distance = lambda x, y: np.abs(x - y)
+    for i in range(preds.shape[0]):
+        x = preds[i].reshape(-1,1)
+        y = trues[i].reshape(-1,1)
+        if i % 100 == 0:
+            print("calculating dtw iter:", i)
+        d, _, _, _ = accelerated_dtw(x, y, dist=manhattan_distance)
+        dtw_list.append(d)
+    dtw = np.array(dtw_list).mean()
+    
+    return dtw
+
+
 def metric(pred, true):
     mae = MAE(pred, true)
     mse = MSE(pred, true)
     rmse = RMSE(pred, true)
     mape = MAPE(pred, true)
     mspe = MSPE(pred, true)
+    # dtw = DTW(pred, true)
 
-    return mae, mse, rmse, mape, mspe
+    return mae, mse, rmse, mape, mspe#, dtw
 
 
 # ------------------------------

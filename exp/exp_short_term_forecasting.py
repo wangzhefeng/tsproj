@@ -6,11 +6,10 @@ import numpy as np
 import pandas
 import torch
 import torch.nn as nn
-from torch import optim
 
+from exp.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
 from data_provider.m4 import M4Meta
-from exp.exp_basic import Exp_Basic
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.m4_summary import M4Summary
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
@@ -29,17 +28,20 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             self.args.seq_len = 2 * self.args.pred_len  # input_len = 2*pred_len
             self.args.label_len = self.args.pred_len
             self.args.frequency_map = M4Meta.frequency_map[self.args.seasonal_patterns]
+        # 时间序列模型初始化
         model = self.model_dict[self.args.model].Model(self.args).float()
-
+        # 多 GPU 训练
         if self.args.use_multi_gpu and self.args.use_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.device_ids)
+            model = nn.DataParallel(model, device_ids = self.args.device_ids)
+        
         return model 
+    
+    def _get_data(self, flag):
+        data_set, data_loader = data_provider(self.args, flag)
 
-    def _select_optimizer(self):
-        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-        return model_optim
-
-    def _select_criterion(self, loss_name='MSE'):
+        return data_set, data_loader
+    
+    def _select_criterion(self, loss_name = 'MSE'):
         if loss_name == 'MSE':
             return nn.MSELoss()
         elif loss_name == 'MAPE':
@@ -49,57 +51,80 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         elif loss_name == 'SMAPE':
             return smape_loss()
 
-    def _get_data(self, flag):
-        data_set, data_loader = data_provider(self.args, flag)
-        return data_set, data_loader
+    def _select_optimizer(self):
+        model_optim = torch.optim.Adam(
+            self.model.parameters(), 
+            lr = self.args.learning_rate
+        )
+
+        return model_optim
 
     def train(self, setting):
+        # ------------------------------
+        # 数据集构建
+        # ------------------------------
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
-
+        # ------------------------------
+        # checkpoint 保存路径
+        # ------------------------------
         path = os.path.join(self.args.checkpoints, setting)
         if not os.path.exists(path):
             os.makedirs(path)
-
+        # ------------------------------
+        # 模型训练
+        # ------------------------------
         time_now = time.time()
 
         train_steps = len(train_loader)
-        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
+
+        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
 
         model_optim = self._select_optimizer()
+
         criterion = self._select_criterion(self.args.loss)
         mse = nn.MSELoss()
 
         for epoch in range(self.args.train_epochs):
+            epoch_time = time.time()
+
             iter_count = 0
+
             train_loss = []
 
             self.model.train()
-            epoch_time = time.time()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
+                # ------------------------------
+                # 模型优化器梯度归零
+                # ------------------------------
                 model_optim.zero_grad()
+                # ------------------------------
+                # 数据预处理
+                # ------------------------------
                 batch_x = batch_x.float().to(self.device)
-
                 batch_y = batch_y.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
-
+                # ------------------------------
+                # 前向传播
+                # ------------------------------
                 # decoder input
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-
+                # model forward
                 outputs = self.model(batch_x, None, dec_inp, None)
-
+                # 特征维度
                 f_dim = -1 if self.args.features == 'MS' else 0
+                # 预测/实际 label
                 outputs = outputs[:, -self.args.pred_len:, f_dim:]
                 batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
-
                 batch_y_mark = batch_y_mark[:, -self.args.pred_len:, f_dim:].to(self.device)
+                # 计算损失
                 loss_value = criterion(batch_x, self.args.frequency_map, outputs, batch_y, batch_y_mark)
                 loss_sharpness = mse((outputs[:, 1:, :] - outputs[:, :-1, :]), (batch_y[:, 1:, :] - batch_y[:, :-1, :]))
                 loss = loss_value  # + loss_sharpness * 1e-5
                 train_loss.append(loss.item())
-
+                # 日志打印：当前 epoch、当前 batch 下每 100 个 batch 的训练速度、误差损失、
                 if (i + 1) % 100 == 0:
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / iter_count
@@ -107,34 +132,42 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
                     iter_count = 0
                     time_now = time.time()
-
+                # ------------------------------
+                # 后向传播
+                # ------------------------------
                 loss.backward()
                 model_optim.step()
-
-            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
+            
+            # 日志打印: 训练 epoch、每个 epoch 训练的用时
+            print(f"Epoch: {epoch + 1} cost time: {time.time() - epoch_time}")
             train_loss = np.average(train_loss)
             vali_loss = self.vali(train_loader, vali_loader, criterion)
             test_loss = vali_loss
-            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
-                epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            print(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f} Vali Loss: {vali_loss:.7f} Test Loss: {test_loss:.7f}")
+
+            # 早停机制
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
 
+            # 学习率调整
             adjust_learning_rate(model_optim, epoch + 1, self.args)
-
+        # ------------------------------
+        # 最优模型保存、加载
+        # ------------------------------
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
         return self.model
 
     def vali(self, train_loader, vali_loader, criterion):
+        # data
         x, _ = train_loader.dataset.last_insample_window()
         y = vali_loader.dataset.timeseries
         x = torch.tensor(x, dtype=torch.float32).to(self.device)
         x = x.unsqueeze(-1)
-
+        # 模型推理
         self.model.eval()
         with torch.no_grad():
             # decoder input
@@ -145,10 +178,14 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             outputs = torch.zeros((B, self.args.pred_len, C)).float()  # .to(self.device)
             id_list = np.arange(0, B, 500)  # validation set size
             id_list = np.append(id_list, B)
+            
             for i in range(len(id_list) - 1):
-                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(x[id_list[i]:id_list[i + 1]], None,
-                                                                      dec_inp[id_list[i]:id_list[i + 1]],
-                                                                      None).detach().cpu()
+                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(
+                    x[id_list[i]:id_list[i + 1]], None,
+                    dec_inp[id_list[i]:id_list[i + 1]],
+                    None
+                ).detach().cpu()
+            
             f_dim = -1 if self.args.features == 'MS' else 0
             outputs = outputs[:, -self.args.pred_len:, f_dim:]
             pred = outputs
@@ -156,28 +193,30 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             batch_y_mark = torch.ones(true.shape)
 
             loss = criterion(x.detach().cpu()[:, :, 0], self.args.frequency_map, pred[:, :, 0], true, batch_y_mark)
-
         self.model.train()
+        
         return loss
 
-    def test(self, setting, test=0):
-        _, train_loader = self._get_data(flag='train')
-        _, test_loader = self._get_data(flag='test')
+    def test(self, setting, test = 0):
+        # data
+        _, train_loader = self._get_data(flag = 'train')
+        _, test_loader = self._get_data(flag = 'test')
         x, _ = train_loader.dataset.last_insample_window()
         y = test_loader.dataset.timeseries
         x = torch.tensor(x, dtype=torch.float32).to(self.device)
         x = x.unsqueeze(-1)
-
+        # model
         if test:
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
-
+        # result save
         folder_path = './test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-
+        # model inference
         self.model.eval()
         with torch.no_grad():
+            # dec input
             B, _, C = x.shape
             dec_inp = torch.zeros((B, self.args.pred_len, C)).float().to(self.device)
             dec_inp = torch.cat([x[:, -self.args.label_len:, :], dec_inp], dim=1).float()
@@ -185,9 +224,14 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             outputs = torch.zeros((B, self.args.pred_len, C)).float().to(self.device)
             id_list = np.arange(0, B, 1)
             id_list = np.append(id_list, B)
+
             for i in range(len(id_list) - 1):
-                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(x[id_list[i]:id_list[i + 1]], None,
-                                                                      dec_inp[id_list[i]:id_list[i + 1]], None)
+                outputs[id_list[i]:id_list[i + 1], :, :] = self.model(
+                    x[id_list[i]:id_list[i + 1]], 
+                    None,
+                    dec_inp[id_list[i]:id_list[i + 1]], 
+                    None
+                )
 
                 if id_list[i] % 1000 == 0:
                     print(id_list[i])
@@ -206,8 +250,9 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
 
         print('test shape:', preds.shape)
-
-        # result save
+        # ------------------------------
+        # 结果保存 
+        # ------------------------------
         folder_path = './m4_results/' + self.args.model + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)

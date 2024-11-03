@@ -9,6 +9,7 @@ RETURN_VALUE = 0
 RETURN_PATH = 1
 RETURN_ALL = -1
 
+
 # Core DTW
 def _traceback(DTW, slope_constraint):
     i, j = np.array(DTW.shape) - 1
@@ -48,6 +49,7 @@ def _traceback(DTW, slope_constraint):
         
     return (np.array(p), np.array(q))
 
+
 def dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmetric", window=None):
     """ Computes the DTW of two sequences.
     :param prototype: np array [0..b]
@@ -77,6 +79,7 @@ def dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmet
     else:
         return DTW[-1,-1]
 
+
 def _cummulative_matrix(cost, slope_constraint, window):
     p = cost.shape[0]
     s = cost.shape[1]
@@ -100,6 +103,7 @@ def _cummulative_matrix(cost, slope_constraint, window):
         sys.exit("Unknown slope constraint %s"%slope_constraint)
         
     return DTW
+
 
 def shape_dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmetric", window=None, descr_ratio=0.05):
     """ Computes the shapeDTW of two sequences.
@@ -183,6 +187,7 @@ def draw_graph2d(cost, DTW, path, prototype, sample):
 
     plt.tight_layout()
     plt.show()
+
 
 def draw_graph1d(cost, DTW, path, prototype, sample):
     import matplotlib.pyplot as plt

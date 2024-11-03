@@ -76,8 +76,7 @@ if __name__ == '__main__':
     ADFmetric = archADF(root_path="./dataset/weather/",data_path="weather.csv")
     print("Weather ADF metric", ADFmetric)
 
-
     # print(ADFmetric)
-
+    
     # mean_ADFmetric = ADFmetric[:,0].mean()
     # print(mean_ADFmetric)

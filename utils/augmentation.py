@@ -9,7 +9,7 @@ def jitter(x, sigma=0.03):
 
 def scaling(x, sigma=0.1):
     # https://arxiv.org/pdf/1706.00527.pdf
-    factor = np.random.normal(loc=1., scale=sigma, size=(x.shape[0],x.shape[2]))
+    factor = np.random.normal(loc=1., scale=sigma, size=(x.shape[0], x.shape[2]))
     return np.multiply(x, factor[:,np.newaxis,:])
 
 
@@ -39,8 +39,6 @@ def permutation(x, max_segments=5, seg_mode="equal"):
             # ? Question: What is the point of making segments?
             # for i in range(len(splits)):
             #     permute = np.random.permutation(splits[i])
-
-
             ret[i] = pat[warp]
         else:
             ret[i] = pat
@@ -366,15 +364,16 @@ def run_augmentation_single(x, y, args):
     x_aug = x
     y_aug = y
     if args.augmentation_ratio > 0:
-        augmentation_tags = "%d"%args.augmentation_ratio
+        augmentation_tags = "%d" % args.augmentation_ratio
         for n in range(args.augmentation_ratio):
             x_temp, augmentation_tags = augment(x, y, args)
-            x_aug =x_temp
+            x_aug = x_temp
             # print("Round %d: %s done"%(n, augmentation_tags))
         if args.extra_tag:
-            augmentation_tags += "_"+args.extra_tag
+            augmentation_tags += "_" + args.extra_tag
     else:
         augmentation_tags = args.extra_tag
+    
     return x_aug, y_aug, augmentation_tags
 
 

@@ -31,8 +31,9 @@ fix_seed = 2021
 random.seed(fix_seed)
 np.random.seed(fix_seed)
 torch.manual_seed(fix_seed)
-torch.cuda.manual_seed_all(fix_seed)
-torch.backends.cudnn.deterministic = True
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(fix_seed)
+    torch.backends.cudnn.deterministic = True
 
 
 # 设备配置

@@ -1,7 +1,30 @@
+# -*- coding: utf-8 -*-
+
+# ***************************************************
+# * File        : DLinear.py
+# * Author      : Zhefeng Wang
+# * Email       : wangzhefengr@163.com
+# * Date        : 2024-11-03
+# * Version     : 0.1.110323
+# * Description : description
+# * Link        : link
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# ***************************************************
+
+# python libraries
+import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
 import torch
 import torch.nn as nn
 
 from layers.Autoformer_EncDec import series_decomp
+
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Model(nn.Module):
@@ -9,11 +32,7 @@ class Model(nn.Module):
     Paper link: https://arxiv.org/pdf/2205.13504.pdf
     """
 
-    def __init__(self, configs, individual = False):
-        """
-        configs (_type_): _description_
-        individual (bool, optional): whether shared model among different variates. Defaults to False.
-        """
+    def __init__(self, configs, individual: bool = False):
         super(Model, self).__init__()
         # 任务类型
         self.task_name = configs.task_name
@@ -24,51 +43,68 @@ class Model(nn.Module):
             self.pred_len = configs.seq_len
         else:
             self.pred_len = configs.pred_len
-        # Series decomposition block from Autoformer
-        self.decompsition = series_decomp(configs.moving_avg)
+        # whether shared model among different variates
         self.individual = individual
-        self.channels = configs.enc_in 
-        if self.individual:  # IMS: Iterated Multi-Step forecating
-            # 季节组分
-            self.Linear_Seasonal = nn.ModuleList()
-            # 趋势组分
-            self.Linear_Trend = nn.ModuleList()
+        # encoder input size
+        self.channels = configs.enc_in
+        # ------------------------------
+        # 时间序列分解实例
+        # Series decomposition block from Autoformer
+        # ------------------------------
+        self.decompsition = series_decomp(configs.moving_avg)
+        # ------------------------------
+        # 时间序列预测模型
+        # ------------------------------
+        # IMS: Iterated Multi-Step forecating
+        if self.individual:
+            self.Linear_Seasonal = nn.ModuleList()  # 季节组分
+            self.Linear_Trend = nn.ModuleList()  # 趋势组分
             for i in range(self.channels):
                 self.Linear_Seasonal.append(nn.Linear(self.seq_len, self.pred_len))
                 self.Linear_Trend.append(nn.Linear(self.seq_len, self.pred_len))
                 self.Linear_Seasonal[i].weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
                 self.Linear_Trend[i].weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
-        else:  # DMS: Direct Multi-Step forecating
+        # DMS: Direct Multi-Step forecating  
+        else:
             self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len)
             self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len)
             self.Linear_Seasonal.weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
             self.Linear_Trend.weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
-        # 时间序列分类
+        # 时间序列分类处理
         if self.task_name == 'classification':
             self.projection = nn.Linear(configs.enc_in * configs.seq_len, configs.num_class)
 
     def encoder(self, x):
+        # ------------------------------
         # 时间序列分解
+        # ------------------------------
         seasonal_init, trend_init = self.decompsition(x)
-        seasonal_init, trend_init = seasonal_init.permute(0, 2, 1), trend_init.permute(0, 2, 1)
-        # 时间序列分析
-        if self.individual:  # IMS: Iterated Multi-Step forecating
+        seasonal_init = seasonal_init.permute(0, 2, 1)
+        trend_init = trend_init.permute(0, 2, 1)
+        # ------------------------------
+        # 时间序列预测
+        # ------------------------------
+        # IMS: Iterated Multi-Step forecating
+        if self.individual:
             seasonal_output = torch.zeros(
-                [seasonal_init.size(0), seasonal_init.size(1), self.pred_len],
-                dtype=seasonal_init.dtype
+                [seasonal_init.size(0), seasonal_init.size(1), self.pred_len], 
+                dtype = seasonal_init.dtype
             ).to(seasonal_init.device)
             trend_output = torch.zeros(
-                [trend_init.size(0), trend_init.size(1), self.pred_len],
-                dtype=trend_init.dtype
+                [trend_init.size(0), trend_init.size(1), self.pred_len], 
+                dtype = trend_init.dtype
             ).to(trend_init.device)
             
             for i in range(self.channels):
                 seasonal_output[:, i, :] = self.Linear_Seasonal[i](seasonal_init[:, i, :])
                 trend_output[:, i, :] = self.Linear_Trend[i](trend_init[:, i, :])
-        else:  # DMS: Direct Multi-Step forecating
+        # DMS: Direct Multi-Step forecating
+        else:
             seasonal_output = self.Linear_Seasonal(seasonal_init)
             trend_output = self.Linear_Trend(trend_init)
+        # ------------------------------
         # 时间序列分析输出
+        # ------------------------------
         x = seasonal_output + trend_output
 
         return x.permute(0, 2, 1)
@@ -118,3 +154,20 @@ class Model(nn.Module):
             return dec_out  # [B, N]
 
         return None
+
+
+# 测试代码 main 函数
+def main():
+    class Config:
+        task_name = "long_term_forecast"
+        seq_len = 96
+        pred_len = 96
+        enc_in = 7
+        moving_avg = 25
+    configs = Config()
+    
+    model = Model(configs, individual = False)
+    print(model)
+
+if __name__ == "__main__":
+    main()
