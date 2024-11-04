@@ -139,18 +139,16 @@ class Model(nn.Module):
 
     def __init__(self, configs):
         super(Model, self).__init__()
-        # params init
+        # params
         self.configs = configs
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len
         self.label_len = configs.label_len
         self.pred_len = configs.pred_len
-
         # stack TimesBlock for e_layers times to form the main part of TimesNet, named model
         self.model = nn.ModuleList([
             TimesBlock(configs) for _ in range(configs.e_layers)
         ])
-
         # embedding & normalization
         # * enc_in is the encoder input size, the number of features for a piece of data
         # * d_model is the dimension of embedding
@@ -163,7 +161,6 @@ class Model(nn.Module):
         )
         self.layer = configs.e_layers  # num of encoder layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
-
         # define the some layers for different tasks
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.predict_linear = nn.Linear(self.seq_len, self.pred_len + self.seq_len)
@@ -179,22 +176,16 @@ class Model(nn.Module):
         # Normalization from Non-stationary Transformer
         means = x_enc.mean(1, keepdim = True).detach()
         x_enc = x_enc - means
-        
         stdev = torch.sqrt(torch.var(x_enc, dim = 1, keepdim = True, unbiased = False) + 1e-5)
-        
         x_enc /= stdev
-        
         # embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
         enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # align temporal dimension
-        
-        # TimesNet
+        # Encoder
         for i in range(self.layer):
             enc_out = self.layer_norm(self.model[i](enc_out))
-        
         # porject back
         dec_out = self.projection(enc_out)
-        
         # De-Normalization from Non-stationary Transformer
         dec_out = dec_out * (stdev[:, 0, :].unsqueeze(1).repeat(1, self.pred_len + self.seq_len, 1))
         dec_out = dec_out + (means[:, 0, :].unsqueeze(1).repeat(1, self.pred_len + self.seq_len, 1))

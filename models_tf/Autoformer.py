@@ -18,9 +18,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from layers.Autoformer_EncDec import (Decoder, DecoderLayer, Encoder,
-                                      EncoderLayer, my_Layernorm,
-                                      series_decomp)
+from layers.Autoformer_EncDec import (
+    Decoder, DecoderLayer, 
+    Encoder, EncoderLayer, 
+    my_Layernorm,
+    series_decomp
+)
 from layers.Embed import DataEmbedding_wo_pos
 
 # global variable
@@ -31,6 +34,7 @@ class Model(nn.Module):
 
     def __init__(self, configs):
         super(Model, self).__init__()
+        # params
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len
         self.label_len = configs.label_len
@@ -52,12 +56,7 @@ class Model(nn.Module):
             [
                 EncoderLayer(
                     AutoCorrelationLayer(
-                        AutoCorrelation(
-                            False, 
-                            configs.factor, 
-                            attention_dropout = configs.dropout, 
-                            output_attention = configs.output_attention
-                        ),
+                        AutoCorrelation(False, configs.factor, attention_dropout = configs.dropout, output_attention = configs.output_attention),
                         configs.d_model, 
                         configs.n_heads
                     ),
@@ -72,17 +71,25 @@ class Model(nn.Module):
         )
         # Decoder
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
-            self.dec_embedding = DataEmbedding_wo_pos(configs.dec_in, configs.d_model, configs.embed, configs.freq, configs.dropout)
+            self.dec_embedding = DataEmbedding_wo_pos(
+                configs.dec_in, 
+                configs.d_model, 
+                configs.embed, 
+                configs.freq, 
+                configs.dropout
+            )
             self.decoder = Decoder(
                 [
                     DecoderLayer(
                         AutoCorrelationLayer(
                             AutoCorrelation(True, configs.factor, attention_dropout = configs.dropout, output_attention = False),
-                            configs.d_model, configs.n_heads
+                            configs.d_model, 
+                            configs.n_heads
                         ),
                         AutoCorrelationLayer(
                             AutoCorrelation(False, configs.factor, attention_dropout = configs.dropout, output_attention = False),
-                            configs.d_model, configs.n_heads
+                            configs.d_model, 
+                            configs.n_heads
                         ),
                         configs.d_model,
                         configs.c_out,
@@ -90,8 +97,7 @@ class Model(nn.Module):
                         moving_avg = configs.moving_avg,
                         dropout = configs.dropout,
                         activation = configs.activation,
-                    )
-                    for l in range(configs.d_layers)
+                    ) for l in range(configs.d_layers)
                 ],
                 norm_layer = my_Layernorm(configs.d_model),
                 projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
@@ -106,11 +112,11 @@ class Model(nn.Module):
             self.projection = nn.Linear(configs.d_model * configs.seq_len, configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
-        # decomp init
-        mean = torch.mean(x_enc, dim = 1).unsqueeze(1).repeat(1, self.pred_len, 1)
-        zeros = torch.zeros([x_dec.shape[0], self.pred_len, x_dec.shape[2]], device = x_enc.device)
+        # decomp init 
         seasonal_init, trend_init = self.decomp(x_enc)
         # decoder input
+        mean = torch.mean(x_enc, dim = 1).unsqueeze(1).repeat(1, self.pred_len, 1)
+        zeros = torch.zeros([x_dec.shape[0], self.pred_len, x_dec.shape[2]], device = x_enc.device)
         trend_init = torch.cat([trend_init[:, -self.label_len:, :], mean], dim = 1)
         seasonal_init = torch.cat([seasonal_init[:, -self.label_len:, :], zeros], dim = 1)
         # enc
@@ -121,6 +127,7 @@ class Model(nn.Module):
         seasonal_part, trend_part = self.decoder(dec_out, enc_out, x_mask = None, cross_mask = None, trend = trend_init)
         # final
         dec_out = trend_part + seasonal_part
+
         return dec_out
 
     def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):

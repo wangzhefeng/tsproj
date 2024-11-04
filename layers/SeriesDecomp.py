@@ -26,13 +26,13 @@ import torch.nn as nn
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class MovingAvg(nn.Module):
+class moving_avg(nn.Module):
     """
     Moving average block to highlight the trend of time series
     """
 
     def __init__(self, kernel_size, stride):
-        super(MovingAvg, self).__init__()
+        super(moving_avg, self).__init__()
         self.kernel_size = kernel_size
         self.avg = nn.AvgPool1d(kernel_size = kernel_size, stride = stride, padding = 0)
 
@@ -55,7 +55,7 @@ class series_decomp(nn.Module):
 
     def __init__(self, kernel_size: int):
         super(series_decomp, self).__init__()
-        self.moving_avg = MovingAvg(kernel_size, stride = 1)
+        self.moving_avg = moving_avg(kernel_size, stride = 1)
 
     def forward(self, x):
         # Trend
@@ -93,7 +93,12 @@ class series_decomp_multi(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    pass
+    x = torch.randn(1, 2, 15)
+    print(x)
+
+    mv = moving_avg(kernel_size=3, stride=1)
+    x_mean = mv(x)
+    print(x_mean)
 
 if __name__ == "__main__":
     main()

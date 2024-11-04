@@ -1,17 +1,38 @@
+# -*- coding: utf-8 -*-
+
+# ***************************************************
+# * File        : Embed.py
+# * Author      : Zhefeng Wang
+# * Email       : wangzhefengr@163.com
+# * Date        : 2024-11-04
+# * Version     : 0.1.110414
+# * Description : description
+# * Link        : link
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# ***************************************************
+
+# python libraries
+import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 import math
 
 import torch
 import torch.nn as nn
 
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
+
 
 class PositionalEmbedding(nn.Module):
     """
-    TODO 
+    Positional Embedding
     """
 
     def __init__(self, d_model, max_len = 5000):
         super(PositionalEmbedding, self).__init__()
-
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model).float()
         pe.require_grad = False
@@ -26,24 +47,26 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        return self.pe[:, :x.size(1)]
+        x = self.pe[:, :x.size(1)]
+
+        return x
 
 
 class TokenEmbedding(nn.Module):
     """
-    # TODO
+    Token Embedding
     """
 
     def __init__(self, c_in, d_model):
         super(TokenEmbedding, self).__init__()
-
+        
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         self.tokenConv = nn.Conv1d(
-            in_channels = c_in, 
+            in_channels = c_in,
             out_channels = d_model,
-            kernel_size = 3, 
-            padding = padding, 
-            padding_mode = 'circular', 
+            kernel_size = 3,
+            padding = padding,
+            padding_mode = 'circular',
             bias = False
         )
         for m in self.modules():
@@ -60,7 +83,6 @@ class FixedEmbedding(nn.Module):
 
     def __init__(self, c_in, d_model):
         super(FixedEmbedding, self).__init__()
-
         w = torch.zeros(c_in, d_model).float()
         w.require_grad = False
 
@@ -74,17 +96,18 @@ class FixedEmbedding(nn.Module):
         self.emb.weight = nn.Parameter(w, requires_grad = False)
 
     def forward(self, x):
-        return self.emb(x).detach()
+        x = self.emb(x).detach()
+
+        return x
 
 
 class TemporalEmbedding(nn.Module):
     """
-    TODO
+    Temporal Embedding
     """
 
     def __init__(self, d_model, embed_type = 'fixed', freq = 'h'):
         super(TemporalEmbedding, self).__init__()
-
         minute_size = 4
         hour_size = 24
         weekday_size = 7
@@ -112,12 +135,11 @@ class TemporalEmbedding(nn.Module):
 
 class TimeFeatureEmbedding(nn.Module):
     """
-    TODO
+    Time Feature Embedding
     """
 
     def __init__(self, d_model, embed_type = 'timeF', freq = 'h'):
         super(TimeFeatureEmbedding, self).__init__()
-
         freq_map = {
             'h': 4, 
             't': 5, 
@@ -132,27 +154,28 @@ class TimeFeatureEmbedding(nn.Module):
         self.embed = nn.Linear(d_inp, d_model, bias = False)
 
     def forward(self, x):
-        return self.embed(x)
+        x = self.embed(x)
+
+        return x
 
 
 class DataEmbedding(nn.Module):
     """
-    # TODO
+    Data Embedding
     """
 
     def __init__(self, c_in, d_model, embed_type = 'fixed', freq = 'h', dropout = 0.1):
         super(DataEmbedding, self).__init__()
-
         self.value_embedding = TokenEmbedding(c_in = c_in, d_model = d_model)
         self.position_embedding = PositionalEmbedding(d_model = d_model)
         self.temporal_embedding = TemporalEmbedding(
             d_model = d_model, 
             embed_type = embed_type, 
-            freq = freq
+            freq = freq,
         ) if embed_type != 'timeF' else TimeFeatureEmbedding(
             d_model = d_model, 
             embed_type = embed_type, 
-            freq = freq
+            freq = freq,
         )
         self.dropout = nn.Dropout(p = dropout)
 
@@ -161,15 +184,15 @@ class DataEmbedding(nn.Module):
             x = self.value_embedding(x) + self.position_embedding(x)
         else:
             x = self.value_embedding(x) + self.temporal_embedding(x_mark) + self.position_embedding(x)
+        x = self.dropout(x)
 
-        return self.dropout(x)
+        return x
 
 
 class DataEmbedding_inverted(nn.Module):
 
     def __init__(self, c_in, d_model, embed_type = 'fixed', freq = 'h', dropout = 0.1):
         super(DataEmbedding_inverted, self).__init__()
-        
         self.value_embedding = nn.Linear(c_in, d_model)
         self.dropout = nn.Dropout(p = dropout)
 
@@ -181,12 +204,14 @@ class DataEmbedding_inverted(nn.Module):
         else:
             x = self.value_embedding(torch.cat([x, x_mark.permute(0, 2, 1)], 1))
         # x: [Batch Variate d_model]
-        return self.dropout(x)
+        x = self.dropout(x)
+        
+        return x
 
 
 class DataEmbedding_wo_pos(nn.Module):
     """
-    # TODO
+    Data Embedding wo pos
     """
 
     def __init__(self, c_in, d_model, embed_type = 'fixed', freq = 'h', dropout = 0.1):
@@ -209,19 +234,19 @@ class DataEmbedding_wo_pos(nn.Module):
         if x_mark is None:
             x = self.value_embedding(x)
         else:
-            x = self.value_embedding(x) + self.temporal_embedding(x_mark)
-        
-        return self.dropout(x)
+            x = self.value_embedding(x) + self.temporal_embedding(x_mark)        
+        x = self.dropout(x)
+
+        return x
 
 
 class PatchEmbedding(nn.Module):
     """
-    TODO
+    Patch Embedding
     """
     
     def __init__(self, d_model, patch_len, stride, padding, dropout):
         super(PatchEmbedding, self).__init__()
-        
         # Patching
         self.patch_len = patch_len
         self.stride = stride
@@ -243,3 +268,25 @@ class PatchEmbedding(nn.Module):
         x = self.value_embedding(x) + self.position_embedding(x)
         
         return self.dropout(x), n_vars
+
+
+
+
+# 测试代码 main 函数
+def main():
+    import pandas as pd
+
+    data = pd.DataFrame({
+        "feat": range(20),
+        "target": range(20),
+    })
+    print(data.values)
+    
+    token_embed = TokenEmbedding(c_in = 7, d_model = 512)
+    print(token_embed)
+
+    res = token_embed(torch.tensor(data.values))
+    print(res)
+
+if __name__ == "__main__":
+    main()
