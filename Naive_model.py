@@ -21,11 +21,19 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
+from sklearn.base import BaseEstimator
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-
+class Navie(BaseEstimator):
+    
+    def fit(self, X, y):
+        return self
+    
+    def predict(self, X):
+        return X["lag1"]
 
 
 
