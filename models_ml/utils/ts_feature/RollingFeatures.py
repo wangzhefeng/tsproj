@@ -20,20 +20,15 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class RollingFeatures:
     
-    def __init__(self, 
-                 data, 
-                 datetime_format: str = '%Y-%m-%d %H:%M:%S',
-                 window_length: int = 7) -> None:
+    def __init__(self, data, window_length: int = 7) -> None:
         self.data = data
-        self.datetime_format = datetime_format
         self.window_length = window_length
 
     def features(self, raw_feature, new_feature):
-        self.data["Datetime"] = pd.to_datetime(self.data["Datetime"], format = self.datetime_format)
-        # TODO
+        # 滚动窗口特征
         self.data[new_feature] = self.data[raw_feature].rolling(self.window_length).mean()
         # 重命名
-        data_columns = ["Datetime", raw_feature, new_feature]
+        data_columns = ["ts", raw_feature, new_feature]
         
         self.data = self.data[data_columns]
 
