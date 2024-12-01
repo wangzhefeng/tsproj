@@ -151,6 +151,8 @@ lightning_logs/
 
 # data/
 dataset/
+datasets/
 results/
 test_results/
 checkpoints/
+data/
