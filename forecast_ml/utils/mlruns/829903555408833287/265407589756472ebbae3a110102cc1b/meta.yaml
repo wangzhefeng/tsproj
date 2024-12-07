@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/wangzf/tsproj/models_ml/ml_forecast/utils/mlruns/829903555408833287/265407589756472ebbae3a110102cc1b/artifacts
+end_time: 1733405298913
+entry_point_name: ''
+experiment_id: '829903555408833287'
+lifecycle_stage: active
+run_id: 265407589756472ebbae3a110102cc1b
+run_name: mysterious-bug-102
+run_uuid: 265407589756472ebbae3a110102cc1b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1733405296595
+status: 3
+tags: []
+user_id: wangzf

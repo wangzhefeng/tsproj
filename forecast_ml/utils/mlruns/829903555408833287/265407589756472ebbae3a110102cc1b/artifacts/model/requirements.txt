@@ -1,0 +1,7 @@
+mlflow==2.18.0
+lightgbm==4.5.0
+mlforecast==0.13.4
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+scipy==1.14.1

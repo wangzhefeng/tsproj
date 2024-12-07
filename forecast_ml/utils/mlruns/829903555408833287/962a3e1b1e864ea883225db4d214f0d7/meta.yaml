@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/wangzf/tsproj/models_ml/ml_forecast/utils/mlruns/829903555408833287/962a3e1b1e864ea883225db4d214f0d7/artifacts
+end_time: 1733405281697
+entry_point_name: ''
+experiment_id: '829903555408833287'
+lifecycle_stage: active
+run_id: 962a3e1b1e864ea883225db4d214f0d7
+run_name: caring-mule-836
+run_uuid: 962a3e1b1e864ea883225db4d214f0d7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1733405281378
+status: 4
+tags: []
+user_id: wangzf

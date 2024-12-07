@@ -1,0 +1,18 @@
+artifact_path: model
+flavors:
+  mlforecast:
+    code: null
+    mlforecast_version: 0.13.4
+    pickled_model: mlforecast-model
+    serialization_format: cloudpickle
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlforecast.flavor
+    model_path: mlforecast-model
+    python_version: 3.11.9
+mlflow_version: 2.18.0
+model_uuid: ce3630ca79d14d05ba8a30d0e899a33a
+run_id: 265407589756472ebbae3a110102cc1b
+utc_time_created: '2024-12-05 13:28:16.916241'

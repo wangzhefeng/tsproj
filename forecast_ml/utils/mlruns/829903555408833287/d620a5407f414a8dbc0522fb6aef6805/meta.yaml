@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/wangzf/tsproj/models_ml/ml_forecast/utils/mlruns/829903555408833287/d620a5407f414a8dbc0522fb6aef6805/artifacts
+end_time: 1733405068152
+entry_point_name: ''
+experiment_id: '829903555408833287'
+lifecycle_stage: active
+run_id: d620a5407f414a8dbc0522fb6aef6805
+run_name: sneaky-ape-612
+run_uuid: d620a5407f414a8dbc0522fb6aef6805
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1733405068075
+status: 4
+tags: []
+user_id: wangzf
