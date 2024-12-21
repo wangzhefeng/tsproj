@@ -1,5 +1,10 @@
-import glob
+# python libraries
 import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+import glob
 import re
 import warnings
 
@@ -19,7 +24,7 @@ warnings.filterwarnings('ignore')
 
 
 class Dataset_Custom(Dataset):
-    
+
     def __init__(self, 
                  args, 
                  root_path, 
@@ -28,10 +33,11 @@ class Dataset_Custom(Dataset):
                  size = None,  # [seq_len, label_len, pred_len]
                  features = 'S',   # "S", "M", "MS"
                  target = 'OT', 
-                 freq = 'h',  # "t", "h", ""
+                 freq = 'h',  # "s", "t", "h", "d", "b", "w", "m"
                  seasonal_patterns = None,
                  scale = True,  # 是否进行数据转换
-                 timeenc = 0): 
+                 timeenc = 0,
+                 df_test = None): 
         # 参数集
         self.args = args
         # 数据参数
@@ -39,12 +45,12 @@ class Dataset_Custom(Dataset):
         self.data_path = data_path
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
-        self.set_type = type_map[flag]
+        self.set_type = type_map[flag]  # 0, 1, 2
         # 数据尺寸参数
         if size == None:
-            self.seq_len = 24 * 4 * 4
-            self.label_len = 24 * 4
-            self.pred_len = 24 * 4
+            self.seq_len = 24 * 4 * 4  # 训练数据长度
+            self.label_len = 24 * 4  # 验证数据长度
+            self.pred_len = 24 * 4  # 预测数据长度(与 label_len 相等)
         else:
             self.seq_len = size[0]
             self.label_len = size[1]
@@ -59,26 +65,28 @@ class Dataset_Custom(Dataset):
         # 数据时间戳特征参数
         self.timeenc = timeenc
         # 读取数据
-        self.__read_data__()
+        self.__read_data__(df_test)
 
     def __data_load(self):
-        # 数据文件(CSV)
+        # 数据文件
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        # df_raw.columns: ['date', (other features), 'target']
-        # 预测特征
-        cols = list(df_raw.columns)
+        # 数据特征排序
+        cols = list(df_raw.columns)  # ['date', (other features), 'target']
         cols.remove(self.target)
         cols.remove('date')
-        # 数据
         df_raw = df_raw[['date'] + cols + [self.target]]
 
         return df_raw
-    
+
     def __data_process(self, df_raw):
-        # 根据预测任务处理数据
+        """
+        根据预测任务处理数据 
+
+        features:
         # S: univariate predict univariate
         # MS: multivariate predict univariate
         # M: multivariate predict multivariate
+        """
         if self.features == 'M' or self.features == 'MS':  # 去除 'date' 字段
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':  # 只取目标特征
@@ -86,9 +94,10 @@ class Dataset_Custom(Dataset):
         
         return df_data
 
-    # TODO
     def __data_split_index(self, df_raw):
-        # 训练/测试/验证数据集分割 
+        """
+        训练/测试/验证数据集分割 
+        """ 
         # 数据分割比例
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
@@ -101,7 +110,9 @@ class Dataset_Custom(Dataset):
         return border1s, border2s, border1, border2
 
     def __data_transform(self, df_data, border1s, border2s):
-        # 数据标准化 
+        """
+        数据标准化
+        """
         self.scaler = StandardScaler()
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -111,122 +122,67 @@ class Dataset_Custom(Dataset):
             data = df_data.values
         
         return data 
-    
+
     def __data_split(self, data, border1, border2):
-        # 数据分割
+        """
+        数据分割
+        """
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
-    
+
+    def __data_ts_feature(self, df_raw, border1, border2):
+        """
+        时间戳特征处理
+        """
+        # 时间戳特征
+        df_stamp = df_raw[['date']][border1:border2]
+        df_stamp['date'] = pd.to_datetime(df_stamp.date)
+        # 日期/时间特征构造
+        if self.timeenc == 0:
+            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
+            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
+            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
+            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
+            self.data_stamp = df_stamp.drop(['date'], axis=1).values
+        elif self.timeenc == 1:
+            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
+            self.data_stamp = data_stamp.transpose(1, 0)
+
     def __data_augmentation(self):
-        # 训练增强
+        """
+        训练数据增强
+        """ 
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, \
             self.data_y, \
             augmentation_tags = run_augmentation_single(
-                self.data_x, self.data_y, self.args
+                self.data_x, 
+                self.data_y, 
+                self.args,
             )
-    
-    def __data_ts_feature(self, df_raw, border1, border2):
-        # 时间戳特征处理
-        df_stamp = df_raw[['date']][border1:border2]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        
-        if self.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            self.data_stamp = df_stamp.drop(['date'], 1).values
-        elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
-            self.data_stamp = data_stamp.transpose(1, 0)
 
-    def __read_data__(self):
-        df_raw = self.__data_load()
+    def __read_data__(self, df_test):
+        # 数据读取
+        if df_test is None:
+            df_raw = self.__data_load()
+        else:
+            df_raw = df_test
+        # 数据变换
         df_data = self.__data_process(df_raw)
+        # 数据分割
         border1s, border2s, border1, border2 = self.__data_split_index(df_raw)
+        print(border1s, border2s)
         data = self.__data_transform(df_data, border1s, border2s)
         self.__data_split(data, border1, border2)
-        self.__data_augmentation()
+        # 特征构造
         self.__data_ts_feature(df_raw, border1, border2)
-
-    def __read_data__(self):
-        """
-        数据读取
-        """
-        # ------------------------------
-        # 数据文件(CSV)
-        # ------------------------------
-        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        # ------------------------------
-        # 数据处理 
-        # df_raw.columns: ['date', (other features), 'target']
-        # ------------------------------
-        # 预测特征
-        cols = list(df_raw.columns)
-        cols.remove(self.target)
-        cols.remove('date')
-        # 数据筛选
-        df_raw = df_raw[['date'] + cols + [self.target]]
-        # 训练/测试/验证数据集分割
-        num_train = int(len(df_raw) * 0.7)
-        num_test = int(len(df_raw) * 0.2)
-        num_vali = len(df_raw) - num_train - num_test
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali, len(df_raw)]
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
-        # 预测特征变量数据
-        # S: univariate predict univariate
-        # MS: multivariate predict univariate
-        # M: multivariate predict multivariate
-        if self.features == 'M' or self.features == 'MS':
-            # 去除 'date' 字段
-            cols_data = df_raw.columns[1:]
-            df_data = df_raw[cols_data]
-        elif self.features == 'S':
-            # 只取目标特征
-            df_data = df_raw[[self.target]]
-        # ------------------------------
-        # 数据标准化 
-        # ------------------------------
-        self.scaler = StandardScaler()
-        if self.scale:
-            train_data = df_data[border1s[0]:border2s[0]]
-            self.scaler.fit(train_data.values)
-            data = self.scaler.transform(df_data.values)
-        else:
-            data = df_data.values
-        # ------------------------------
-        # 时间戳特征处理 
-        # ------------------------------
-        df_stamp = df_raw[['date']][border1:border2]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        if self.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            self.data_stamp = df_stamp.drop(['date'], 1).values
-        elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
-            self.data_stamp = data_stamp.transpose(1, 0)
-        # ------------------------------
-        # 数据分割
-        # ------------------------------
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
-        # ------------------------------
-        # 数据增强
-        # ------------------------------
-        if self.set_type == 0 and self.args.augmentation_ratio > 0:
-            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
-                self.data_x, self.data_y, self.args
-            )
+        # 训练数据增强
+        self.__data_augmentation()
     
     def __getitem__(self, index):
         """
         数据索引
+        data_x 与 data_y 有 label_len 重叠
         """
         # data_x 索引
         s_begin = index
@@ -244,9 +200,9 @@ class Dataset_Custom(Dataset):
 
     def __len__(self):
         """
-        TODO
+        样本数量
         """
-        return len(self.data_x) - self.seq_len - self.pred_len + 1
+        return len(self.data_x) - (self.seq_len + self.pred_len) + 1
 
     def inverse_transform(self, data):
         """
@@ -1049,3 +1005,13 @@ class Data_Loader:
         test_loader = DataLoader(test_data, batch_size = self.cfg.batch_size, shuffle = False)
 
         return train_loader, test_loader
+
+
+
+
+# 测试代码 main 函数
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()

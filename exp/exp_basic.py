@@ -1,7 +1,7 @@
 import os
 
 import torch
-from models_tf import (
+from models import (
     # TimesNet, 
     # Autoformer, 
     DLinear, 
@@ -27,7 +27,7 @@ from models_tf import (
 # )
 
 
-class Exp_Basic(object):
+class Exp_Basic:
 
     def __init__(self, args):
         # 参数
@@ -83,7 +83,7 @@ class Exp_Basic(object):
         }
         if args.model == 'Mamba':
             print('Please make sure you have successfully installed mamba_ssm')
-            from models_tf import Mamba
+            from models import Mamba
             self.model_dict[Mamba] = Mamba
         # 设备
         self.device = self._acquire_device()
