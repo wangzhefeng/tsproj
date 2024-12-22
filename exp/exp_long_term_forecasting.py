@@ -110,13 +110,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             scaler = torch.amp.GradScaler("cuda")
         # 分 epoch 训练
         for epoch in range(self.args.train_epochs):
-            iter_count = 0  # 每个 epoch 迭代次数记录
-            train_loss = []  # 训练误差
-            
-            # 模型训练
-            self.model.train()
             # time: epoch 模型训练开始时间
             epoch_time = time.time()
+
+            iter_count = 0  # 每个 epoch 迭代次数记录
+            train_loss = []  # 训练误差
+            self.model.train()  # 模型训练模式
             # 分 batch 训练
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # 当前 epoch 的迭代次数记录
@@ -266,9 +265,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             os.makedirs(folder_path)
         # ------------------------------
         # 模型推理
-        # ------------------------------ 
-        # 模型推理
-        self.model.eval()
+        # ------------------------------  
+        self.model.eval()  # 模型推理模式
         # 预测/实际标签
         preds, trues = [], []
         with torch.no_grad():

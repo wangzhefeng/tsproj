@@ -1,4 +1,23 @@
-import numpy as np
+# -*- coding: utf-8 -*-
+
+# ***************************************************
+# * File        : Transformer.py
+# * Author      : Zhefeng Wang
+# * Email       : wangzhefengr@163.com
+# * Date        : 2024-12-22
+# * Version     : 0.1.122222
+# * Description : description
+# * Link        : link
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# ***************************************************
+
+# python libraries
+import os
+import sys
+ROOT = os.getcwd()
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,6 +29,9 @@ from layers.Transformer_EncDec import (
     Encoder, EncoderLayer
 )
 
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
+
 
 class Model(nn.Module):
     """
@@ -20,28 +42,35 @@ class Model(nn.Module):
 
     def __init__(self, configs):
         super(Model, self).__init__()
+        
         # params
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
+        
         # Embedding
         self.enc_embedding = DataEmbedding(
-            configs.enc_in, 
-            configs.d_model, 
-            configs.embed, 
-            configs.freq,
-            configs.dropout
+            c_in=configs.enc_in, 
+            d_model=configs.d_model, 
+            embed_type=configs.embed, 
+            freq=configs.freq,
+            dropout=configs.dropout,
         )
         # Encoder
         self.encoder = Encoder(
-            [
+            attn_layers = [
                 EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False), 
-                        configs.d_model, 
-                        configs.n_heads
+                    attention = AttentionLayer(
+                        attention=FullAttention(
+                            mask_flag=False, 
+                            factor=configs.factor, 
+                            attention_dropout=configs.dropout, 
+                            output_attention=False
+                        ), 
+                        d_model=configs.d_model, 
+                        n_heads=configs.n_heads,
                     ),
-                    configs.d_model,
-                    configs.d_ff,
+                    d_model = configs.d_model,
+                    d_ff = configs.d_ff,
                     dropout = configs.dropout,
                     activation = configs.activation
                 ) for l in range(configs.e_layers)
@@ -142,4 +171,57 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        
         return None
+
+
+
+
+# 测试代码 main 函数
+def main():
+    """
+    python -u run.py \
+    --task_name long_term_forecast \
+    --is_training 1 \
+    --root_path ./dataset/ETT-small/ \
+    --data_path ETTh1.csv \
+    --model_id ETTh1_96_96 \
+    --model $model_name \
+    --data ETTh1 \
+    --features M \
+    --seq_len 96 \
+    --label_len 48 \
+    --pred_len 96 \
+    --e_layers 2 \
+    --d_layers 1 \
+    --factor 3 \
+    --enc_in 7 \
+    --dec_in 7 \
+    --c_out 7 \
+    --des 'Exp' \
+    --itr 1
+    """
+    class Config:
+        task_name = "long_term_forecast"
+        is_training = 1
+        root_path = "./dataset/ETT-small"
+        data_path = "ETTh1.csv"
+        model_id = "ETTh1_96_96"
+        model = "Tansformer"
+        data = "ETTh1"
+        features = "M"
+        seq_len = 96
+        label_len = 48
+        pred_len = 96
+        e_layers = 2
+        d_layers = 1
+        factor = 3
+        en_in = 7
+        dec_in = 7
+        c_out = 7
+        des = "Exp"
+        itr = 1
+    config = Config()
+
+if __name__ == "__main__":
+    main()

@@ -10,26 +10,33 @@ class Transpose(nn.Module):
 
     def __init__(self, *dims, contiguous=False): 
         super().__init__()
-        self.dims, self.contiguous = dims, contiguous
+
+        self.dims = dims
+        self.contiguous = contiguous
 
     def forward(self, x):
-        if self.contiguous: return x.transpose(*self.dims).contiguous()
-        else: return x.transpose(*self.dims)
+        if self.contiguous:
+            return x.transpose(*self.dims).contiguous()
+        else:
+            return x.transpose(*self.dims)
 
 
 class FlattenHead(nn.Module):
 
     def __init__(self, n_vars, nf, target_window, head_dropout=0):
         super().__init__()
+        
         self.n_vars = n_vars
         self.flatten = nn.Flatten(start_dim=-2)
         self.linear = nn.Linear(nf, target_window)
         self.dropout = nn.Dropout(head_dropout)
 
-    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
+    def forward(self, x):
+        # x: [bs x nvars x d_model x patch_num]
         x = self.flatten(x)
         x = self.linear(x)
         x = self.dropout(x)
+        
         return x
 
 
@@ -44,13 +51,14 @@ class Model(nn.Module):
         stride: int, stride for patch_embedding
         """
         super().__init__()
+        
         # params
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
 
-        padding = stride
         # patching and embedding
+        padding = stride
         self.patch_embedding = PatchEmbedding(
             configs.d_model, 
             patch_len, 
@@ -58,23 +66,34 @@ class Model(nn.Module):
             padding, 
             configs.dropout
         )
+        
         # Encoder
         self.encoder = Encoder(
-            [
+            attn_layers = [
                 EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False), 
-                        configs.d_model, 
-                        configs.n_heads
+                    attention = AttentionLayer(
+                        attention=FullAttention(
+                            mask_flag=False, 
+                            factor=configs.factor, 
+                            attention_dropout=configs.dropout, 
+                            output_attention=False
+                        ), 
+                        d_model=configs.d_model, 
+                        n_heads=configs.n_heads,
                     ),
-                    configs.d_model,
-                    configs.d_ff,
+                    d_model = configs.d_model,
+                    d_ff = configs.d_ff,
                     dropout = configs.dropout,
                     activation = configs.activation
                 ) for l in range(configs.e_layers)
             ],
-            norm_layer = nn.Sequential(Transpose(1,2), nn.BatchNorm1d(configs.d_model), Transpose(1,2))
+            norm_layer = nn.Sequential(
+                Transpose(1,2), 
+                nn.BatchNorm1d(configs.d_model), 
+                Transpose(1,2)
+            ),
         )
+        
         # Prediction Head
         self.head_nf = configs.d_model * int((configs.seq_len - patch_len) / stride + 2)
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
@@ -237,4 +256,5 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        
         return None

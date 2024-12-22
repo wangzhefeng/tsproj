@@ -33,6 +33,7 @@ class moving_avg(nn.Module):
 
     def __init__(self, kernel_size, stride):
         super(moving_avg, self).__init__()
+        
         self.kernel_size = kernel_size
         self.avg = nn.AvgPool1d(kernel_size = kernel_size, stride = stride, padding = 0)
 
@@ -41,6 +42,7 @@ class moving_avg(nn.Module):
         front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         x = torch.cat([front, x, end], dim = 1)
+        
         # avgpool1d
         x = self.avg(x.permute(0, 2, 1))
         x = x.permute(0, 2, 1)
@@ -62,6 +64,7 @@ class series_decomp(nn.Module):
         moving_mean = self.moving_avg(x)
         # Seasonal
         res = x - moving_mean
+        
         return res, moving_mean
 
 
@@ -89,16 +92,24 @@ class series_decomp_multi(nn.Module):
 
 
 
-
-
 # 测试代码 main 函数
 def main():
     x = torch.randn(1, 2, 15)
     print(x)
+    print(x.size())
 
-    mv = moving_avg(kernel_size=3, stride=1)
-    x_mean = mv(x)
-    print(x_mean)
-
+    # 移动平均
+    # mv = moving_avg(kernel_size=3, stride=1)
+    # x_mean = mv(x)
+    # print(x_mean)
+    
+    # 时序分解
+    decompsition = series_decomp(kernel_size = 3)
+    seasonal, trend = decompsition(x)
+    print(f"seasonal: \n{seasonal}")
+    print(f"seasonal size: \n{seasonal.size()}")
+    print(f"trend: \n{trend}")
+    print(f"trend size: \n{trend.size()}")
+    
 if __name__ == "__main__":
     main()

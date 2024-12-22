@@ -26,6 +26,37 @@ import torch.nn as nn
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
+class TokenEmbedding(nn.Module):
+    """
+    Token Embedding
+    """
+
+    def __init__(self, c_in, d_model):
+        super(TokenEmbedding, self).__init__()
+        
+        # Conv1d layer
+        padding = 1 if torch.__version__ >= '1.5.0' else 2
+        self.tokenConv = nn.Conv1d(
+            in_channels = c_in,
+            out_channels = d_model,
+            kernel_size = 3,
+            padding = padding,
+            padding_mode = 'circular',
+            bias = False,
+        )
+        # Conv1d layer 参数初始化
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                nn.init.kaiming_normal_(m.weight, mode = 'fan_in', nonlinearity = 'leaky_relu')
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1)
+        x = self.tokenConv(x)
+        x = x.transpose(1, 2)
+
+        return x
+
+
 class PositionalEmbedding(nn.Module):
     """
     Positional Embedding
@@ -33,6 +64,7 @@ class PositionalEmbedding(nn.Module):
 
     def __init__(self, d_model, max_len = 5000):
         super(PositionalEmbedding, self).__init__()
+        
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model).float()
         pe.require_grad = False
@@ -48,33 +80,6 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, x):
         x = self.pe[:, :x.size(1)]
-
-        return x
-
-
-class TokenEmbedding(nn.Module):
-    """
-    Token Embedding
-    """
-
-    def __init__(self, c_in, d_model):
-        super(TokenEmbedding, self).__init__()
-        
-        padding = 1 if torch.__version__ >= '1.5.0' else 2
-        self.tokenConv = nn.Conv1d(
-            in_channels = c_in,
-            out_channels = d_model,
-            kernel_size = 3,
-            padding = padding,
-            padding_mode = 'circular',
-            bias = False
-        )
-        for m in self.modules():
-            if isinstance(m, nn.Conv1d):
-                nn.init.kaiming_normal_(m.weight, mode = 'fan_in', nonlinearity = 'leaky_relu')
-
-    def forward(self, x):
-        x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
 
         return x
 
@@ -164,26 +169,32 @@ class DataEmbedding(nn.Module):
     Data Embedding
     """
 
-    def __init__(self, c_in, d_model, embed_type = 'fixed', freq = 'h', dropout = 0.1):
+    def __init__(self, c_in = 7, d_model = 512, embed_type = 'fixed', freq = 'h', dropout = 0.1):
         super(DataEmbedding, self).__init__()
+
         self.value_embedding = TokenEmbedding(c_in = c_in, d_model = d_model)
         self.position_embedding = PositionalEmbedding(d_model = d_model)
-        self.temporal_embedding = TemporalEmbedding(
-            d_model = d_model, 
-            embed_type = embed_type, 
-            freq = freq,
-        ) if embed_type != 'timeF' else TimeFeatureEmbedding(
-            d_model = d_model, 
-            embed_type = embed_type, 
-            freq = freq,
-        )
+        if embed_type == "timeF":
+            self.temporal_embedding = TimeFeatureEmbedding(
+                d_model = d_model, 
+                embed_type = embed_type, 
+                freq = freq,
+            )
+        else:
+            self.temporal_embedding = TemporalEmbedding(
+                d_model = d_model, 
+                embed_type = embed_type, 
+                freq = freq,
+            )
         self.dropout = nn.Dropout(p = dropout)
 
     def forward(self, x, x_mark):
+        # value embedding + position embedding
         if x_mark is None:
             x = self.value_embedding(x) + self.position_embedding(x)
         else:
             x = self.value_embedding(x) + self.temporal_embedding(x_mark) + self.position_embedding(x)
+        # dropout
         x = self.dropout(x)
 
         return x
@@ -274,19 +285,30 @@ class PatchEmbedding(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    import pandas as pd
+    x = torch.randn(1, 50, 5)
+    x = x.permute(0, 2, 1)
+    print(x)
+    print(x.size())
+    x = x.transpose(1, 2)
+    print(x.size())
 
-    data = pd.DataFrame({
-        "feat": range(20),
-        "target": range(20),
-    })
-    print(data.values)
-    
-    token_embed = TokenEmbedding(c_in = 7, d_model = 512)
-    print(token_embed)
+    # ------------------------------
+    # conv1d
+    # ------------------------------
+    conv1 = nn.Conv1d(in_channels=50, out_channels=5, kernel_size=3) 
+    conv1_out = conv1(x)
+    # conv1_out = conv1_out.transpose(1, 2)
+    print(conv1_out)
+    print(conv1_out.size())
 
-    res = token_embed(torch.tensor(data.values))
-    print(res)
+    # ------------------------------
+    # token embedding
+    # ------------------------------
+    # token_embed = TokenEmbedding(c_in = 7, d_model = 512)
+    # print(token_embed)
+
+    # res = token_embed(x)
+    # print(res)
 
 if __name__ == "__main__":
     main()

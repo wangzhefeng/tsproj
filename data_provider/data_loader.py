@@ -43,6 +43,7 @@ class Dataset_Custom(Dataset):
         # 数据参数
         self.root_path = root_path
         self.data_path = data_path
+        # 任务参数
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]  # 0, 1, 2
@@ -145,7 +146,10 @@ class Dataset_Custom(Dataset):
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             self.data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
+            data_stamp = time_features(
+                pd.to_datetime(df_stamp['date'].values), 
+                freq = self.freq
+            )
             self.data_stamp = data_stamp.transpose(1, 0)
 
     def __data_augmentation(self):
@@ -200,7 +204,7 @@ class Dataset_Custom(Dataset):
 
     def __len__(self):
         """
-        样本数量
+        样本数量(seq + label)
         """
         return len(self.data_x) - (self.seq_len + self.pred_len) + 1
 
@@ -218,7 +222,7 @@ class Dataset_ETT_hour(Dataset):
                  root_path = "dataset/ETT-small/", 
                  data_path = 'ETTh1.csv',
                  flag = 'train', 
-                 size = None,  # [seq_len, label_len, pred_len]
+                 size = None,
                  features = 'S', 
                  target = 'OT', 
                  freq = 'h', 
@@ -226,59 +230,72 @@ class Dataset_ETT_hour(Dataset):
                  scale = True, 
                  timeenc = 0):
         self.args = args
+        
         self.root_path = root_path
         self.data_path = data_path
+        
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
-        self.set_type = type_map[flag]  # 0, 1, 2
+        self.set_type = type_map[flag]
+        
         if size == None:
-            self.seq_len = 24 * 4 * 4
-            self.label_len = 24 * 4
-            self.pred_len = 24 * 4
+            self.seq_len = 24 * 4 * 4  # 16days
+            self.label_len = 24 * 4  # 4days
+            self.pred_len = 24 * 4  # 4days
         else:
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
+        
         self.features = features
         self.target = target
         self.freq = freq
-        # self.seasonal_patterns = seasonal_patterns
+        self.seasonal_patterns = seasonal_patterns
+        
         self.scale = scale
+        
         self.timeenc = timeenc
         # 读取数据
         self.__read_data__()
 
-    def __read_data__(self):
-        # 标准化
-        self.scaler = StandardScaler()
+    def __read_data__(self): 
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        # 数据处理
-        border1s = [
-            0, 
-            12 * 30 * 24 - self.seq_len, 
-            12 * 30 * 24 + 4 * 30 * 24 - self.seq_len
-        ]
-        border2s = [
-            12 * 30 * 24, 
-            12 * 30 * 24 + 4 * 30 * 24, 
-            12 * 30 * 24 + 8 * 30 * 24
-        ]
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
+        # 数据特征排序
+        cols = list(df_raw.columns)  # ['date', (other features), 'target']
+        cols.remove(self.target)
+        cols.remove('date')
+        df_raw = df_raw[['date'] + cols + [self.target]]
+
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
             cols_data = df_raw.columns[1:]
             df_data = df_raw[cols_data]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
+
+        # 数据处理
+        # num_train = 12*30*24
+        # num_test = 4*30*24
+        # num_eval = 4*30*24
+        border1s = [0,              (12 * 30 * 24) - self.seq_len,  (12 * 30 * 24 + 8 * 30 * 24) - (4 * 30 * 24) - self.seq_len]
+        border2s = [(12 * 30 * 24), (12 * 30 * 24) + (4 * 30 * 24), (12 * 30 * 24 + 8 * 30 * 24)]
+        border1 = border1s[self.set_type]
+        border2 = border2s[self.set_type]
+        
         # 数据标准化
+        self.scaler = StandardScaler()
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
         else:
-            data = df_data.values
+            data = df_data.values 
+        
+        # 数据分割
+        self.data_x = data[border1:border2]
+        self.data_y = data[border1:border2]
+        
         # 时间戳特征处理
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
@@ -289,14 +306,19 @@ class Dataset_ETT_hour(Dataset):
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             self.data_stamp = df_stamp.drop(['date'], 1).values
         elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
-            self.data_stamp = data_stamp.transpose(1, 0) 
-        # 数据分割
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
-        # 训练数据聚合
+            data_stamp = time_features(
+                pd.to_datetime(df_stamp['date'].values), 
+                freq = self.freq
+            )
+            self.data_stamp = data_stamp.transpose(1, 0)
+        
+        # 训练数据增强
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
-            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(self.data_x, self.data_y, self.args)
+            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
+                self.data_x, 
+                self.data_y, 
+                self.args,
+            )
 
     def __getitem__(self, index):
         # data_x 索引
@@ -338,7 +360,8 @@ class Dataset_ETT_minute(Dataset):
         self.args = args
         # 数据参数
         self.root_path = root_path
-        self.data_path = data_path
+        self.data_path = data_path 
+        # 任务参数
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
@@ -366,33 +389,29 @@ class Dataset_ETT_minute(Dataset):
     def __read_data__(self): 
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        
-        # 数据处理
-        border1s = [
-            0, 
-            (12 * 30 * 24 * 4) - self.seq_len, 
-            (12 * 30 * 24 * 4) + (4 * 30 * 24 * 4) - self.seq_len
-        ]
-        border2s = [
-            (12 * 30 * 24 * 4),  # 1年的数据数量
-            (12 * 30 * 24 * 4) + (4 * 30 * 24 * 4),  # 1年 + 4个月的数据数量
-            (12 * 30 * 24 * 4) + (8 * 30 * 24 * 4),  # 1年 + 8个月的数据数量
-        ]
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
-        
-        # train: 0                         :34560
-        # val:   (34560-self.seq_len)      :(34560+11520)
-        # test:  (34560+11520-self.seq_len):(34560+23040)
-        
-        # 时序数据构造
+        # 数据特征排序
+        cols = list(df_raw.columns)  # ['date', (other features), 'target']
+        cols.remove(self.target)
+        cols.remove('date')
+        df_raw = df_raw[['date'] + cols + [self.target]]
+
+        # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
-        # ------------------------------
+
+        # 数据处理
+        border1s = [
+            0,            (12*30*24*4) - self.seq_len, (12*30*24*4 + 8*30*24*4) - 4*30*24*4 - self.seq_len
+        ]
+        border2s = [
+            (12*30*24*4), (12*30*24*4) + (4*30*24*4),  (12*30*24*4 + 8*30*24*4)
+        ]
+        border1 = border1s[self.set_type]
+        border2 = border2s[self.set_type] 
+        
         # 数据标准化 
-        # ------------------------------
         self.scaler = StandardScaler()
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -400,9 +419,12 @@ class Dataset_ETT_minute(Dataset):
             data = self.scaler.transform(df_data.values)
         else:
             data = df_data.values
-        # ------------------------------
+        
+        # 数据分割 
+        self.data_x = data[border1:border2]
+        self.data_y = data[border1:border2]
+
         # 时间戳特征处理 
-        # ------------------------------
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
         if self.timeenc == 0:
@@ -415,26 +437,17 @@ class Dataset_ETT_minute(Dataset):
             self.data_stamp = df_stamp.drop(['date'], 1).values
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq = self.freq)
-            self.data_stamp = data_stamp.transpose(1, 0)
-        # ------------------------------
-        # 数据分割 
-        # ------------------------------
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
-        # ------------------------------
-        # 数据增强
-        # ------------------------------
+            self.data_stamp = data_stamp.transpose(1, 0) 
+        
+        # 训练数据增强
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
-                self.data_x, self.data_y, self.args
+                self.data_x, 
+                self.data_y, 
+                self.args,
             )
 
     def __getitem__(self, index):
-        """
-        数据索引
-        x: index:(index+seq_len)
-        y: (index+seq_len-label_len):(index+seq_len+pred_len)
-        """
         # data_x 索引
         s_begin = index
         s_end = s_begin + self.seq_len
@@ -456,37 +469,45 @@ class Dataset_ETT_minute(Dataset):
         return self.scaler.inverse_transform(data)
 
 
+# TODO
 class Dataset_M4(Dataset):
     
     def __init__(self, 
                  args, 
                  root_path, 
-                 flag = 'pred', 
-                 size = None,
-                 features='S', 
                  data_path='ETTh1.csv',
-                 target = 'OT', 
+                 flag = 'pred',
+                 size = None,
+                 features='S',  
+                 target = 'OT',
+                 freq = '15min',
+                 seasonal_patterns = 'Yearly',
                  scale = False, 
                  inverse = False, 
-                 timeenc = 0, 
-                 freq = '15min',
-                 seasonal_patterns = 'Yearly'):
-        
-        self.features = features
-        self.target = target
-        self.scale = scale
-        self.inverse = inverse
-        self.timeenc = timeenc
+                 timeenc = 0):
+        self.args = args
+
         self.root_path = root_path
+        self.data_path = data_path
+
+        self.flag = flag
 
         self.seq_len = size[0]
         self.label_len = size[1]
         self.pred_len = size[2]
 
+        self.features = features
+        self.target = target
+        self.freq = freq
         self.seasonal_patterns = seasonal_patterns
         self.history_size = M4Meta.history_size[seasonal_patterns]
         self.window_sampling_limit = int(self.history_size * self.pred_len)
-        self.flag = flag
+
+        self.scale = scale
+        self.inverse = inverse
+
+        self.timeenc = timeenc
+        
         self.__read_data__()
 
     def __read_data__(self):
@@ -495,9 +516,11 @@ class Dataset_M4(Dataset):
             dataset = M4Dataset.load(training=True, dataset_file=self.root_path)
         else:
             dataset = M4Dataset.load(training=False, dataset_file=self.root_path)
+        
         training_values = np.array(
-            [v[~np.isnan(v)] for v in
-             dataset.values[dataset.groups == self.seasonal_patterns]])  # split different frequencies
+            [v[~np.isnan(v)] 
+             for v in dataset.values[dataset.groups == self.seasonal_patterns]]
+        )  # split different frequencies
         self.ids = np.array([i for i in dataset.ids[dataset.groups == self.seasonal_patterns]])
         self.timeseries = [ts for ts in training_values]
 
@@ -508,15 +531,18 @@ class Dataset_M4(Dataset):
         outsample_mask = np.zeros((self.pred_len + self.label_len, 1))  # m4 dataset
 
         sampled_timeseries = self.timeseries[index]
-        cut_point = np.random.randint(low=max(1, len(sampled_timeseries) - self.window_sampling_limit),
-                                      high=len(sampled_timeseries),
-                                      size=1)[0]
+        cut_point = np.random.randint(
+            low=max(1, len(sampled_timeseries) - self.window_sampling_limit),
+            high=len(sampled_timeseries),
+            size=1
+        )[0]
 
         insample_window = sampled_timeseries[max(0, cut_point - self.seq_len):cut_point]
         insample[-len(insample_window):, 0] = insample_window
         insample_mask[-len(insample_window):, 0] = 1.0
         outsample_window = sampled_timeseries[
-                           cut_point - self.label_len:min(len(sampled_timeseries), cut_point + self.pred_len)]
+            cut_point - self.label_len:min(len(sampled_timeseries), cut_point + self.pred_len)
+        ]
         outsample[:len(outsample_window), 0] = outsample_window
         outsample_mask[:len(outsample_window), 0] = 1.0
         return insample, outsample, insample_mask, outsample_mask
@@ -540,6 +566,7 @@ class Dataset_M4(Dataset):
             ts_last_window = ts[-self.seq_len:]
             insample[i, -len(ts):] = ts_last_window
             insample_mask[i, -len(ts):] = 1.0
+        
         return insample, insample_mask
 
 

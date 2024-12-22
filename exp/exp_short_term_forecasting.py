@@ -3,7 +3,7 @@ import time
 import warnings
 
 import numpy as np
-import pandas
+import pandas as pd
 import torch
 import torch.nn as nn
 
@@ -75,25 +75,20 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         # 模型训练
         # ------------------------------
         time_now = time.time()
-
         train_steps = len(train_loader)
-
-        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
-
         model_optim = self._select_optimizer()
-
         criterion = self._select_criterion(self.args.loss)
         mse = nn.MSELoss()
-
+        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
+        
         for epoch in range(self.args.train_epochs):
             epoch_time = time.time()
 
             iter_count = 0
-
             train_loss = []
-
             self.model.train()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
+                # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # ------------------------------
                 # 模型优化器梯度归零
@@ -126,7 +121,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
                 train_loss.append(loss.item())
                 # 日志打印：当前 epoch、当前 batch 下每 100 个 batch 的训练速度、误差损失、
                 if (i + 1) % 100 == 0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
+                    print(f"\titers: {i+1}, epoch: {epoch+1} | loss: {loss.item():.7f}")
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
@@ -156,8 +151,8 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         # ------------------------------
         # 最优模型保存、加载
         # ------------------------------
-        best_model_path = path + '/' + 'checkpoint.pth'
-        self.model.load_state_dict(torch.load(best_model_path))
+        self.best_model_path = f"{path}/checkpoint.pth"
+        self.model.load_state_dict(torch.load(self.best_model_path))
 
         return self.model
 
@@ -198,23 +193,25 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         return loss
 
     def test(self, setting, test = 0):
-        # data
+        # 测试数据集构建
         _, train_loader = self._get_data(flag = 'train')
         _, test_loader = self._get_data(flag = 'test')
         x, _ = train_loader.dataset.last_insample_window()
         y = test_loader.dataset.timeseries
         x = torch.tensor(x, dtype=torch.float32).to(self.device)
         x = x.unsqueeze(-1)
-        # model
+        # 最优模型加载
         if test:
             print('loading model')
-            self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
-        # result save
-        folder_path = './test_results/' + setting + '/'
+            self.model.load_state_dict(torch.load(self.best_model_path))
+        # 测试数据结果保存地址
+        folder_path = os.path.join(self.args.test_results, setting + '/')
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        # model inference
-        self.model.eval()
+        # ------------------------------
+        # 模型推理
+        # ------------------------------
+        self.model.eval()  # 模型推理模式
         with torch.no_grad():
             # dec input
             B, _, C = x.shape
@@ -257,7 +254,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        forecasts_df = pandas.DataFrame(preds[:, :, 0], columns=[f'V{i + 1}' for i in range(self.args.pred_len)])
+        forecasts_df = pd.DataFrame(preds[:, :, 0], columns=[f'V{i + 1}' for i in range(self.args.pred_len)])
         forecasts_df.index = test_loader.dataset.ids[:preds.shape[0]]
         forecasts_df.index.name = 'id'
         forecasts_df.set_index(forecasts_df.columns[0], inplace=True)

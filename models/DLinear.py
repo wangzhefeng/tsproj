@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 import torch
 import torch.nn as nn
 
-from layers.Autoformer_EncDec import series_decomp
+from layers.SeriesDecomp import series_decomp
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -34,12 +34,15 @@ class Model(nn.Module):
 
     def __init__(self, configs, individual: bool = False):
         super(Model, self).__init__()
+        
         # 任务类型
         self.task_name = configs.task_name
-        # 时间序列历史数据长度
+        # 输入历史数据长度
         self.seq_len = configs.seq_len
-        # 时间序列处理数据长度
-        if self.task_name == 'classification' or self.task_name == 'anomaly_detection' or self.task_name == 'imputation':
+        # 输出未来数据长度
+        if self.task_name == 'classification' or \
+           self.task_name == 'anomaly_detection' or \
+           self.task_name == 'imputation':
             self.pred_len = configs.seq_len
         else:
             self.pred_len = configs.pred_len
@@ -47,10 +50,7 @@ class Model(nn.Module):
         self.individual = individual
         # encoder input size
         self.channels = configs.enc_in
-        # ------------------------------
-        # 时间序列分解实例
-        # Series decomposition block from Autoformer
-        # ------------------------------
+        # 时间序列分解实例：Series decomposition block from Autoformer
         self.decompsition = series_decomp(configs.moving_avg)
         # ------------------------------
         # 时间序列预测模型
@@ -64,12 +64,13 @@ class Model(nn.Module):
                 self.Linear_Trend.append(nn.Linear(self.seq_len, self.pred_len))
                 self.Linear_Seasonal[i].weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
                 self.Linear_Trend[i].weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
-        # DMS: Direct Multi-Step forecating  
+        # DMS: Direct Multi-Step forecating
         else:
             self.Linear_Seasonal = nn.Linear(self.seq_len, self.pred_len)
             self.Linear_Trend = nn.Linear(self.seq_len, self.pred_len)
             self.Linear_Seasonal.weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
             self.Linear_Trend.weight = nn.Parameter((1 / self.seq_len) * torch.ones([self.pred_len, self.seq_len]))
+        
         # 时间序列分类处理
         if self.task_name == 'classification':
             self.projection = nn.Linear(configs.enc_in * configs.seq_len, configs.num_class)
@@ -156,8 +157,11 @@ class Model(nn.Module):
         return None
 
 
+
+
 # 测试代码 main 函数
 def main():
+    # args
     class Config:
         task_name = "long_term_forecast"
         seq_len = 96
@@ -166,6 +170,7 @@ def main():
         moving_avg = 25
     configs = Config()
     
+    # model
     model = Model(configs, individual = False)
     print(model)
 
