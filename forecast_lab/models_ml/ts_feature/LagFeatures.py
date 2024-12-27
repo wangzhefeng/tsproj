@@ -170,6 +170,7 @@ def main():
         "ds": pd.date_range(start="2024-11-17 00:00:00", end="2024-11-17 09:00:00", freq="1h"),
         "unique_id": [1] * 10,
         "load": range(1, 11),
+        "load1": range(1, 11),
         # "load2": np.random.randn(100),
     })
     print(df1)
@@ -199,11 +200,18 @@ def main():
     # ------------------------------
     # time_delay_embedding
     # ------------------------------
-    df_lags = lag_features(df1, target="load", group_col="unique_id", numLags=5, numHorizon=0, dropna=False)
+    # df_lags = lag_features(df1, target="load", group_col="unique_id", numLags=0, numHorizon=0, dropna=False)
+    # with pd.option_context("display.max_columns", None, "display.max_rows", None):
+    #     print(df_lags)
+    #     print("-" * 80)
+    
+    df_lags = lag_features(df1, target="load", group_col="unique_id", numLags=5, numHorizon=0, dropna=True)
     with pd.option_context("display.max_columns", None, "display.max_rows", None):
         print(df_lags)
         print("-" * 80)
+    
     df_lags = lag_features(df1, target="load", group_col="unique_id", numLags=0, numHorizon=5, dropna=False)
+    df_lags = df_lags.iloc[-5:, ]
     with pd.option_context("display.max_columns", None, "display.max_rows", None):
         print(df_lags)
         print("-" * 80)
