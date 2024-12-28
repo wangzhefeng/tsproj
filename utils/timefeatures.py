@@ -21,6 +21,7 @@ from pandas.tseries.frequencies import to_offset
 
 
 class TimeFeature:
+
     def __init__(self):
         pass
 
@@ -32,7 +33,7 @@ class TimeFeature:
 
 
 class SecondOfMinute(TimeFeature):
-    """Minute of hour encoded as value between [-0.5, 0.5]"""
+    """Second of minute encoded as value between [-0.5, 0.5]"""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.second / 59.0 - 0.5
@@ -53,7 +54,7 @@ class HourOfDay(TimeFeature):
 
 
 class DayOfWeek(TimeFeature):
-    """Hour of day encoded as value between [-0.5, 0.5]"""
+    """Day of week encoded as value between [-0.5, 0.5]"""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.dayofweek / 6.0 - 0.5
@@ -90,12 +91,17 @@ class WeekOfYear(TimeFeature):
 def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     """
     Returns a list of time features that will be appropriate for the given frequency string.
-    Parameters
-    ----------
-    freq_str
-        Frequency string of the form [multiple][granularity] such as "12H", "5min", "1D" etc.
-    """
 
+    Args:
+        freq_str (str): Frequency string of the form [multiple][granularity] such as "12H", "5min", "1D" etc.
+
+    Raises:
+        RuntimeError: _description_
+
+    Returns:
+        List[TimeFeature]: _description_
+    """
+    # freq_str = freq_str.upper()
     features_by_offsets = {
         offsets.YearEnd: [],
         offsets.QuarterEnd: [MonthOfYear],
@@ -104,29 +110,15 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
         offsets.Day: [DayOfWeek, DayOfMonth, DayOfYear],
         offsets.BusinessDay: [DayOfWeek, DayOfMonth, DayOfYear],
         offsets.Hour: [HourOfDay, DayOfWeek, DayOfMonth, DayOfYear],
-        offsets.Minute: [
-            MinuteOfHour,
-            HourOfDay,
-            DayOfWeek,
-            DayOfMonth,
-            DayOfYear,
-        ],
-        offsets.Second: [
-            SecondOfMinute,
-            MinuteOfHour,
-            HourOfDay,
-            DayOfWeek,
-            DayOfMonth,
-            DayOfYear,
-        ],
+        offsets.Minute: [MinuteOfHour, HourOfDay, DayOfWeek, DayOfMonth, DayOfYear],
+        offsets.Second: [SecondOfMinute, MinuteOfHour, HourOfDay, DayOfWeek, DayOfMonth, DayOfYear],
     }
-
+    # offset = pd.tseries.frequencies.to_offset(freq_str)
     offset = to_offset(freq_str)
-
     for offset_type, feature_classes in features_by_offsets.items():
         if isinstance(offset, offset_type):
             return [cls() for cls in feature_classes]
-
+    # raise RuntimeError(f"Unsupported frequency {freq_str}")
     supported_freq_msg = f"""
     Unsupported frequency {freq_str}
     The following frequencies are supported:
