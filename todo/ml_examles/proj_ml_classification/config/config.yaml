@@ -1,0 +1,8 @@
+PATH:
+  data_path: /Users/zfwang/machinelearning/datasets/creditcard/
+  model_path: /Users/zfwang/machinelearning/deeplearning/src_keras/project/classification/models/
+DATA:
+  validation_split: 0.2
+MODEL:
+  batch_size: 2048
+  epochs: 30
