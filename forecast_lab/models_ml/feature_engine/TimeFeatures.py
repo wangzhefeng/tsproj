@@ -18,6 +18,7 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 from typing import List
+import copy
 
 import numpy as np
 import pandas as pd
@@ -65,6 +66,7 @@ class MinuteOfHour(TimeFeature):
         return index.minute / 59.0 - 0.5
 
 
+# TODO
 class minute_of_hour(TimeFeature):  
     """Minute of hour encoded as value"""
     
@@ -93,6 +95,7 @@ class DayOfWeek(TimeFeature):
         return index.dayofweek / 6.0 - 0.5
 
 
+# TODO
 class day_of_week(TimeFeature):
     """Day of week encoded as value"""
 
@@ -105,7 +108,7 @@ class weekday(TimeFeature):
     """Day of week encoded as value"""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
-        return index.weekday
+        return index.weekday()
 
 
 class DayOfMonth(TimeFeature):
@@ -163,7 +166,7 @@ class week_of_year(TimeFeature):
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.isocalendar().week
 
-
+# TODO
 class year(TimeFeature):
     """Year encoded as value as actual year"""
 
@@ -187,7 +190,7 @@ def time_features_from_frequency_str_enc(freq_str: str) -> List[TimeFeature]:
     # freq_str = freq_str.upper()
     features_by_offsets = {
         offsets.YearEnd: {
-            "name": ["year"],
+            "name": [],
             "func": [],
         },
         offsets.QuarterEnd: {
@@ -266,8 +269,8 @@ def time_features_from_frequency_str_notenc(freq_str: str) -> List[TimeFeature]:
     # freq_str = freq_str.upper()
     features_by_offsets = {
         offsets.YearEnd: {
-            "name": ["year"],
-            "func": [year],
+            "name": [],
+            "func": [],
         },
         offsets.QuarterEnd: {
             "name": ["month_of_year"],
@@ -278,28 +281,28 @@ def time_features_from_frequency_str_notenc(freq_str: str) -> List[TimeFeature]:
             "func": [month_of_year],
         },
         offsets.Week: {
-            "name": ["day_of_month", "week_of_year"],
-            "func": [day_of_month, week_of_year],
+            "name": ["week_of_year", "month_of_year"],
+            "func": [week_of_year, month_of_year],
         },
         offsets.Day: {
-            "name": ["day_of_week", "day_of_month", "day_of_year"],
-            "func": [day_of_week, day_of_month, day_of_year],
+            "name": ["day_of_week", "day_of_month", "day_of_year", "week_of_year", "month_of_year"],
+            "func": [day_of_week, day_of_month, day_of_year, week_of_year, month_of_year],
         },
         offsets.BusinessDay: {
-            "name": ["day_of_week", "day_of_month", "day_of_year"],
-            "func": [day_of_week, day_of_month, day_of_year],
+            "name": ["day_of_week", "day_of_month", "day_of_year", "week_of_year", "month_of_year"],
+            "func": [day_of_week, day_of_month, day_of_year, week_of_year, month_of_year],
         },
         offsets.Hour: {
-            "name": ["hour_of_day", "day_of_week", "day_of_month", "day_of_year"],
-            "func": [hour_of_day, day_of_week, day_of_month, day_of_year],
+            "name": ["hour_of_day", "day_of_week", "day_of_month", "day_of_year", "week_of_year", "month_of_year"],
+            "func": [hour_of_day, day_of_week, day_of_month, day_of_year, week_of_year, month_of_year],
         },
         offsets.Minute: {
-            "name": ["minute_of_hour", "hour_of_day", "day_of_week", "day_of_month", "day_of_year"],
-            "func": [minute_of_hour, hour_of_day, day_of_week, day_of_month, day_of_year],
+            "name": ["minute_of_hour", "hour_of_day", "day_of_week", "day_of_month", "day_of_year", "week_of_year", "month_of_year"],
+            "func": [minute_of_hour, hour_of_day, day_of_week, day_of_month, day_of_year, week_of_year, month_of_year],
         },
         offsets.Second: {
-            "name": ["second_of_minute", "minute_of_hour", "hour_of_day", "day_of_week", "day_of_month", "day_of_year"],
-            "func": [second_of_minute, minute_of_hour, hour_of_day, day_of_week, day_of_month, day_of_year],
+            "name": ["second_of_minute", "minute_of_hour", "hour_of_day", "day_of_week", "day_of_month", "day_of_year", "week_of_year", "month_of_year"],
+            "func": [second_of_minute, minute_of_hour, hour_of_day, day_of_week, day_of_month, day_of_year, week_of_year, month_of_year],
         },
     }
     # offset = pd.tseries.frequencies.to_offset(freq_str)
@@ -329,25 +332,19 @@ def time_features_from_frequency_str_notenc(freq_str: str) -> List[TimeFeature]:
     raise RuntimeError(supported_freq_msg)
 
 
-def time_features_dl(dates, freq='h'):
-    return np.vstack([
-        feat(dates) 
-        for feat in time_features_from_frequency_str_enc(freq)
-    ])
-
-
-def time_features_ml(df, time_col: str = "ds", freq: str = "h", timeenc = 0, result_type="all"):
+def time_features(data, time_col: str = "ds", freq: str = "h", timeenc = 0, result_type="all"):
     """
     > `time_features` takes in a `df` dataframe with a 'date' column 
     > and extracts the date down to `freq` where freq can be any of the 
     > following if `timeenc` is 0: 
-    > * m - [month]
-    > * w - [month]
-    > * d - [month, day, weekday]
-    > * b - [month, day, weekday]
-    > * h - [month, day, weekday, hour]
-    > * t - [month, day, weekday, hour, *minute]
-    > * s - [month, day, weekday, hour, *minute, *second]
+    > * q - [month(monthofyear)]
+    > * m - [month(monthofyear)]
+    > * w - [month(monthofyear), weekofyear]
+    > * d - [month(monthofyear), weekofyear, dayofyear, day(dayofmonth), weekday(dayofweek)]
+    > * b - [month(monthofyear), weekofyear, dayofyear, day(dayofmonth), weekday(dayofweek)]
+    > * h - [month(monthofyear), weekofyear, dayofyear, day(dayofmonth), weekday(dayofweek), hour]
+    > * t - [month(monthofyear), weekofyear, dayofyear, day(dayofmonth), weekday(dayofweek), hour, *minute]
+    > * s - [month(monthofyear), weekofyear, dayofyear, day(dayofmonth), weekday(dayofweek), hour, *minute, *second]
     > 
     > If `timeenc` is 1, a similar, but different list of `freq` values 
     > are supported (all encoded between [-0.5 and 0.5]): 
@@ -365,66 +362,16 @@ def time_features_ml(df, time_col: str = "ds", freq: str = "h", timeenc = 0, res
     *second returns a number from 0-11 corresponding to the 5 second period it falls into.
     *second returns a number from 0-3 corresponding to the 15 second period it falls into.
 
-    result_type: "all": all origin features of df and build features, 
-         "ts": only timestamp features
-         "ts_value": only timestamp features values
+    result_type: 
+        - "all": all origin features of df and build features, 
+        - "ts": only timestamp features
+        - "ts_values": only timestamp features values
     """
+    # 数据备份
+    df = copy.deepcopy(data)
     # 频率字符处理
-    freq = freq.lower() 
-    if timeenc == 0: 
-        # 原始数据特征
-        origin_feats = list(df.columns)
-        # 时间特征编码
-        df["year"] = df[time_col].apply(lambda row: row.year, 1)
-        df['month'] = df[time_col].apply(lambda row: row.month, 1)
-        df['day'] = df[time_col].apply(lambda row: row.day, 1)
-        df['weekday'] = df[time_col].apply(lambda row: row.weekday(), 1)
-        df['hour'] = df[time_col].apply(lambda row: row.hour, 1)
-        df['minute'] = df[time_col].apply(lambda row: row.minute, 1)
-        if freq == "5minute" or freq == "5min":
-            df['minute'] = df.minute.map(lambda x: x // 5)
-        if freq == "15minute" or freq == "15min":
-            df['minute'] = df.minute.map(lambda x: x // 15)
-        df['second'] = df[time_col].apply(lambda row: row.second, 1)
-        if freq == "5seconds" or freq == "5sec" or freq == "5s":
-            df['second'] = df.second.map(lambda x: x // 5)
-        if freq == "15seconds" or freq == "15sec" or freq == "15s":
-            df['second'] = df.second.map(lambda x: x // 15)
-        # 频率字符处理
-        freq_name_map = {
-            "y": ["year", "1y", "y"],
-            "m": ["month", "1m", "m"],
-            "w": ["weekday", "1w", "w"],
-            "d": ["day", "1d", "d"],
-            "b": ["business day", "businessday", "1b", "b"],
-            "h": ["hour", "1h", "h"],
-            "t": ["minute", "1minute", "5minute", "15minute", "min", "1min", "5min", "15min"],
-            "s": ["second", "1second", "5seconds", "10seconds", "15seconds", 
-                  "sec", "1sec", "5sec", "10sec", "15sec", 
-                  "s", "1s", "5s", "10s", "15s"]
-        }
-        for freq_name, freq_name_list in freq_name_map.items():
-            if freq in freq_name_list:
-                freq = freq_name
-        # 特征筛选
-        freq_feat_map = {
-            'y': ['year'],
-            'm': ['month'],
-            'w': ['month', "day"],
-            'd': ['month', 'day', 'weekday'],
-            'b': ['month', 'day', 'weekday'],
-            'h': ['month', 'day', 'weekday', 'hour'],
-            't': ['month', 'day', 'weekday', 'hour', 'minute'],
-            's': ['month', 'day', 'weekday', 'hour', 'minute', "second"],
-        }
-        freq_feats = freq_feat_map[freq]
-        if result_type == "all":
-            return df[origin_feats + freq_feats]
-        elif result_type == "ts":
-            return df[freq_feats]
-        elif result_type == "ts_value":
-            return df[freq_feats].values
-    elif timeenc == 2:
+    freq = freq.lower()
+    if timeenc == 0:
         feat_names_funcs = time_features_from_frequency_str_notenc(freq)
         if result_type == "all":
             for feat_name, feat_func in feat_names_funcs.items():
@@ -435,7 +382,7 @@ def time_features_ml(df, time_col: str = "ds", freq: str = "h", timeenc = 0, res
                 df[feat_name] = feat_func(pd.to_datetime(df[time_col].values))
             selected_feats = list(feat_names_funcs.keys())
             return df[selected_feats]
-        elif result_type == "ts_value":
+        elif result_type == "ts_values":
             return np.vstack([
                 feat_func(pd.to_datetime(df[time_col].values)) 
                 for feat_func in feat_names_funcs.values()
@@ -451,14 +398,15 @@ def time_features_ml(df, time_col: str = "ds", freq: str = "h", timeenc = 0, res
                 df[feat_name] = feat_func(pd.to_datetime(df[time_col].values))
             selected_feats = list(feat_names_funcs.keys())
             return df[selected_feats]
-        elif result_type == "ts_value":
+        elif result_type == "ts_values":
             return np.vstack([
                 feat_func(pd.to_datetime(df[time_col].values)) 
                 for feat_func in feat_names_funcs.values()
             ]).transpose(1, 0)
 
 
-def time_static_features(df, dt_is_index: bool = False, dt_name: str = None, dt_format: str = "%Y-%m-%d %H:%M:%S", features: List = []) -> pd.DataFrame:
+# TODO
+def time_static_features(data, time_col: str, freq: str, timeenc: int = 0, result_type: str = "all"):
     """
     时间特征提取
 
@@ -470,66 +418,122 @@ def time_static_features(df, dt_is_index: bool = False, dt_name: str = None, dt_
         features: 最后返回的特征名称列表
     """
     # 数据备份
-    df = df.copy()
+    df = copy.deepcopy(data)
+    # 频率字符处理
+    freq = freq.lower()
+    # 原始数据特征
+    origin_feats = list(df.columns)
+    # 时间特征编码
+    df["date"] = df[time_col].apply(lambda row: row.date(), 1)  # 日期
+    df["time"] = df[time_col].apply(lambda row: row.time(), 1)  # 时间
     
-    # 日期时间特征处理
-    dt_col = df.index if dt_is_index else df[dt_name]
-    df["ds"] = pd.to_datetime(dt_col, format = dt_format)
+    df["year"] = df[time_col].apply(lambda row: row.year, 1)  # 年
+    df["is_year_start"] = df[time_col].apply(lambda row: row.is_year_start, 1)  # 是否年初
+    df["is_year_end"] = df[time_col].apply(lambda row: row.is_year_end, 1)  # 是否年末
+    df["is_leap_year"] = df[time_col].apply(lambda row: row.is_leap_year, 1)  # 是否是闰年
     
-    # 时间日期特征
-    df["date"] = df["ds"].dt.date  # 日期
-    df["time"] = df["ds"].dt.time  # 时间
-    df["year"] = df["ds"].dt.year  # 年
-    df["is_year_start"] = df["ds"].dt.is_year_start  # 是否年初
-    df["is_year_end"] = df["ds"].dt.is_year_end  # 是否年末
-    df["is_leap_year"] = df["ds"].dt.is_leap_year  # 是否是闰年
-    df["quarter"] = df["ds"].dt.quarter  # 季度
-    df["is_quarter_start"] = df["ds"].dt.is_quarter_start  # 是否季度初
-    df["is_quarter_end"] = df["ds"].dt.is_quarter_end  # 是否季度末
-    # TODO 季节
-    # TODO 业务季度
-    df["month"] = df["ds"].dt.month  # 月
-    df["is_month_start"] = df["ds"].dt.is_month_start  # 是否月初
-    df["is_month_end"] = df["ds"].dt.is_month_end  # 是否月末
-    df["daysinmonth"] = df["ds"].dt.daysinmonth  # 每个月的天数
-    # TODO 每个月中的工作日天数
-    # TODO 每个月中的休假天数
-    # TODO 是否夏时制
-    df["weekofyear"] = df["ds"].dt.isocalendar().week  # 一年的第几周
+    df["quarter"] = df[time_col].apply(lambda row: row.quarter, 1)  # 季度
+    df["is_quarter_start"] = df[time_col].apply(lambda row: row.is_quarter_start, 1)  # 是否季度初
+    df["is_quarter_end"] = df[time_col].apply(lambda row: row.is_quarter_end, 1)  # 是否季度末
+    
+    df["month"] = df[time_col].apply(lambda row: row.month, 1)  # 月
+    df["is_month_start"] = df[time_col].apply(lambda row: row.is_month_start, 1)  # 是否月初
+    df["is_month_end"] = df[time_col].apply(lambda row: row.is_month_end, 1)  # 是否月末
+    
+    df["weekofyear"] = df[time_col].apply(lambda row: row.weekofyear, 1)  # 周
     # TODO df["weekofmonth"] = df["ds"].apply(lambda x: x.weekofmonth(), 1)  # 一月中的第几周
-    df["dayofyear"] = df["ds"].dt.dayofyear  # 一年的第几天
-    df["dayofmonth"] = df["ds"].dt.day  # 日(一月中的第几天)
-    df["dayofweek"] = df["ds"].dt.dayofweek  # 一周的第几天
-    df["weekday"] = df["ds"].apply(lambda x: x.weekday(), 1)  # 周几
-    df["is_weekend"] = df['dayofweek'].apply(is_weekend, 1)  # 是否周末
+    # df["is_week_start"] = df[time_col].apply(lambda row: row.is_week_start, 1)  # 是否周初
+    # df["is_week_end"] = df[time_col].apply(lambda row: row.is_week_end, 1)  # 是否周末
+
+    # df["days_in_year"] = df[time_col].apply(lambda row: row.daysinyear, 1)  # 每年天数
+    df["days_in_month"] = df[time_col].apply(lambda row: row.daysinmonth, 1)  # 每月天数
+    df["day_of_year"] = df[time_col].apply(lambda row: row.dayofyear, 1)  # 一年中的第几天
+    df["day_of_month"] = df[time_col].apply(lambda row: row.day, 1)  # 一月中的第几天
+    df["day_of_week"] = df[time_col].apply(lambda row: row.dayofweek, 1)  # 一周中的第几天
+    df["weekday"] = df[time_col].apply(lambda row: row.weekday(), 1)  # 一周中的第几天
+    # df["is_weekend"] = df[time_col].apply(lambda row: row.is_weekend >= 5, 1)  # 是否是周末
+
     # TODO df["is_holiday"] = df["ds"].apply(is_holiday, 1)  # 是否放假/是否工作日/是否节假日 
     # TODO 节假日连续天数
     # TODO 节假日前第 n 天
     # TODO 节假日第 n 天
     # TODO 节假日后第 n 天
     # TODO df["is_tiaoxiu"] = df["ds"].apply(is_tiaoxiu, 1)  # 是否调休
-    df["hour"] = df["ds"].dt.hour  # 时(一天过去了几小时)
-    df["minute"] = df["ds"].dt.minute  # 分
+
+    df["hour"] = df[time_col].apply(lambda row: row.hour, 1)
+    
+    df["minute"] = df[time_col].apply(lambda row: row.minute, 1)
+    if freq == "5minute" or freq == "5min":
+        df["minute"] = df.minute.map(lambda x: x // 5)
+    if freq == "15minute" or freq == "15min":
+        df["minute"] = df.minute.map(lambda x: x // 15)
+    
     # TODO df["past_minutes"] = df["ds"].apply(past_minutes, 1)  # 一天过去了几分钟
-    df["second"] = df["ds"].dt.second  # 秒
-    df["microsecond"] = df["ds"].dt.microsecond  # 微妙
-    df["nanosecond"] = df["ds"].dt.nanosecond  # 纳秒
+    df["second"] = df[time_col].apply(lambda row: row.second, 1)
+    if freq == "5seconds" or freq == "5sec" or freq == "5s":
+        df["second"] = df.second.map(lambda x: x // 5)
+    if freq == "15seconds" or freq == "15sec" or freq == "15s":
+        df["second"] = df.second.map(lambda x: x // 15) 
+    df["microsecond"] = df[time_col].dt.microsecond  # 微妙
+    df["nanosecond"] = df[time_col].dt.nanosecond  # 纳秒
     # TODO df["time_period"] = df["ds"].apply(time_period, 1)  # 一天的哪个时间段
     # TODO df["day_high"] = df["hour"].apply(lambda x: 0 if 0 < x < 8 else 1, 1)  # 是否为高峰期
     # TODO df["is_work"] = df["hour"].apply(is_work, 1)  # 该时间点是否营业/上班
-    
-    # 删除时间列
-    del df["ds"]
-    
-    # 数据特征筛选
-    if features == []:
-        selected_df = df
-    else:
-        selected_df = df[features]
-     
-    return selected_df
+    # 频率/频率名称/特征筛选
+    freq_name_feat_map = {
+        "y": {
+            "name": ["year", "1y", "y"],
+            "feat": [],
+        },
+        "q": {
+            "name": ["quarter", "1q", "q"],
+            "feat": ["month"],
+        },
+        "m": {
+            "name": ["month", "1m", "m"],
+            "feat": ["month"],
+        },
+        "w": {
+            "name": ["weekday", "1w", "w"], 
+            "feat": ["month", "day"],
+        },
+        "d": {
+            "name": ["day", "1d", "d"],
+            "feat": ["month", "day", "weekday"],
+        },
+        "b": {
+            "name": ["business day", "businessday", "1b", "b"],
+            "feat": ["month", "day", "weekday"],
+        },
+        "h": {
+            "name": ["hour", "1h", "h"],
+            "feat": ["month", "day", "weekday", "hour"],
+        },
+        "t": {
+            "name": ["minute", "1minute", "5minute", "15minute", "min", "1min", "5min", "15min"],
+            "feat": ["month", "day", "weekday", "hour", "minute"],
+        },
+        "s": {
+            "name": [
+                "second", "1second", "5seconds", "10seconds", "15seconds", 
+                "sec", "1sec", "5sec", "10sec", "15sec", 
+                "s", "1s", "5s", "10s", "15s"
+            ],
+            "feat": ["month", "day", "weekday", "hour", "minute", "second"],
+        },
+    }
+    for freq_str, name_feat in freq_name_feat_map.items():
+        if freq in name_feat["name"]:
+            freq_feats = name_feat["feat"]
+    # 特征输出
+    if result_type == "all":
+        return df[origin_feats + freq_feats]
+    elif result_type == "ts":
+        return df[freq_feats]
+    elif result_type == "ts_value":
+        return df[freq_feats].values
 
-
+# TODO
 def time_dynamic_features(df, n_lag: int = 1, n_fut: int = 1, selLag = None, selFut = None, dropnan = True):
     """
     Converts a time series to a supervised learning data set by adding time-shifted 
@@ -607,6 +611,7 @@ def time_dynamic_features(df, n_lag: int = 1, n_fut: int = 1, selLag = None, sel
     return agg
 
 
+# TODO
 def get_time_sin_cos(data: pd.DataFrame, col: str, n: int, one_hot: bool = False, drop: bool = True):
     """
     构造时间特征
@@ -622,12 +627,12 @@ def get_time_sin_cos(data: pd.DataFrame, col: str, n: int, one_hot: bool = False
     Returns:
         _type_: _description_
     """
-    data[col + '_sin'] = round(np.sin(2 * np.pi / n * data[col]), 6)
-    data[col + '_cos'] = round(np.cos(2 * np.pi / n * data[col]), 6)
+    data[col + "_sin"] = round(np.sin(2 * np.pi / n * data[col]), 6)
+    data[col + "_cos"] = round(np.cos(2 * np.pi / n * data[col]), 6)
     if one_hot:
         ohe = OneHotEncoder()
         X = ohe.fit_transform(data[col].values.reshape(-1, 1)).toarray()
-        df = pd.DataFrame(X, columns = [col + '_' + str(int(i)) for i in range(X.shape[1])])
+        df = pd.DataFrame(X, columns = [col + "_" + str(int(i)) for i in range(X.shape[1])])
         data = pd.concat([data, df], axis = 1)
         if drop:
             data = data.drop(col, axis = 1)
@@ -650,27 +655,37 @@ def main():
     # ------------------------------
     # 
     # ------------------------------
-    res = time_features_ml(df=df, time_col="ds", freq="15min", timeenc=2, result_type="all")
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=0, result_type="all")
     with pd.option_context("display.max_columns", None):
         print(res)
         print("-" * 80)
     
-    df = pd.DataFrame({
-        "ds": pd.date_range(start="2024-11-14 00:00:00", end="2024-11-15 00:46:00", freq="15min"),
-        "unique_id": range(100),
-        "y": range(100),
-    })
-    res = time_features_ml(df=df, time_col="ds", freq="15min", timeenc=0, result_type="all")
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=0, result_type="ts")
+    with pd.option_context("display.max_columns", None):
+        print(res)
+        print("-" * 80)
+    
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=0, result_type="ts_values")
     with pd.option_context("display.max_columns", None):
         print(res)
         print("-" * 80)
     # ------------------------------
     # 
     # ------------------------------
-    # res1 = time_static_features(df, dt_is_index=False, dt_name= "date", dt_format="%Y-%m-%d %H:%M:%S", features=[])
-    # print(res1)
-    # print(res1.columns)
-    # print("-" * 80)
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=1, result_type="all")
+    with pd.option_context("display.max_columns", None):
+        print(res)
+        print("-" * 80)
+    
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=1, result_type="ts")
+    with pd.option_context("display.max_columns", None):
+        print(res)
+        print("-" * 80)
+    
+    res = time_features(data=df, time_col="ds", freq="15min", timeenc=1, result_type="ts_values")
+    with pd.option_context("display.max_columns", None):
+        print(res)
+        print("-" * 80)
 
 if __name__ == "__main__":
     main()
