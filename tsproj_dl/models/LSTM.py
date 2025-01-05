@@ -27,10 +27,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device {device}.")
 
 
-class Model(nn.Module):
+class LSTM(nn.Module):
     
     def __init__(self, feature_size: int, hidden_size: int, num_layers: int, output_size: int):
-        super(Model, self).__init__()
+        super(LSTM, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # lstm
@@ -84,9 +84,9 @@ class Model(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from tsproj_csdn.config.lstm import Config
-    from tsproj_csdn.data_provider.data_splitor import Data_Loader
-    from tsproj_csdn.exp.exp_forecasting import train, plot_train_results
+    from tsproj_dl.config.lstm import Config
+    from tsproj_dl.data_provider.data_loader import Data_Loader
+    from tsproj_dl.exp.exp_forecasting import train, plot_train_results
     # config
     config = config()
     
@@ -95,7 +95,7 @@ def main():
     train_loader, test_loader = data_loader.run()
 
     # model
-    model = Model(
+    model = LSTM(
         feature_size = config.feature_size,
         hidden_size = config.hidden_size,
         num_layers = config.num_layers,

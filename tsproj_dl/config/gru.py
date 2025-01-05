@@ -23,7 +23,10 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Config:
-    data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_csdn/dataset/wind_dataset.csv"
+    model_name = "GRU"  # 模型名称
+    features = "S"
+    pred_method = "recursive_multi_step"  # "recursive_multi_step", "direct_multi_step_output", "direct_recursive_mix"
+    data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
     target = "WIND"
     target_index = 0
     split_ratio = 0.8  # 训练数据数据分割比例
@@ -32,17 +35,11 @@ class Config:
     hidden_size = 256  # GRU 隐藏层大小
     num_layers = 2  # GRU 的层数
     output_size = 1  # 由于是单输出任务，最终输出层大小为 1，预测未来 1 个时刻数据
-    
     epochs = 10  # 迭代轮数
     batch_size = 32  # 批次大小
     learning_rate = 3e-4  # 学习率
-    # best_loss = 0  # 记录损失
-    best_loss = 0.1
-    
-    model_name = "GRU"  # 模型名称
-    features = "S"
-    pred_method = "recursive_multi_step"  # "recursive_multi_step", "direct_multi_step_output", "direct_recursive_mix"
-    save_path = f"D:/projects/timeseries_forecasting/tsproj/tsproj_csdn/saved_models/{model_name}.pth"
+    best_loss = 0.1 # 记录损失
+    save_path = f"D:/projects/timeseries_forecasting/tsproj/tsproj_dl/saved_models/{model_name}.pth"
 
 
 class Config_test:

@@ -14,23 +14,23 @@
 # python libraries
 import os
 import sys
-
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import gc
+from tqdm import tqdm
+from loguru import logger
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import torch
-from loguru import logger
+import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
-from torch import nn
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
-from models_dl.LSTM import LSTMRegressor
+from tsproj_dl.models.GRU import GRU
 
 # global variable
 LOGGING_LABEL = __file__.split("/")[-1][:-3]
@@ -46,7 +46,7 @@ learning_rate = 1e-3
 # data download
 data_url, data_path = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/00616/Tetuan%20City%20power%20consumption.csv", 
-    "./data/Tetuan City power consumption.csv",
+    "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/Tetuan City power consumption.csv",
 )
 if not os.path.exists(data_path):
     os.system(f"wget {data_url}")
@@ -74,36 +74,25 @@ Y_org = torch.tensor(np.array(Y_org), dtype = torch.float32)
 # data split
 X_train, Y_train = X_org[:50000], Y_org[:50000]
 X_test, Y_test = X_org[50000:], Y_org[50000:]
-
 # target scale
 mean, std = Y_train.mean(), Y_train.std()
 Y_train_scaled, Y_test_scaled = (Y_train - mean) / std, (Y_test - mean) / std
-
 # dataset
 train_dataset = TensorDataset(X_train, Y_train_scaled)
 test_dataset = TensorDataset(X_test, Y_test_scaled)
-
 # dataloader
-train_loader = DataLoader(
-    train_dataset, 
-    batch_size = batch_size,
-    shuffle = False,
-)
-test_loader = DataLoader(
-    test_dataset,
-    batch_size = batch_size,
-    shuffle = False
-)
-
+train_loader = DataLoader(train_dataset, batch_size = batch_size,shuffle = False)
+test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle = False)
 # 内存回收
 del X, Y
 gc.collect()
 
+"""
 # ------------------------------
 # model
 # ------------------------------
 # model
-lstm_reg = LSTMRegressor(num_features = num_features)
+lstm_reg = LSTM()
 logger.info(lstm_reg)
 for layer in lstm_reg.children():
     logger.info(f"Layer: {layer}")
@@ -161,17 +150,15 @@ data_df_final.plot(
 )
 plt.grid(which = 'minor', linestyle = ':', linewidth = '0.5', color = 'black');
 plt.show()
-
-
-
+"""
 
 # 测试代码 main 函数
 def main():
-    """
     # data
     logger.info(f"Data Columns: {data.columns.values.tolist()}")
     logger.info(f"Data Shape: {data.shape}")
     logger.info(data.head())
+    
     # data view of 2017-12 data and 2017-12-01 data
     data.loc["2017-12"].plot(
         y = "Zone 1 Power Consumption", 
@@ -180,6 +167,7 @@ def main():
         grid = True
     )
     plt.grid(which = "minor", linestyle = ":", linewidth = "0.5", color = "black")
+    
     data.loc["2017-12-1"].plot(
         y = "Zone 1 Power Consumption", 
         figsize = (18, 7), 
@@ -188,8 +176,6 @@ def main():
     )
     plt.grid(which = "minor", linestyle = ":", linewidth = "0.5", color = "black");
     plt.show()
-    """
-    pass
 
 if __name__ == "__main__":
     main()

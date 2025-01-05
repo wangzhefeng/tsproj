@@ -27,33 +27,37 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device {device}.")
 
 
-class Model(nn.Module):
+class GRU(nn.Module):
     """
     GRU
     """
 
-    def __init__(self, feature_size, hidden_size, num_layers, output_size) -> None:
+    def __init__(self, cfgs) -> None:
         """
         feature_size (_type_): 每个时间点的特征维度
         hidden_size (_type_): GRU 内部隐层的维度
         num_layers (_type_): GRU 层数，默认为 1
         output_size (_type_): 输出维度
         """
-        super(Model, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+        super(GRU, self).__init__()
+        self.cfgs = cfgs
+        self.hidden_size = self.cfgs.hidden_size
+        self.num_layers = self.cfgs.num_layers
         # GRU
         self.gru = nn.GRU(
-            input_size = feature_size, 
-            hidden_size = hidden_size, 
-            num_layers = num_layers,
+            input_size = self.cfgs.feature_size, 
+            hidden_size = self.cfgs.hidden_size, 
+            num_layers = self.cfgs.num_layers,
             bias = True, 
             batch_first = True,  # [B, seq_len, ]
             dropout = 0,  # 是否采用 dropout
             bidirectional = False,  # 是否采用双向 GRU 模型
         )
         # fc
-        self.linear = nn.Linear(in_features = hidden_size, out_features = output_size)
+        self.linear = nn.Linear(
+            in_features = self.cfgs.hidden_size, 
+            out_features = self.cfgs.output_size
+        )
 
     def forward(self, x, hidden = None):
         # 获取 batch size
@@ -82,9 +86,9 @@ class Model(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from tsproj_csdn.config.gru import Config
-    from tsproj_csdn.data_provider.data_splitor import Data_Loader
-    from tsproj_csdn.exp.exp_forecasting import train, plot_train_results
+    from tsproj_dl.config.gru import Config
+    from tsproj_dl.data_provider.data_loader import Data_Loader
+    from tsproj_dl.exp.exp_forecasting import train, plot_train_results
 
     # config
     config = Config()
@@ -94,12 +98,7 @@ def main():
     train_loader, test_loader = data_loader.run()
     
     # model
-    model = Model(
-        feature_size = config.feature_size,
-        hidden_size = config.hidden_size,
-        num_layers = config.num_layers,
-        output_size = config.output_size,
-    )
+    model = GRU(cfgs = config)
     
     # loss
     loss_func = nn.MSELoss()
