@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
+# import paddle
 
 plt.switch_backend('agg')
 
@@ -73,26 +74,28 @@ class EarlyStopping:
     """
 
     def __init__(self, patience = 7, verbose = False, delta = 0):
-        self.patience = patience  # 早停步数忍耐度
-        self.verbose = verbose  # 是否打印日志
+        self.patience = patience  # val_loss 不更新容忍 epoch 次数，超过 patience，则停止训练
+        self.verbose = verbose  # 是否输出日志信息
         self.delta = delta  # 阈值
 
-        self.best_score = None  # 最小验证损失记录
-        self.counter = 0  # 早停步数
+        self.best_score = None  # 最佳评估分数
+        self.counter = 0  # 当前 epoch 的 val_loss 没有超过历史最佳分数的计数器
         self.early_stop = False  # 是否早停
-        self.val_loss_min = np.Inf  # 最小验证损失
+        self.val_loss_min = np.Inf  # 最小 val_loss
 
     def __call__(self, val_loss, model, path):
         score = -val_loss  # loss 递增
-        # 更新最好的结果
+        # 首轮，直接更新 best_score 和保存节点模型
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model, path)
+        # 若当前 epoch 表现没超过历史最佳分数，且累积发生次数超过 patience，早停
         elif score < self.best_score + self.delta:
             self.counter += 1
             print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
+        # 若当前 epoch 表现超过历史最佳分数，更新 best_socre，保存该节点模型
         else:
             self.best_score = score
             self.save_checkpoint(val_loss, model, path)
@@ -114,6 +117,58 @@ class EarlyStopping:
         torch.save(model.state_dict(), os.path.join(path, "/checkpoint.pth"))
         # 更新最小验证损失
         self.val_loss_min = val_loss
+
+
+# class EarlyStopping_paddle_version:
+#     """
+#     早停机制
+#     checkpoint 保存
+#     """
+
+#     def __init__(self, patience = 7, verbose = False, delta = 0):
+#         self.patience = patience  # val_loss 不更新容忍 epoch 次数，超过 patience，则停止训练
+#         self.verbose = verbose  # 是否输出日志信息
+#         self.delta = delta  # 阈值
+
+#         self.best_score = None  # 最佳评估分数
+#         self.counter = 0  # 当前 epoch 的 val_loss 没有超过历史最佳分数的计数器
+#         self.early_stop = False  # 是否早停
+#         self.val_loss_min = np.Inf  # 最小 val_loss
+
+#     def __call__(self, val_loss, model, path):
+#         score = -val_loss  # loss 递增
+#         # 首轮，直接更新 best_score 和保存节点模型
+#         if self.best_score is None:
+#             self.best_score = score
+#             self.save_checkpoint(val_loss, model, path)
+#         # 若当前 epoch 表现没超过历史最佳分数，且累积发生次数超过 patience，早停
+#         elif score < self.best_score + self.delta:
+#             self.counter += 1
+#             print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+#             if self.counter >= self.patience:
+#                 self.early_stop = True
+#         # 若当前 epoch 表现超过历史最佳分数，更新 best_socre，保存该节点模型
+#         else:
+#             self.best_score = score
+#             self.save_checkpoint(val_loss, model, path)
+#             self.counter = 0
+
+#     def save_checkpoint(self, val_loss, model, path):
+#         """
+#         checkpoint 保存
+
+#         Args:
+#             val_loss (_type_): 验证损失
+#             model (_type_): 模型
+#             path (_type_): checkpoint 保存路径
+#         """
+#         # 验证损失变化日志打印
+#         if self.verbose:
+#             print(f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...")
+#         # checkpoint 保存
+#         paddle.save(model.state_dict(), os.path.join(path, "/checkpoint.pth"))
+#         # 更新最小验证损失
+#         self.val_loss_min = val_loss
 
 
 def adjustment(gt, pred):

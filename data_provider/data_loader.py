@@ -215,6 +215,136 @@ class Dataset_Custom(Dataset):
         return self.scaler.inverse_transform(data)
 
 
+class Dataset_Pred(Dataset):
+    
+    def __init__(self, 
+                 root_path, 
+                 data_path = "ETTh1.csv",
+                 flag = "pred", 
+                 size = None,  # [seq_len, label_len, pred_len]
+                 freq = "15min",
+                 features = "S",
+                 cols = None, 
+                 timeenc = 0,
+                 target = "OT", 
+                 scale = True, 
+                 inverse = False) -> None:
+        # data file path
+        self.root_path = root_path  # 数据根路径
+        self.data_path = data_path  # 数据文件路径
+        # data type
+        assert flag in ["pred"]
+        # data size
+        if size is None:
+            self.seq_len = 24 * 4 * 4
+            self.label_len = 24 * 4
+            self.pred_len = 24 * 4
+        else:
+            self.seq_len = size[0]
+            self.label_len = size[1]
+            self.pred_len = size[2]
+        # data freq, feature columns, and target
+        self.freq = freq  # 频率
+        self.features = features  # 特征类型 'S': 单序列, "M": 多序列, "MS": 多序列
+        self.cols = cols  # 表列名
+        self.timeenc = timeenc  # 时间特征
+        self.target = target  # 预测目标标签
+        # data preprocess
+        self.scale = scale  # 是否进行标准化
+        self.inverse = inverse
+        # data read
+        self.__read_data__()  # 数据读取
+    
+    def __read_data__(self):
+        """
+        Returns:
+            data_stamp: 日期时间动态特征
+            data_x: # TODO
+            data_y: # TODO
+        """
+        # ------------------------------
+        # data read
+        # df_raw: (date, features, target)
+        # df_data: (features, target) or (target)
+        # ------------------------------
+        # data read(df_raw.columns: ["date", ...(other features), target feature])
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        # data columns sort
+        if self.cols:
+            cols = self.cols.copy()
+            cols.remove(self.target)
+        else:
+            cols = list(df_raw.columns)
+            cols.remove(self.target)
+            cols.remove("date")
+        df_raw = df_raw["date"] + cols + [self.target]
+        # 根据数据格式进行数据处理
+        if self.features == "M" or self.features == "MS":  # 多序列(date, feature1, feature2, feature3, ..., target)
+            cols_data = df_raw.columns[1:]
+            df_data = df_raw[cols_data]  # 不包含 'date' 列的预测特征列(包含 target)
+        elif self.features == "S":  # 单序列(date, target)
+            df_data = df_raw[[self.target]]  # 不包含 'date' 列的预测标签列(target)
+        # ------------------------------
+        # train/val/test split
+        # ------------------------------
+        border1 = len(df_raw) - self.seq_len
+        border2 = len(df_raw)
+        # ------------------------------
+        # 预测特征(features)和预测标签(target)标准化
+        # data: (features, target) or (target)
+        # ------------------------------
+        # 特征和预测标签标准化(不包含 'date' 列)
+        self.scaler = StandardScaler()
+        if self.scale:
+            self.scaler.fit(df_data.values)
+            data = self.scaler.transform(df_data.values)  # 标准化
+        else:
+            data = df_data.values  # 非标准化
+        # ------------------------------
+        # 特征构造
+        # [self.data_stamp:, self.data_x] -> [time_features, features, target]
+        # ------------------------------
+        # 日期时间动态特征
+        tmp_stamp = df_raw[["date"]][border1:border2]
+        tmp_stamp["date"] = pd.to_datetime(tmp_stamp.date)
+        pred_dates = pd.date_range(tmp_stamp.date.values[-1], periods = self.pred_len + 1, freq = self.freq)
+        df_stamp = pd.DataFrame(columns = ["date"])
+        df_stamp.date = list(tmp_stamp.date.values) + list(pred_dates[1:])
+        data_stamp = time_features(df_stamp, timeenc = self.timeenc, freq = self.freq[-1:])
+        self.data_stamp = data_stamp 
+        # 预测特征和预测标签(不包含日期时间特征、'date' 列)
+        self.data_x = data[border1:border2]
+        if self.inverse:
+            self.data_y = df_data.values[border1:border2]  # 非标准化
+        else:
+            self.data_y = data[border1:border2]  # 标准化
+     
+    def __getitem__(self, index):
+        # history
+        s_begin = index
+        s_end = s_begin + self.seq_len
+        seq_x = self.data_x[s_begin:s_end]
+        
+        # target history and predict
+        r_begin = s_end - self.label_len
+        r_end = r_begin + self.label_len + self.pred_len
+        if self.inverse:
+            seq_y = self.data_x[r_begin:(r_begin + self.label_len)]
+        else:
+            seq_y = self.data_y[r_begin:(r_begin + self.label_len)]
+        
+        # 日期时间动态特征
+        seq_x_mark = self.data_stamp[s_begin:s_end]
+        seq_y_mark = self.data_stamp[r_begin:r_end]
+        return seq_x, seq_y, seq_x_mark, seq_y_mark
+            
+    def __len__(self):
+        return len(self.data_x) - self.seq_len + 1
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
+
+
 class Dataset_ETT_hour(Dataset):
 
     def __init__(self, 
@@ -935,103 +1065,6 @@ class UEAloader(Dataset):
 
     def __len__(self):
         return len(self.all_IDs)
-
-
-# ------------------------------
-# custom [CSDN]
-# ------------------------------
-class Data_Loader:
- 
-    def __init__(self, 
-                 cfg, 
-                #  cols: List
-                ):
-        self.cfg = cfg
-        # self.cols = cols
-    
-    def _read_data(self):
-        """
-        data read
-        """
-        data = pd.read_csv(self.cfg.data_path, index_col = 0)
-        
-        return data
-
-    def transform_data(self, df):
-        """
-        data scaler
-        """
-        # TODO
-        scaler_model = MinMaxScaler()
-        data = scaler_model.fit_transform(np.array(df))
-        # TODO
-        self.scaler = MinMaxScaler()
-        self.scaler.fit_transform(np.array(df["WIND"]).reshape(-1, 1))
-        
-        return data
-
-    @staticmethod
-    def _split_data(data, timestep: int, input_size: int, split_ratio: float = 0.8):
-        """
-        形成训练数据
-        例如：123456789 => 12-3、23-4、34-5...
-        """ 
-        # ------------------------------
-        # 
-        # ------------------------------
-        dataX = []  # 保存 X
-        dataY = []  # 保存 Y
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(data) - timestep):
-            dataX.append(data[index:(index + timestep)][:, 0:input_size])
-            dataY.append(data[index + timestep][0])
-        dataX = np.array(dataX)
-        dataY = np.array(dataY)
-        print(dataX)
-        # print(dataY)
-        # 获取训练数据集大小
-        train_size = int(np.round(split_ratio * dataX.shape[0]))
-        # 划分训练集、测试集
-        # train data
-        x_train = dataX[:train_size, :].reshape(-1, timestep, input_size)
-        y_train = dataY[:train_size].reshape(-1, 1)
-        # test data
-        x_test = dataX[train_size:, :].reshape(-1, timestep, input_size)
-        y_test = dataY[train_size:].reshape(-1, 1)
-
-        return [x_train, y_train, x_test, y_test]
-    
-    def build_dataloader(self):
-        from torch.utils.data import TensorDataset, DataLoader
-        # data load
-        df = self._read_data()
-        # df = df.iloc[0:5, :]
-        print(df)
-        
-        # data transform
-        data = self.transform_data(df)
-        print(data)
-        print(data.shape)
-        
-        # data split
-        x_train, y_train, x_test, y_test = self._split_data(
-            data = data,
-            timestep = self.cfg.timestep, 
-            input_size = self.cfg.feature_size,
-            split_ratio = self.cfg.split_ratio,
-        )
-        self.x_train_tensor = torch.from_numpy(x_train).to(torch.float32)
-        self.y_train_tensor = torch.from_numpy(y_train).to(torch.float32)
-        self.x_test_tensor = torch.from_numpy(x_test).to(torch.float32)
-        self.y_test_tensor = torch.from_numpy(y_test).to(torch.float32)
-        
-        # data loader
-        train_data = TensorDataset(self.x_train_tensor, self.y_train_tensor)
-        test_data = TensorDataset(self.x_test_tensor, self.y_test_tensor)
-        train_loader = DataLoader(train_data, batch_size = self.cfg.batch_size, shuffle = False)
-        test_loader = DataLoader(test_data, batch_size = self.cfg.batch_size, shuffle = False)
-
-        return train_loader, test_loader
 
 
 
