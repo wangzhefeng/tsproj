@@ -50,6 +50,31 @@ def _traceback(DTW, slope_constraint):
     return (np.array(p), np.array(q))
 
 
+def _cummulative_matrix(cost, slope_constraint, window):
+    p = cost.shape[0]
+    s = cost.shape[1]
+    
+    # Note: DTW is one larger than cost and the original patterns
+    DTW = np.full((p+1, s+1), np.inf)
+
+    DTW[0, 0] = 0.0
+
+    if slope_constraint == "asymmetric":
+        for i in range(1, p+1):
+            if i <= window+1:
+                DTW[i,1] = cost[i-1,0] + min(DTW[i-1,0], DTW[i-1,1])
+            for j in range(max(2, i-window), min(s, i+window)+1):
+                DTW[i,j] = cost[i-1,j-1] + min(DTW[i-1,j-2], DTW[i-1,j-1], DTW[i-1,j])
+    elif slope_constraint == "symmetric":
+        for i in range(1, p+1):
+            for j in range(max(1, i-window), min(s, i+window)+1):
+                DTW[i,j] = cost[i-1,j-1] + min(DTW[i-1,j-1], DTW[i,j-1], DTW[i-1,j])
+    else:
+        sys.exit("Unknown slope constraint %s"%slope_constraint)
+        
+    return DTW
+
+
 def dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmetric", window=None):
     """ Computes the DTW of two sequences.
     :param prototype: np array [0..b]
@@ -78,31 +103,6 @@ def dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmet
         return _traceback(DTW, slope_constraint)
     else:
         return DTW[-1,-1]
-
-
-def _cummulative_matrix(cost, slope_constraint, window):
-    p = cost.shape[0]
-    s = cost.shape[1]
-    
-    # Note: DTW is one larger than cost and the original patterns
-    DTW = np.full((p+1, s+1), np.inf)
-
-    DTW[0, 0] = 0.0
-
-    if slope_constraint == "asymmetric":
-        for i in range(1, p+1):
-            if i <= window+1:
-                DTW[i,1] = cost[i-1,0] + min(DTW[i-1,0], DTW[i-1,1])
-            for j in range(max(2, i-window), min(s, i+window)+1):
-                DTW[i,j] = cost[i-1,j-1] + min(DTW[i-1,j-2], DTW[i-1,j-1], DTW[i-1,j])
-    elif slope_constraint == "symmetric":
-        for i in range(1, p+1):
-            for j in range(max(1, i-window), min(s, i+window)+1):
-                DTW[i,j] = cost[i-1,j-1] + min(DTW[i-1,j-1], DTW[i,j-1], DTW[i-1,j])
-    else:
-        sys.exit("Unknown slope constraint %s"%slope_constraint)
-        
-    return DTW
 
 
 def shape_dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="asymmetric", window=None, descr_ratio=0.05):
@@ -154,7 +154,7 @@ def shape_dtw(prototype, sample, return_flag = RETURN_VALUE, slope_constraint="a
 def draw_graph2d(cost, DTW, path, prototype, sample):
     import matplotlib.pyplot as plt
     plt.figure(figsize=(12, 8))
-   # plt.subplots_adjust(left=.02, right=.98, bottom=.001, top=.96, wspace=.05, hspace=.01)
+    # plt.subplots_adjust(left=.02, right=.98, bottom=.001, top=.96, wspace=.05, hspace=.01)
 
     #cost
     plt.subplot(2, 3, 1)

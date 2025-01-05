@@ -10,7 +10,8 @@ from torch import optim
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.metrics import metric
-from utils.tools import EarlyStopping, adjust_learning_rate, visual
+from utils.tools import EarlyStopping, adjust_learning_rate
+from utils.visual import test_result_visual 
 
 warnings.filterwarnings('ignore')
 
@@ -203,7 +204,7 @@ class Exp_Imputation(Exp_Basic):
                     filled = true[0, :, -1].copy()
                     filled = filled * mask[0, :, -1].detach().cpu().numpy() + \
                              pred[0, :, -1] * (1 - mask[0, :, -1].detach().cpu().numpy())
-                    visual(true[0, :, -1], filled, os.path.join(folder_path, str(i) + '.pdf'))
+                    test_result_visual(true[0, :, -1], filled, os.path.join(folder_path, str(i) + '.pdf'))
 
         preds = np.concatenate(preds, 0)
         trues = np.concatenate(trues, 0)

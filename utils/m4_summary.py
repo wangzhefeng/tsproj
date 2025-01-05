@@ -15,6 +15,7 @@
 """
 M4 Summary
 """
+
 import os
 from collections import OrderedDict
 
@@ -47,6 +48,7 @@ def mape(forecast, target):
 
 
 class M4Summary:
+    
     def __init__(self, file_path, root_path):
         self.file_path = file_path
         self.training_set = M4Dataset.load(training=True, dataset_file=root_path)
@@ -100,14 +102,12 @@ class M4Summary:
         grouped_naive2_smapes = self.summarize_groups(naive2_smapes)
         grouped_naive2_mases = self.summarize_groups(naive2_mases)
         for k in grouped_model_mases.keys():
-            grouped_owa[k] = (grouped_model_mases[k] / grouped_naive2_mases[k] +
-                              grouped_smapes[k] / grouped_naive2_smapes[k]) / 2
+            grouped_owa[k] = (grouped_model_mases[k] / grouped_naive2_mases[k] + grouped_smapes[k] / grouped_naive2_smapes[k]) / 2
 
         def round_all(d):
             return dict(map(lambda kv: (kv[0], np.round(kv[1], 3)), d.items()))
 
-        return round_all(grouped_smapes), round_all(grouped_owa), round_all(grouped_mapes), round_all(
-            grouped_model_mases)
+        return round_all(grouped_smapes), round_all(grouped_owa), round_all(grouped_mapes), round_all(grouped_model_mases)
 
     def summarize_groups(self, scores):
         """
@@ -137,3 +137,13 @@ class M4Summary:
         scores_summary['Average'] = average
 
         return scores_summary
+
+
+
+
+# 测试代码 main 函数
+def main():
+   pass
+
+if __name__ == "__main__":
+   main()

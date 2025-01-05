@@ -11,7 +11,8 @@ from data_provider.data_factory import data_provider
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics import metric, DTW
 # from utils.dtw_metric import accelerated_dtw, dtw
-from utils.tools import EarlyStopping, adjust_learning_rate, visual
+from utils.tools import EarlyStopping, adjust_learning_rate
+from utils.visual import test_result_visual
 
 warnings.filterwarnings('ignore')
 
@@ -318,7 +319,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
                     gt = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     pd = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    test_result_visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
         # ------------------------------
         # 预测/实际标签处理
         # ------------------------------

@@ -15,11 +15,11 @@
 """
 M4 Dataset
 """
+from dataclasses import dataclass
 import logging
 import os
 import pathlib
 import sys
-from dataclasses import dataclass
 from urllib import request
 
 import numpy as np
@@ -83,13 +83,16 @@ class M4Dataset:
         train_cache_file = os.path.join(dataset_file, 'training.npz')
         test_cache_file = os.path.join(dataset_file, 'test.npz')
         m4_info = pd.read_csv(info_file)
-        return M4Dataset(ids=m4_info.M4id.values,
-                         groups=m4_info.SP.values,
-                         frequencies=m4_info.Frequency.values,
-                         horizons=m4_info.Horizon.values,
-                         values=np.load(
-                             train_cache_file if training else test_cache_file,
-                             allow_pickle=True))
+        return M4Dataset(
+            ids=m4_info.M4id.values,
+            groups=m4_info.SP.values,
+            frequencies=m4_info.Frequency.values,
+            horizons=m4_info.Horizon.values,
+            values=np.load(
+                train_cache_file if training else test_cache_file,
+                allow_pickle=True
+            )
+        )
 
 
 @dataclass()

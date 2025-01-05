@@ -47,6 +47,7 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, attention, d_model, d_ff = None, dropout = 0.1, activation = "relu"):
         super(EncoderLayer, self).__init__()
+        
         d_ff = d_ff or 4 * d_model
         self.attention = attention
         self.conv1 = nn.Conv1d(in_channels = d_model, out_channels = d_ff, kernel_size = 1)
@@ -74,6 +75,7 @@ class Encoder(nn.Module):
 
     def __init__(self, attn_layers, conv_layers = None, norm_layer = None):
         super(Encoder, self).__init__()
+        
         self.attn_layers = nn.ModuleList(attn_layers)
         self.conv_layers = nn.ModuleList(conv_layers) if conv_layers is not None else None
         self.norm = norm_layer

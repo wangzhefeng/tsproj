@@ -80,14 +80,14 @@ class Model(nn.Module):
         # Decoder
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.dec_embedding = DataEmbedding(
-                configs.dec_in, 
-                configs.d_model, 
-                configs.embed, 
-                configs.freq,
-                configs.dropout
+                c_in = configs.dec_in, 
+                d_model = configs.d_model, 
+                embed_type = configs.embed, 
+                freq = configs.freq,
+                dropout = configs.dropout
             )
             self.decoder = Decoder(
-                [
+                layers = [
                     DecoderLayer(
                         AttentionLayer(
                             FullAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False),

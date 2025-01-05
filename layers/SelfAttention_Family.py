@@ -6,14 +6,17 @@ import torch.nn as nn
 from einops import rearrange, repeat
 from reformer_pytorch import LSHSelfAttention
 
-from utils.masking import ProbMask, TriangularCausalMask
+from utils.masking import TriangularCausalMask, ProbMask
 
 
 class DSAttention(nn.Module):
-    '''De-stationary Attention'''
+    '''
+    De-stationary Attention
+    '''
 
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(DSAttention, self).__init__()
+        
         self.scale = scale
         self.mask_flag = mask_flag
         self.output_attention = output_attention
@@ -51,6 +54,7 @@ class FullAttention(nn.Module):
     
     def __init__(self, mask_flag = True, factor = 5, scale = None, attention_dropout = 0.1, output_attention = False):
         super(FullAttention, self).__init__()
+        
         self.scale = scale
         self.mask_flag = mask_flag
         self.output_attention = output_attention
@@ -60,9 +64,9 @@ class FullAttention(nn.Module):
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
         scale = self.scale or 1. / sqrt(E)
-
+        # 
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
-
+        # 
         if self.mask_flag:
             if attn_mask is None:
                 attn_mask = TriangularCausalMask(B, L, device=queries.device)
@@ -182,6 +186,7 @@ class AttentionLayer(nn.Module):
 
     def __init__(self, attention, d_model, n_heads, d_keys = None, d_values = None):
         super(AttentionLayer, self).__init__()
+        
         d_keys = d_keys or (d_model // n_heads)
         d_values = d_values or (d_model // n_heads)
 

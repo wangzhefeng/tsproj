@@ -40,6 +40,7 @@ class TokenEmbedding(nn.Module):
             in_channels = c_in,
             out_channels = d_model,
             kernel_size = 3,
+            stride = 1,
             padding = padding,
             padding_mode = 'circular',
             bias = False,
@@ -172,8 +173,11 @@ class DataEmbedding(nn.Module):
     def __init__(self, c_in = 7, d_model = 512, embed_type = 'fixed', freq = 'h', dropout = 0.1):
         super(DataEmbedding, self).__init__()
 
+        # value embedding
         self.value_embedding = TokenEmbedding(c_in = c_in, d_model = d_model)
+        # position embedding
         self.position_embedding = PositionalEmbedding(d_model = d_model)
+        # temporal embedding
         if embed_type == "timeF":
             self.temporal_embedding = TimeFeatureEmbedding(
                 d_model = d_model, 

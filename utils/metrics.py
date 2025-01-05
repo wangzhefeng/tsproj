@@ -142,6 +142,13 @@ def metric(pred, true):
     return rse, mae, mse, rmse, mape, accuracy, mspe, dtw, r2
 
 
+def cal_accuracy(y_pred, y_true):
+    """
+    计算准确率
+    """
+    return np.mean(y_pred == y_true)
+
+
 def evaluate(pred, true):
     """
     模型评估

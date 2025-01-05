@@ -6,8 +6,8 @@ from arch.unitroot import ADF
 from statsmodels.tsa.stattools import adfuller
 
 
-def calculate_ADF(root_path,data_path):
-    df_raw = pd.read_csv(os.path.join(root_path,data_path))
+def calculate_ADF(root_path, data_path):
+    df_raw = pd.read_csv(os.path.join(root_path, data_path))
     cols = list(df_raw.columns)
     cols.remove('date')
     df_raw = df_raw[cols]
