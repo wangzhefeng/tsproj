@@ -29,7 +29,11 @@ stream_handler.setLevel(LOG_LEVEL)
 stream_handler.setFormatter(default_formatter)
 
 # 日志文件路径
-log_path = os.path.join(f"{ROOT_PATH}/logs", "service")
+log_dir = f"{ROOT_PATH}/logs"
+if not os.path.exists(log_dir):
+    os.mkdir(log_dir)
+log_path = os.path.join(log_dir, "service")
+
 
 # 按天轮转的文件日志处理器
 time_rotating_file_handler = handlers.TimedRotatingFileHandler(

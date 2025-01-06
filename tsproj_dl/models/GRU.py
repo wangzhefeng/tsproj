@@ -23,11 +23,9 @@ import torch.nn as nn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device {device}.")
 
 
-class GRU(nn.Module):
+class Model(nn.Module):
     """
     GRU
     """
@@ -39,7 +37,7 @@ class GRU(nn.Module):
         num_layers (_type_): GRU 层数，默认为 1
         output_size (_type_): 输出维度
         """
-        super(GRU, self).__init__()
+        super(Model, self).__init__()
         self.cfgs = cfgs
         self.hidden_size = self.cfgs.hidden_size
         self.num_layers = self.cfgs.num_layers
@@ -86,55 +84,12 @@ class GRU(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from tsproj_dl.config.gru import Config
-    from tsproj_dl.data_provider.data_loader import Data_Loader
-    from tsproj_dl.exp.exp_forecasting import train, plot_train_results
-
-    # config
-    config = Config()
-    
-    # data
-    data_loader = Data_Loader(cfgs = config)
-    train_loader, test_loader = data_loader.run()
-    
-    # model
-    model = GRU(cfgs = config)
-    
-    # loss
-    loss_func = nn.MSELoss()
-    
-    # optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
-    
-    # model train
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = train(
-        config = config,
-        train_loader = train_loader,
-        test_loader = test_loader,
-        model = model,
-        loss_func = loss_func,
-        optimizer = optimizer,
-        x_train_tensor = data_loader.x_train_tensor, 
-        y_train_tensor = data_loader.y_train_tensor,
-        x_test_tensor = data_loader.x_test_tensor,
-        y_test_tensor = data_loader.y_test_tensor,
-        plot_size = 200,
-        scaler = data_loader.scaler,
-    )
-    print(y_train_pred)
-    print(y_test_pred)
-    # result plot
-    plot_train_results(y_train_pred, y_train_true)
-    plot_train_results(y_test_pred, y_test_true)
-    
-    # ------------------------------
     # test
-    # ------------------------------
-    # model = nn.GRU(input_size=3, hidden_size=10, num_layers=2, bias=True, batch_first=True, bidirectional=False)
-    # x = torch.randn(1, 5, 3)
-    # output, h_0 = model(x)
-    # print(output.shape)
-    # print(h_0.shape)
+    model = nn.GRU(input_size=3, hidden_size=10, num_layers=2, bias=True, batch_first=True, bidirectional=False)
+    x = torch.randn(1, 5, 3)
+    output, h_0 = model(x)
+    print(output.shape)
+    print(h_0.shape)
 
 if __name__ == "__main__":
     main()

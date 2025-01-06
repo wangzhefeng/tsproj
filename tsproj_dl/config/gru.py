@@ -24,9 +24,13 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class Config:
     model_name = "GRU"  # 模型名称
+    data = "wind"
     features = "S"
     pred_method = "recursive_multi_step"  # "recursive_multi_step", "direct_multi_step_output", "direct_recursive_mix"
-    data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
+    if sys.platform == "win32":
+        data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
+    else:
+        data_path = "/Users/wangzf/tsproj/tsproj_dl/dataset/wind_dataset.csv"
     target = "WIND"
     target_index = 0
     split_ratio = 0.8  # 训练数据数据分割比例
@@ -38,8 +42,17 @@ class Config:
     epochs = 10  # 迭代轮数
     batch_size = 32  # 批次大小
     learning_rate = 3e-4  # 学习率
+    loss_name = "MSE"
     best_loss = 0.1 # 记录损失
-    save_path = f"D:/projects/timeseries_forecasting/tsproj/tsproj_dl/saved_models/{model_name}.pth"
+    use_gpu = False
+    use_multi_gpu = False
+    gpu = "0"
+    devices = "cuda:0"
+    device_ids = "0,1,2,3"
+    if sys.platform == "win32":
+        save_path = f"D:/projects/timeseries_forecasting/tsproj/tsproj_dl/saved_models/{model}-sl{seq_len}-fz{feature_size}-nl{num_layers}-os{output_size}.pth"
+    else:
+        save_path = f"/Users/wangzf/tsproj/tsproj_dl/saved_models/{model_name}-sl{seq_len}-fz{feature_size}-nl{num_layers}-os{output_size}.pth"
 
 
 class Config_test:

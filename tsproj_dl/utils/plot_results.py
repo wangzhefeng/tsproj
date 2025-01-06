@@ -24,9 +24,7 @@ import matplotlib.pyplot as plt
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def plot_results(preds, 
-                 trues, 
-                 title: str = "result"):
+def plot_results(preds, trues, title: str = "result"):
     """
     绘图展示结果
     """
@@ -40,10 +38,7 @@ def plot_results(preds,
     plt.savefig(f'images/{title}_results.png')
 
 
-def plot_results_multiple(preds, 
-                          trues, 
-                          preds_len: int, 
-                          title: str = "results_multiple"):
+def plot_results_multiple(preds, trues, preds_len: int, title: str = "results_multiple"):
     """
     绘图展示结果
     """
