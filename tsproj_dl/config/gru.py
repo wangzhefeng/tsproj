@@ -25,7 +25,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 class Config:
     model_name = "GRU"  # 模型名称
     data = "wind"
-    features = "S"
+    features = "MS"
     pred_method = "recursive_multi_step"  # "recursive_multi_step", "direct_multi_step_output", "direct_recursive_mix"
     if sys.platform == "win32":
         data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
@@ -34,8 +34,8 @@ class Config:
     target = "WIND"
     target_index = 0
     split_ratio = 0.8  # 训练数据数据分割比例
-    seq_len = 1  # 时间步长，就是利用多少时间窗口
-    feature_size = 1  # 每个步长对应的特征数量
+    seq_len = 4  # 时间步长，就是利用多少时间窗口(lags)
+    feature_size = 3  # 每个步长对应的特征数量
     hidden_size = 256  # GRU 隐藏层大小
     num_layers = 2  # GRU 的层数
     output_size = 1  # 由于是单输出任务，最终输出层大小为 1，预测未来 1 个时刻数据
@@ -44,6 +44,7 @@ class Config:
     learning_rate = 3e-4  # 学习率
     loss_name = "MSE"
     best_loss = 0.1 # 记录损失
+    scale = False
     use_gpu = False
     use_multi_gpu = False
     gpu = "0"

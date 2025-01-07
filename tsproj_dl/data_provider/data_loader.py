@@ -34,15 +34,16 @@ class Data_Loader:
     def __init__(self, cfgs) -> None:
         self.cfgs = cfgs
         self.data_path = self.cfgs.data_path
+        self.features = self.cfgs.features
         self.target = self.cfgs.target
+        self.target_index = self.cfgs.target_index
         self.seq_len = self.cfgs.seq_len
         self.feature_size = self.cfgs.feature_size
         self.output_size = self.cfgs.output_size
-        self.target_index = self.cfgs.target_index
-        self.features = self.cfgs.features
-        self.pred_method = self.cfgs.pred_method
         self.split_ratio = self.cfgs.split_ratio
         self.batch_size = self.cfgs.batch_size
+        self.pred_method = self.cfgs.pred_method
+        self.scale = self.cfgs.scale
     
     def _read_data(self):
         """
@@ -59,12 +60,15 @@ class Data_Loader:
         """
         data scaler
         """
-        # min-max scaler
-        scaler_model = MinMaxScaler()
-        data = scaler_model.fit_transform(np.array(df))
-        # min-max scaler
-        self.scaler = MinMaxScaler()
-        self.scaler.fit_transform(np.array(df[self.target]).reshape(-1, 1))
+        if self.scale:
+            # min-max scaler
+            scaler_model = MinMaxScaler()
+            data = scaler_model.fit_transform(np.array(df))
+            # min-max scaler
+            self.scaler = MinMaxScaler()
+            self.scaler.fit_transform(np.array(df[self.target]).reshape(-1, 1))
+        else:
+            data = np.array(df)
         
         return data
     
@@ -82,25 +86,31 @@ class Data_Loader:
             if self.features == "S":
                 dataX.append(data[index:(index + self.seq_len)][:, self.target_index])  # 单变量特征
             else:
-                dataX.append(data[index:(index + self.seq_len)][:, :])  # 多变量特征
-            dataY.append(data[index + self.seq_len][self.target_index]) 
+                dataX.append(data[index:(index + self.seq_len)][:, self.target_index:self.feature_size])  # 多变量特征
+            dataY.append(data[index + self.seq_len][self.target_index])
         dataX = np.array(dataX)
         dataY = np.array(dataY)
         # print(f"dataX: \n{dataX}")
         # print(f"dataX shape: {dataX.shape}")
         # print(f"dataY: \n{dataY}")
         # print(f"dataY shape: {dataY.shape}")
+        print("-" * 80)
         # 训练集大
         train_size = int(np.round(self.split_ratio * dataX.shape[0]))
         # 划分训练集、测试集
         self.x_train = dataX[:train_size, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
         self.y_train = dataY[:train_size].reshape(-1, 1)  # (batch_size, num_target)
-        self.x_test = dataX[train_size:, :].reshape(-1, self.seq_len, self.feature_size)
-        self.y_test = dataY[train_size:].reshape(-1, 1)
+        self.x_test = dataX[train_size:, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
+        self.y_test = dataY[train_size:].reshape(-1, 1)  # (batch_size, num_target)
         # print(f"x_train: \n{self.x_train}")
         # print(f"x_train shape: {self.x_train.shape}")
         # print(f"y_train: \n{self.y_train}")
         # print(f"y_train shape: {self.y_train.shape}")
+        # print("-" * 40)
+        # print(f"x_test: \n{self.x_test}")
+        # print(f"x_test shape: {self.x_test.shape}")
+        # print(f"y_test: \n{self.y_test}")
+        # print(f"y_test shape: {self.y_test.shape}")
         # 创建 torch Dataset 和 DataLoader
         train_loader, test_loader = self._dataset_dataloader()
         
@@ -179,8 +189,13 @@ class Data_Loader:
     def run(self):
         # 读取数据
         data = self._read_data()
+        data = data.head(10)
+        print(data)
+        print("-" * 80)
         # 数据预处理
         data = self._transform_data(data)
+        print(data)
+        print("-" * 80)
         # 选择预测方法
         if self.pred_method == "recursive_multi_step":
             return self.RecursiveMultiStep(data)
@@ -367,6 +382,11 @@ def main():
     # ------------------------------
     data_loader = Data_Loader(cfgs = config)
     train_loader, test_loader = data_loader.run()
+    
+    
+    
+    
+    
     '''
     # ------------------------------
     # 读取数据

@@ -163,7 +163,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
                 
-                # 日志打印：当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失、
+                # 日志打印：当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 100 == 0:
                     print(f"\titers: {i + 1}, epoch: {epoch + 1} | loss: {loss.item():.7f}")
                     speed = (time.time() - time_now) / iter_count

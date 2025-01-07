@@ -27,10 +27,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-# from keras.utils import plot_model
-# from keras.layers import LSTM, Activation, Dense, Dropout
-# from keras.callbacks import EarlyStopping, ModelCheckpoint
-# from keras.models import Sequential, load_model
+os.environ["KERAS_BACKEND"] = "torch"
+from keras.utils import plot_model
+from keras.layers import LSTM, Activation, Dense, Dropout
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.models import Sequential, load_model
 
 from tsproj_dl.exp.exp_basic import Exp_Basic
 
