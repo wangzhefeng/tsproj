@@ -256,12 +256,6 @@ class Dataset_Pred(Dataset):
         self.__read_data__()  # 数据读取
     
     def __read_data__(self):
-        """
-        Returns:
-            data_stamp: 日期时间动态特征
-            data_x: # TODO
-            data_y: # TODO
-        """
         # ------------------------------
         # data read
         # df_raw: (date, features, target)

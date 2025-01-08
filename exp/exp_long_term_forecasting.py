@@ -297,7 +297,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                     else:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark) 
-                f_dim = -1 if self.args.features == 'MS' else 0  # 特征维度 
+                f_dim = -1 if self.args.features == 'MS' else 0  # 特征维度
                 outputs = outputs[:, -self.args.pred_len:, :]  # 预测 label
                 outputs = outputs.detach().cpu().numpy()
                 batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)  # 实际 label
