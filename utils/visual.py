@@ -42,7 +42,7 @@ def test_result_visual(true, preds=None, name='./pic/test.pdf'):
 
 # 测试代码 main 函数
 def main():
-   p
+   pass
 
 if __name__ == "__main__":
    main()

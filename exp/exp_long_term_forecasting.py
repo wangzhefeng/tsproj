@@ -78,7 +78,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             lr = self.args.learning_rate
         )
         
-        return model_optim 
+        return model_optim
 
     def train(self, setting):
         # ------------------------------
