@@ -25,12 +25,9 @@ import copy
 import datetime
 from typing import Dict, List
 
-# tools
 import numpy as np
 import pandas as pd
-# models
 import lightgbm as lgb
-# metrics
 from sklearn.metrics import (
     mean_absolute_error,
     mean_absolute_percentage_error,
@@ -52,10 +49,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class Model:
 
-    def __init__(self, 
-                 model_cfgs: Dict,
-                 history_data: pd.DataFrame, 
-                 future_data: pd.DataFrame) -> None:
+    def __init__(self, model_cfgs: Dict, history_data: pd.DataFrame, future_data: pd.DataFrame) -> None:
         self.model_cfgs = model_cfgs
         self.history_data = history_data
         self.future_data = future_data
@@ -64,6 +58,7 @@ class Model:
         """
         历史数据处理
         """
+        # 数据时间范围
         start_time = self.model_cfgs["time_range"]["start_time"]
         now_time = self.model_cfgs["time_range"]["now_time"]
         freq = self.model_cfgs["freq"]
@@ -76,11 +71,11 @@ class Model:
             # 转换时间戳类型
             df["ds"] = pd.to_datetime(df["ds"])
             # 去除重复时间戳
-            df.drop_duplicates(subset="ds", keep="last", inplace=True, ignore_index=True) 
+            df.drop_duplicates(subset="ds", keep="last", inplace=True, ignore_index=True)
             # 数据处理
             for col in df.columns:
                 if col != "ds":
-                    # 将数据转换为字符串类型
+                    # 将数据转换为浮点数类型
                     df[col] = df[col].apply(lambda x: float(x))
                     # 将原始数据映射到时间戳完整的 df_history 中, 特征包括[ds, y, exogenous_features]
                     df_history[col] = df_history["ds"].map(df.set_index("ds")[col])
@@ -91,6 +86,7 @@ class Model:
         """
         未来数据处理
         """
+        # 数据时间范围
         now_time = self.model_cfgs["time_range"]["now_time"]
         future_time = self.model_cfgs["time_range"]["future_time"]
         freq = self.model_cfgs["freq"]
@@ -103,7 +99,7 @@ class Model:
             # 转换时间戳类型
             df["ds"] = pd.to_datetime(df["ds"])
             # 去除重复时间戳
-            df.drop_duplicates(subset="ds", keep="last", inplace=True, ignore_index=True) 
+            df.drop_duplicates(subset="ds", keep="last", inplace=True, ignore_index=True)
             # 数据处理
             for col in df.columns:
                 if col != "ds":
@@ -578,62 +574,7 @@ def mutlip_step_recursion():
 
 # 测试代码 main 函数
 def main():
-    # input info
-    pred_method = "multip-step-recursion"                                          # 预测方法
-    freq = "15min"                                                                 # 数据频率
-    lags = 0 if pred_method == "multip-step-directly" else 96                      # 滞后特征构建
-    target = "load"                                                                # 预测目标变量名称
-    n_windows = 1                                                                  # cross validation 窗口数量
-    history_days = 30                                                              # 历史数据天数
-    predict_days = 1                                                               # 预测未来1天的功率
-    data_length = 30 * 96 if n_windows > 1 else history_days * 24                  # 训练数据长度
-    horizon = predict_days * 24 * 40                                               # 预测未来 1天(24小时)的功率/数据划分长度/预测数据长度
-    now = datetime.datetime(2025, 2, 4, 0, 0, 0)                                   # 模型预测的日期时间
-    now_time = now.replace(tzinfo=None, minute=0, second=0, microsecond=0)         # 时间序列当前时刻
-    start_time = now_time.replace(hour=0) - datetime.timedelta(days=history_days)  # 时间序列历史数据开始时刻
-    future_time = now_time + datetime.timedelta(days=predict_days)                 # 时间序列未来结束时刻
-    
-    # model params
-    model_cfgs = {
-        "pred_method": pred_method,
-        "time_range": {
-            "start_time": start_time,
-            "now_time": now_time,
-            "future_time": future_time,
-        },
-        "data_length": data_length,
-        "horizon": horizon,
-        "freq": freq,
-        "lags": lags,
-        "target": target,
-        "n_windows": n_windows,
-        "model_params": {
-            "boosting_type": "gbdt",
-            "objective": "regression",
-            "metric": "rmse",
-            "max_bin": 31,
-            "num_leaves": 39,
-            "learning_rate": 0.05,
-            "feature_fraction": 0.6,
-            "bagging_fraction": 0.7,
-            "bagging_freq": 5,
-            "lambda_l1": 0.5,
-            "lambda_l2": 0.5,
-            "verbose": -1,
-        },
-    }
-    
-    # input data
-    history_data = None
-    future_data = None
-    # model
-    model_instance = Model(
-        model_cfgs=model_cfgs,
-        history_data=history_data,
-        future_data=future_data,
-    )
-    # model running
-    pred_df, eval_scores = model_instance.run()
+    pass
     
 if __name__ == "__main__":
     main()

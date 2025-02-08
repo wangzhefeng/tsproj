@@ -152,7 +152,6 @@ lightning_logs/
 # data/
 dataset/
 datasets/
-results/
-test_results/
+saved_results/
 checkpoints/
 data/
