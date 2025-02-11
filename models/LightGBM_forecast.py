@@ -393,54 +393,59 @@ class Model:
         
         return eval_scores_df, cv_plot_df
 
+    # TODO
+    def model_save(self):
+        pass
+
     def run(self):
-        # ------------------------------
-        # 数据处理
-        # ------------------------------
-        logger.info(f"history data process...")
-        df_history_X, df_history_Y = self.process_input_history_data()
         # ------------------------------
         # 模型训练、验证
         # ------------------------------
-        logger.info(f"model training...")
-        # 模型训练、评价
-        eval_scores_df, cv_plot_df = self.cross_validation(
-            df_history_X, 
-            df_history_Y,
-            n_windows = self.model_cfgs["n_windows"],
-        )
-        logger.info(f"cross validation scores: \n{eval_scores_df}")
-        # 模型评价指标数据处理
-        eval_scores_df = eval_scores_df.mean()
-        eval_scores_df = eval_scores_df.to_frame().T.reset_index(drop = True, inplace = False)
-        logger.info(f"cross validation average scores: \n{eval_scores_df}")
-        # ------------------------------
-        # 模型重新训练
-        # ------------------------------
-        final_model = self.train(X_train=df_history_X, Y_train=df_history_Y)
+        if self.model_cfgs["is_training"]:
+            # 数据处理
+            logger.info(f"history data process...")
+            df_history_X, df_history_Y = self.process_input_history_data()
+            
+            # 模型训练、评价
+            logger.info(f"model training...")
+            eval_scores_df, cv_plot_df = self.cross_validation(
+                df_history_X, 
+                df_history_Y,
+                n_windows = self.model_cfgs["n_windows"],
+            )
+            logger.info(f"cross validation scores: \n{eval_scores_df}")
+
+            # 模型评价指标数据处理
+            eval_scores_df = eval_scores_df.mean()
+            eval_scores_df = eval_scores_df.to_frame().T.reset_index(drop = True, inplace = False)
+            logger.info(f"cross validation average scores: \n{eval_scores_df}")
+
+            # 模型重新训练
+            final_model = self.train(X_train=df_history_X, Y_train=df_history_Y)
         # ------------------------------
         # 模型预测
         # ------------------------------
-        logger.info(f"future data process...")
-        df_future_X = self.process_input_future_data()
-        
-        logger.info(f"model predict...")
-        if self.model_cfgs["pred_method"] == "multip-step-directly":  # 模型单步预测
-            pred_df = self.predict(final_model, df_future_X)
-        elif self.model_cfgs["pred_method"] == "multip-step-recursion":  # 模型多步递归预测
-            pred_df = np.array([])
-            for step in range(self.model_cfgs["horizon"]):
-                logger.info(f'step {step} predict...')
-                df_future_x_row = df_future_X.iloc[step, ].values
-                df_future_x_row = np.delete(df_future_x_row, np.where(np.isnan(df_future_x_row)))
-                X_future = np.concatenate([df_future_x_row, pred_df])
-                pred_value = self.predict(final_model, X_future.reshape(1, -1))
-                pred_df = np.concatenate([pred_df, pred_value])
-        elif self.model_cfgs["pred_method"] == "multip-step-directly-lags":  # TODO 模型多步直接预测
-            pred_df = []
-        logger.info(f"model predict result: \n{pred_df}")
-        logger.info(f"model predict over...")
-        return pred_df, eval_scores_df, cv_plot_df
+        if self.model_cfgs["is_predicting"]: 
+            logger.info(f"future data process...")
+            df_future_X = self.process_input_future_data()
+            
+            logger.info(f"model predict...")
+            if self.model_cfgs["pred_method"] == "multip-step-directly":  # 模型单步预测
+                pred_df = self.predict(final_model, df_future_X)
+            elif self.model_cfgs["pred_method"] == "multip-step-recursion":  # 模型多步递归预测
+                pred_df = np.array([])
+                for step in range(self.model_cfgs["horizon"]):
+                    logger.info(f'step {step} predict...')
+                    df_future_x_row = df_future_X.iloc[step, ].values
+                    df_future_x_row = np.delete(df_future_x_row, np.where(np.isnan(df_future_x_row)))
+                    X_future = np.concatenate([df_future_x_row, pred_df])
+                    pred_value = self.predict(final_model, X_future.reshape(1, -1))
+                    pred_df = np.concatenate([pred_df, pred_value])
+            elif self.model_cfgs["pred_method"] == "multip-step-directly-lags":  # TODO 模型多步直接预测
+                pred_df = []
+            logger.info(f"model predict result: \n{pred_df}")
+            logger.info(f"model predict over...")
+        # return pred_df, eval_scores_df, cv_plot_df
 
 
 def multip_step_directly():

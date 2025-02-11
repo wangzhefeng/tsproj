@@ -149,9 +149,9 @@ lightning_logs/
 *.ts
 *.xlsx
 
-# data/
+# ---------------------------------------
+# custom setting
+# ---------------------------------------
+# data
 dataset/
-datasets/
 saved_results/
-checkpoints/
-data/

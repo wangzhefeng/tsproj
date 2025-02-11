@@ -87,7 +87,7 @@ def extend_date_type_feature(df: pd.DataFrame, df_date: pd.DataFrame):
     df["date"] = df["ds"].apply(
         lambda x: x.replace(hour=0, minute=0, second=0, microsecond=0)
     )
-    df["date_type"] = df["date"].map(df_date.set_index("date")["date_type"])
+    df["date_type"] = df["date"].map(df_date.set_index("ds")["date_type"])
 
     return df
 
