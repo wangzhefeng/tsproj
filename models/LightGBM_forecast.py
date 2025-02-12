@@ -49,10 +49,11 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class Model:
 
-    def __init__(self, model_cfgs: Dict, history_data: pd.DataFrame, future_data: pd.DataFrame) -> None:
+    def __init__(self, model_cfgs: Dict, history_data: pd.DataFrame, future_data: pd.DataFrame, is_workday: str) -> None:
         self.model_cfgs = model_cfgs
         self.history_data = history_data
         self.future_data = future_data
+        self.is_workday = is_workday
 
     def _get_history_data(self):
         """
@@ -60,10 +61,10 @@ class Model:
         """
         # 数据时间范围
         start_time = self.model_cfgs["time_range"]["start_time"]
-        now_time = self.model_cfgs["time_range"]["now_time"]
+        now_time = self.model_cfgs["time_range"]["now_time_start"]
         freq = self.model_cfgs["freq"]
         # 构造时间戳完整的历史数据：生成以 freq 间隔的时间序列，创建 pandas.DataFrame 并添加 ds 列
-        df_history = pd.DataFrame({"ds": pd.date_range(start=start_time, end=now_time, freq=freq, inclusive="left")})
+        df_history = pd.DataFrame({"ds": pd.date_range(start=start_time, end=now_time, freq=freq)})
         # 复制 history data
         df = copy.deepcopy(self.history_data)
         # 数据处理
@@ -87,11 +88,11 @@ class Model:
         未来数据处理
         """
         # 数据时间范围
-        now_time = self.model_cfgs["time_range"]["now_time"]
+        now_time = self.model_cfgs["time_range"]["now_time_end"]
         future_time = self.model_cfgs["time_range"]["future_time"]
         freq = self.model_cfgs["freq"]
         # 构造时间戳完整的历史数据：生成未来 freq 间隔的时间序列，创建 pandas.DataFrame 并添加 ds 列
-        df_future = pd.DataFrame({"ds": pd.date_range(start=now_time, end=future_time, freq=freq, inclusive="left")})
+        df_future = pd.DataFrame({"ds": pd.date_range(start=now_time, end=future_time, freq=freq)})
         # 复制 history data
         df = copy.deepcopy(self.future_data)
         # 数据处理
@@ -144,7 +145,7 @@ class Model:
         滞后特征构造
         """
         # params
-        now_time = self.model_cfgs["time_range"]["now_time"]
+        now_time = self.model_cfgs["time_range"]["now_time_end"]
         future_time = self.model_cfgs["time_range"]["future_time"]
         freq = self.model_cfgs["freq"]
         # 特征构造
@@ -159,7 +160,7 @@ class Model:
         # 筛选样本
         df_future_lags = df_future_lags.iloc[-self.model_cfgs["horizon"]:, ]
         # 时间戳修改为未来时间戳
-        df_future_lags["ds"] = pd.date_range(start=now_time, end=future_time, freq=freq, inclusive="left")
+        df_future_lags["ds"] = pd.date_range(start=now_time, end=future_time, freq=freq)
         # 滞后特征合并
         df_future_lags_feats = [col for col in df_future_lags if col.startswith(f"{self.model_cfgs['target']}(")]
         for col in df_future_lags_feats:
@@ -172,9 +173,11 @@ class Model:
         处理输入历史数据
         """
         # ------------------------------
-        # 数据预处理
+        # TODO 数据预处理
         # ------------------------------
-        df_history = self._get_history_data()
+        # df_history = self._get_history_data()
+        # logger.info(f"df_history: \n{df_history}")
+        df_history = self.history_data
         # ------------------------------
         # 特征工程
         # ------------------------------
@@ -188,7 +191,8 @@ class Model:
         df_history, datetime_features = self._get_datetime_features(
             df_history, 
             datetime_features = [
-                # 'minute', 
+                # TODO
+                'minute', 
                 'hour', 'day', 'weekday', 'week', 
                 'day_of_week', 'week_of_year', 'month', 'days_in_month', 
                 'quarter', 'day_of_year', 'year'
@@ -201,6 +205,15 @@ class Model:
         # ------------------------------
         df_history = df_history.interpolate()  # 缺失值插值填充
         df_history.dropna(inplace=True, ignore_index=True)  # 缺失值删除
+        
+        if self.is_workday:
+            df_history = copy.deepcopy(
+                df_history.query("(date_type == 1) or ((date_type == 2) and (datetime_weekday == 5))")
+            )
+        else:
+            df_history = copy.deepcopy(
+                df_history.query("(date_type > 2) or ((date_type == 2) and (datetime_weekday == 6))")
+            )
         # ------------------------------
         # 预测特征、目标变量分割
         # ------------------------------
@@ -216,10 +229,14 @@ class Model:
         处理输入未来数据
         """
         # ------------------------------
-        # 数据预处理
+        # TODO 数据预处理
         # ------------------------------
-        df_history = self._get_history_data()
-        df_future = self._get_future_data()
+        # df_history = self._get_history_data()
+        # df_future = self._get_future_data()
+        # logger.info(f"df_history: \n{df_history}")
+        # logger.info(f"df_future: \n{df_future}")
+        df_history = self.history_data
+        df_future = self.future_data
         # ------------------------------
         # 缺失值处理
         # ------------------------------
@@ -233,20 +250,34 @@ class Model:
         # 时间戳特征
         # timestamp_feats = ["ds"]
         # 外生特征
-        exogenous_features = [col for col in df_future.columns if col != "ds" and col != self.model_cfgs["target"]]
+        exogenous_features = [
+            col 
+            for col in df_future.columns 
+            if col != "ds" and col != self.model_cfgs["target"]
+        ]
         # 日期时间特征
         df_future, datetime_features = self._get_datetime_features(
             df_future,
             datetime_features = [
-                # 'minute', 
+                # TODO
+                'minute', 
                 'hour', 'day', 
                 'weekday', 'week', 'day_of_week', 'week_of_year', 
                 'month', 'days_in_month', 'quarter', 
                 'day_of_year', 'year'
-            ]
+            ],
         )
         # 滞后特征
         df_future, lag_features = self._get_future_lag_features(df_history, df_future)
+
+        if self.is_workday:
+            df_future = copy.deepcopy(
+                df_future.query("(date_type == 1) or ((date_type == 2) and (datetime_weekday == 5))")
+            )
+        else:
+            df_future = copy.deepcopy(
+                df_future.query("(date_type > 2) or ((date_type == 2) and (datetime_weekday == 6))")
+            )
         # ------------------------------
         # 预测特征数据
         # ------------------------------
@@ -350,13 +381,13 @@ class Model:
         测试集预测数据
         """
         start_time = self.model_cfgs["time_range"]["start_time"]
-        now_time = self.model_cfgs["time_range"]["now_time"]
+        now_time = self.model_cfgs["time_range"]["now_time_start"]
         freq = self.model_cfgs["freq"]
         # 数据分割指标
         train_start, train_end, valid_start, valid_end = self._cv_split_index(window)
         # 训练结果数据收集
         cv_plot_df_window = pd.DataFrame()
-        cv_timestamp_df = pd.DataFrame({"ds": pd.date_range(start=start_time, end=now_time, freq=freq, inclusive="left")})
+        cv_timestamp_df = pd.DataFrame({"ds": pd.date_range(start=start_time, end=now_time, freq=freq)})
         if valid_end == -1:
             cv_plot_df_window["ds"] = cv_timestamp_df[valid_start:]#.values
         else:
@@ -393,7 +424,7 @@ class Model:
         
         return eval_scores_df, cv_plot_df
 
-    # TODO
+    # TODO 早停机制，模型保存
     def model_save(self):
         pass
 
@@ -409,7 +440,7 @@ class Model:
             # 模型训练、评价
             logger.info(f"model training...")
             eval_scores_df, cv_plot_df = self.cross_validation(
-                df_history_X, 
+                df_history_X,
                 df_history_Y,
                 n_windows = self.model_cfgs["n_windows"],
             )
@@ -445,16 +476,24 @@ class Model:
                 pred_df = []
             logger.info(f"model predict result: \n{pred_df}")
             logger.info(f"model predict over...")
-        # return pred_df, eval_scores_df, cv_plot_df
+        # ------------------------------
+        # 模型输出
+        # ------------------------------
+        if self.model_cfgs["is_training"] and not self.model_cfgs["is_predicting"]:
+            return (None, None, cv_plot_df)
+        if not self.model_cfgs["is_training"] and self.model_cfgs["is_predicting"]:
+            return (pred_df, None, None)
+        if self.model_cfgs["is_training"] and self.model_cfgs["is_predicting"]:
+            return (pred_df, eval_scores_df, cv_plot_df)
 
 
-def multip_step_directly():
+def multip_step_directly(history_data, future_data, is_workday: str):
     # input info
     pred_method = "multip-step-directly"                                           # 预测方法
     freq = "15min"                                                                 # 数据频率
     target = "load"                                                                # 预测目标变量名称
     lags = 0 if pred_method == "multip-step-directly" else 96                      # 滞后特征构建
-    n_windows = 1                                                                  # cross validation 窗口数量
+    n_windows = 1                                                                 # cross validation 窗口数量
     # history and future days
     history_days = 30                                                              # 历史数据天数
     predict_days = 1                                                               # 预测未来1天的功率
@@ -462,17 +501,25 @@ def multip_step_directly():
     data_length = 15 * 96 if n_windows > 1 else history_days * 24 * 4              # 训练数据长度
     horizon = predict_days * 24 * 4                                                # 预测未来 1天(24小时)的功率/数据划分长度/预测数据长度
     # timestamp
-    now = datetime.datetime(2025, 2, 4, 0, 0, 0)                                   # 模型预测的日期时间
-    now_time = now.replace(tzinfo=None, minute=0, second=0, microsecond=0)         # 时间序列当前时刻
-    start_time = now_time.replace(hour=0) - datetime.timedelta(days=history_days)  # 时间序列历史数据开始时刻
-    future_time = now_time + datetime.timedelta(days=predict_days)                 # 时间序列未来结束时刻
-    
+    now = datetime.datetime(2025, 2, 6, 23, 46, 0)                                   # 模型预测的日期时间
+    now_time_start = now.replace(tzinfo=None, minute=(now.minute // 15) * 15, second=0, microsecond=0)
+    start_time = now_time_start.replace(hour=0, minute=0, second=0) - datetime.timedelta(days=history_days - 1)
+    now_time_end = now_time_start + datetime.timedelta(minutes=15)
+    future_time = now_time_start + datetime.timedelta(days=predict_days)                 # 时间序列未来结束时刻
+    logger.info("Params:")
+    logger.info(f"start_time: {start_time}")
+    logger.info(f"now_time_start: {now_time_start}")
+    logger.info(f"now_time_end: {now_time_end}")
+    logger.info(f"future_time: {future_time}")
     # model params
     model_cfgs = {
+        "is_training": True,
+        "is_predicting": True,
         "pred_method": pred_method,
         "time_range": {
             "start_time": start_time,
-            "now_time": now_time,
+            "now_time_start": now_time_start,
+            "now_time_end": now_time_end,
             "future_time": future_time,
         },
         "data_length": data_length,
@@ -496,29 +543,34 @@ def multip_step_directly():
             "verbose": -1,
         },
     }
-    
     # input data
-    history_data = None
-    future_data = None
+    # history_data = None
+    # future_data = None
 
     # model
-    model_ins = Model(
+    model = Model(
         model_cfgs=model_cfgs,
         history_data=history_data,
         future_data=future_data,
+        is_workday=is_workday,
     )
     
     # model running
-    pred_df, eval_scores = model_ins.run()
+    (pred_df, eval_scores_df, cv_plot_df) = model.run()
+    # with pd.option_context("display.max_columns", None, "display.max_rows", None):
+    logger.info(f"pred_df: \n{pred_df}")
+    logger.info(f"eval_scores_df: \n{eval_scores_df}")
+    logger.info(f"cv_plot_df: \n{cv_plot_df.sort_values(by="ds")}")
+    logger.info(f"cv_plot_df.isna().sum(): \n{cv_plot_df.isna().sum()}")
 
 
-def mutlip_step_recursion():
+def mutlip_step_recursion(history_data, future_data, is_workday):
     # input info
     pred_method = "multip-step-recursion"                                          # 预测方法
     freq = "15min"                                                                 # 数据频率
     target = "load"                                                                # 预测目标变量名称
     lags = 0 if pred_method == "multip-step-directly" else 96                      # 滞后特征构建
-    n_windows = 16                                                                 # cross validation 窗口数量
+    n_windows = 1                                                                # cross validation 窗口数量
     # history and future days
     history_days = 30                                                              # 历史数据天数
     predict_days = 1                                                               # 预测未来1天的功率
@@ -526,17 +578,25 @@ def mutlip_step_recursion():
     data_length = 15 * 96 if n_windows > 1 else history_days * 24 * 4              # 训练数据长度
     horizon = predict_days * 24 * 4                                                # 预测未来 1天(24小时)的功率/数据划分长度/预测数据长度
     # timestamp
-    now = datetime.datetime(2025, 2, 4, 0, 0, 0)                                   # 模型预测的日期时间
-    now_time = now.replace(tzinfo=None, minute=0, second=0, microsecond=0)         # 时间序列当前时刻
-    start_time = now_time.replace(hour=0) - datetime.timedelta(days=history_days)  # 时间序列历史数据开始时刻
-    future_time = now_time + datetime.timedelta(days=predict_days)                 # 时间序列未来结束时刻
-    
+    now = datetime.datetime(2025, 2, 6, 23, 46, 0)                                   # 模型预测的日期时间
+    now_time_start = now.replace(tzinfo=None, minute=(now.minute // 15) * 15, second=0, microsecond=0)
+    start_time = now_time_start.replace(hour=0, minute=0, second=0) - datetime.timedelta(days=history_days - 1)
+    now_time_end = now_time_start + datetime.timedelta(minutes=15)
+    future_time = now_time_start + datetime.timedelta(days=predict_days)                 # 时间序列未来结束时刻
+    logger.info("Params:")
+    logger.info(f"start_time: {start_time}")
+    logger.info(f"now_time_start: {now_time_start}")
+    logger.info(f"now_time_end: {now_time_end}")
+    logger.info(f"future_time: {future_time}")
     # model params
     model_cfgs = {
+        "is_training": True,
+        "is_predicting": True,
         "pred_method": pred_method,
         "time_range": {
             "start_time": start_time,
-            "now_time": now_time,
+            "now_time_start": now_time_start,
+            "now_time_end": now_time_end,
             "future_time": future_time,
         },
         "data_length": data_length,
@@ -561,18 +621,23 @@ def mutlip_step_recursion():
         },
     }
     # input data
-    history_data = None
-    future_data = None
+    # history_data = None
+    # future_data = None
     
     # model
-    model_ins = Model(
+    model = Model(
         model_cfgs=model_cfgs,
         history_data=history_data,
         future_data=future_data,
+        is_workday=is_workday,
     )
     
     # model running
-    pred_df, eval_scores, _ = model_ins.run()
+    (pred_df, eval_scores_df, cv_plot_df) = model.run()
+    # with pd.option_context("display.max_rows", None, "display.max_columns", None):
+    logger.info(f"pred_df: \n{pred_df}")
+    logger.info(f"eval_scores_df: \n{eval_scores_df}")
+    logger.info(f"cv_plot_df: \n{cv_plot_df}")
 
 
 

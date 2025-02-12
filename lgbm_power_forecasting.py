@@ -24,6 +24,8 @@ import math
 import copy
 import datetime
 from typing import Dict, Any
+import warnings
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import pandas as pd
@@ -59,16 +61,16 @@ def load_data(project: str, data_cfgs: Dict[str, Any] = {}):
     ts_range_history = f"{start_date_str}_to_{now_date_start_str}"
     ts_range_future = f"{now_date_end_str}_to_{future_date_str}"
     # 数据路径
-    data_dir = f"./dataset/{project}_dev_{now_date_start_str}/{data_cfgs["nodes"]["node"]['node_prefix']}/pred/"
+    data_dir = f"./dataset/{project}_dev_{now_date_start_str}_hist{data_cfgs["history_days"]}days_pred{data_cfgs['predict_days']}days/{data_cfgs["nodes"]["node"]['node_prefix']}/pred/"
     # 历史数据
     df_load_1_history = pd.read_csv(os.path.join(data_dir, f"df_gate_{ts_range_history}.csv"), encoding="utf-8")
     df_load_2_history = pd.read_csv(os.path.join(data_dir, f"df_es_1_{ts_range_history}.csv"), encoding="utf-8")
     df_date_history = pd.read_csv(os.path.join(data_dir, f"df_date_history_{ts_range_history}.csv"), encoding="utf-8")
     df_weather_history = pd.read_csv(os.path.join(data_dir, f"df_weather_history_{ts_range_history}.csv"), encoding="utf-8")
-    logger.info(f"df_load_1_history: \n{df_load_1_history.head()}, \ndf_load_1_history.shape: {df_load_1_history.shape}")
-    logger.info(f"df_load_2_history: \n{df_load_2_history.head()}, \ndf_load_2_history.shape: {df_load_2_history.shape}")
-    logger.info(f"df_date_history: \n{df_date_history.head()}, \ndf_date_history.shape: {df_date_history.shape}")
-    logger.info(f"df_weather_history: \n{df_weather_history.head()}, \ndf_weather_history.shape: {df_weather_history.shape}")
+    logger.info(f"df_load_1_history: \n{df_load_1_history}, \ndf_load_1_history.shape: {df_load_1_history.shape}")
+    logger.info(f"df_load_2_history: \n{df_load_2_history}, \ndf_load_2_history.shape: {df_load_2_history.shape}")
+    logger.info(f"df_date_history: \n{df_date_history}, \ndf_date_history.shape: {df_date_history.shape}")
+    logger.info(f"df_weather_history: \n{df_weather_history}, \ndf_weather_history.shape: {df_weather_history.shape}")
     # 未来数据
     df_date_future = pd.read_csv(os.path.join(data_dir, f"df_date_future_{ts_range_future}.csv"), encoding="utf-8")
     df_weather_future = pd.read_csv(os.path.join(data_dir, f"df_weather_future_{ts_range_future}.csv"), encoding="utf-8")
@@ -100,7 +102,6 @@ def process_history_data(input_data: Dict, data_cfgs: Dict):
     df_load_1 = datetime_process(input_data["df_load_1"], "count_data_time", "ds")
     df_load_2 = datetime_process(input_data["df_load_2"], "count_data_time", "ds")
     df_weather_history = datetime_process(input_data["df_weather"], "ts", "ds")
-    # TODO
     df_date_history = datetime_process(input_data["df_date"], "date", "ds")
 
     # 处理其他特征
@@ -136,7 +137,6 @@ def process_history_data(input_data: Dict, data_cfgs: Dict):
             rt_dt = df_weather_history.loc[i, "rt_dt"]
             logger.info(f"rt_tt2: {rt_tt2}, rt_dt: {rt_dt}")
     logger.info(f"df_weather_history: \n{df_weather_history.head()} \ndf_weather_history.shape: {df_weather_history.shape}")
-    
     # merge load and weather data
     df_history = pd.merge(df_history, df_weather_history, on = "ds", how = "left")
     logger.info(f"df_history: \n{df_history.head()} \ndf_history.shape: {df_history.shape}")
@@ -161,12 +161,11 @@ def process_future_data(input_data: Dict, data_cfgs: Dict):
         df.drop_duplicates(subset=new_ds_name, keep="last", inplace=True, ignore_index=True)
         return df
     df_weather_future = datetime_process(input_data["df_weather_future"], "ts", "ds")
-    # TODO
     df_date_future = datetime_process(input_data["df_date_future"], "date", "ds")
 
     # 处理其他特征
     df_future = pd.DataFrame({"ds": pd.date_range(
-        data_cfgs["time_range"]["now_time"], 
+        data_cfgs["time_range"]["now_time_end"], 
         data_cfgs["time_range"]["future_time"], 
         freq=data_cfgs["freq"]
     )})
@@ -177,7 +176,6 @@ def process_future_data(input_data: Dict, data_cfgs: Dict):
     for col in df_weather_future.columns[1:]:
         df_weather_future[col] = df_weather_future[col].apply(lambda x: float(x))
     logger.info(f"df_weather_future: \n{df_weather_future.head()} \ndf_weather_future.shape: {df_weather_future.shape}")
-    
     # 将预测天气数据整理到预测df中
     df_future["rt_ssr"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ssrd"])
     df_future["rt_ws10"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ws10"])
@@ -200,6 +198,7 @@ def process_future_data(input_data: Dict, data_cfgs: Dict):
 
 
 def feature_engine_history_v1(df_history: pd.DataFrame, df_date_history: Dict):
+    """
     # 时间戳特征构造
     df_history = extend_datetime_stamp_feature(
         df = df_history,
@@ -209,12 +208,21 @@ def feature_engine_history_v1(df_history: pd.DataFrame, df_date_history: Dict):
             "quarter", "day_of_year", "year"
         ]
     )
+    """
     # 日期类型特征构造
     df_history = extend_date_type_feature(df_history, df_date_history)
+    # 特征筛选
+    predict_features = [
+        "ds",
+        "rt_ssr", "rt_ws10", "rt_tt2", "cal_rh", "rt_ps", "rt_rain",
+        "date_type", 
+        "load",
+    ]
+    df_history = df_history[predict_features]
     # 缺失值删除
     df_history.dropna(inplace=True, ignore_index=True)
-    logger.info(f"df_history: \n{df_history.head(20)} \ndf_history.shape: {df_history.shape}")
- 
+    logger.info(f"df_history: \n{df_history.head()} \ndf_history.shape: {df_history.shape} \ndf_history.columns: {df_history.columns}")
+    """
     # 特征筛选
     predict_features = [
         "rt_ssr", "rt_ws10", "rt_tt2", "cal_rh", "rt_ps", "rt_rain",
@@ -229,9 +237,9 @@ def feature_engine_history_v1(df_history: pd.DataFrame, df_date_history: Dict):
     logger.info(f"data_X_workday: \n{data_X_workday.head()} \ndata_X_workday.shape: {data_X_workday.shape} \ndata_X_workday.columns: {data_X_workday.columns}")
     logger.info(f"data_Y_workday: \n{data_Y_workday.head()} \ndata_Y_workday.shape: {data_Y_workday.shape}")
     # 非工作日数据（节日和非节日的周日）
-    df_load_offday = copy.deepcopy(df_history.query("(date_type > 2) or ((date_type == 2) and (datetime_weekday == 6))"))  # 节日或者非节日的周日
-    data_X_offday = df_load_offday[predict_features]
-    data_Y_offday = df_load_offday[target_feature]
+    df_history_offday = copy.deepcopy(df_history.query("(date_type > 2) or ((date_type == 2) and (datetime_weekday == 6))"))  # 节日或者非节日的周日
+    data_X_offday = df_history_offday[predict_features]
+    data_Y_offday = df_history_offday[target_feature]
     logger.info(f"data_X_offday: \n{data_X_offday.head()} \ndata_X_offday.shape: {data_X_offday.shape} \ndata_X_offday.columns: {data_X_offday.columns}")
     logger.info(f"data_Y_offday: \n{data_Y_offday.head()} \ndata_Y_offday.shape: {data_Y_offday.shape}")
 
@@ -241,9 +249,12 @@ def feature_engine_history_v1(df_history: pd.DataFrame, df_date_history: Dict):
         data_X_offday,
         data_Y_offday,
     )
+    """
+    return df_history
 
 
 def feature_engine_future_v1(df_future: pd.DataFrame, df_date_future: pd.DataFrame):
+    """
     # 时间戳特征构造
     df_future = extend_datetime_stamp_feature(
         df = df_future,
@@ -253,12 +264,20 @@ def feature_engine_future_v1(df_future: pd.DataFrame, df_date_future: pd.DataFra
             "quarter", "day_of_year", "year"
         ]
     )
+    """
     # 日期类型特征构造
-    df_future = extend_date_type_feature(df_future, df_date_future) 
+    df_future = extend_date_type_feature(df_future, df_date_future)
+    # 特征筛选
+    predict_features = [
+        "ds",
+        "rt_ssr", "rt_ws10", "rt_tt2", "cal_rh", "rt_ps", "rt_rain",
+        "date_type",
+    ]
+    df_future = df_future[predict_features]
     # 缺失值删除
     df_future.dropna(inplace=True, ignore_index=True)
-    logger.info(f"df_future: \n{df_future.head(20)} \ndf_future.shape: {df_future.shape}")
-
+    logger.info(f"df_future: \n{df_future.head()} \ndf_future.shape: {df_future.shape} \ndf_future.columns: {df_future.columns}")
+    """
     # 特征筛选
     predict_features = [
         "rt_ssr", "rt_ws10", "rt_tt2", "cal_rh", "rt_ps", "rt_rain",
@@ -278,6 +297,8 @@ def feature_engine_future_v1(df_future: pd.DataFrame, df_date_future: pd.DataFra
         X_future_workday,
         X_future_offday
     )
+    """
+    return df_future
 
 
 
@@ -295,7 +316,7 @@ def main():
     # 时间索引
     now = datetime.datetime(2025, 2, 6, 23, 46, 0)
     history_days = 30
-    predict_days = 5
+    predict_days = 1
     now_time_start = now.replace(tzinfo=None, minute=(now.minute // 15) * 15, second=0, microsecond=0)
     start_time = now_time_start.replace(hour=0, minute=0, second=0) - datetime.timedelta(days=history_days - 1)
     now_time_end = now_time_start + datetime.timedelta(minutes=15)
@@ -328,9 +349,18 @@ def main():
             "future_time": future_time,
         },
         "freq": "15min",
+        "history_days": 30,
+        "predict_days": 1,
         "demand_load_min_thread": 66,
     }
     model_cfgs = {
+        "time_range": {
+            "start_time": start_time,
+            "now_time": now_time_start,
+            "now_time_end": now_time_end,
+            "future_time": future_time,
+        },
+        "freq": "15min",
         "lgbm_params_workday": {
             "boosting_type": "gbdt",
             "objective": "regression",
@@ -389,18 +419,42 @@ def main():
     logger.info("=" * 50)
     logger.info(f"History data feature engine for training...")
     logger.info("-" * 40)
+    """
     (
         data_X_workday,
         data_Y_workday,
         data_X_offday,
         data_Y_offday
     ) = feature_engine_history_v1(data_history, data_date_history)
+    """
+    df_history= feature_engine_history_v1(data_history, data_date_history)
     logger.info(f"Future data feature engine for training...")
     logger.info("-" * 40)
+    """
     (
         X_future_workday,
         X_future_offday
     ) = feature_engine_future_v1(data_future, data_date_future)
+    """
+    df_future= feature_engine_future_v1(data_future, data_date_future)
+    # ------------------------------
+    # model training and prdicting
+    # ------------------------------
+    logger.info("=" * 50)
+    logger.info(f"Model training and predict...")
+    logger.info("=" * 50)
+    from models.LightGBM_forecast import multip_step_directly, mutlip_step_recursion
+
+    logger.info(f"Model training and multip-step-directly predict...")
+    logger.info("-" * 40)
+    # multip_step_directly(df_history, df_future, is_workday=True)
+    # multip_step_directly(df_history, df_future, is_workday=False)
+
+    # ------------------------------
+    logger.info(f"Model training and multip-step-recursion predict...")
+    logger.info("-" * 40)
+    # mutlip_step_recursion(df_history, df_future, is_workday = True)
+    mutlip_step_recursion(df_history, df_future, is_workday = False)
 
 if __name__ == "__main__":
     main()

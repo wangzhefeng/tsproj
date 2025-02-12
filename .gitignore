@@ -155,3 +155,4 @@ lightning_logs/
 # data
 dataset/
 saved_results/
+logs/
