@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from layers.Embed import DataEmbedding, DataEmbedding_wo_temp
+from layers.Embed import DataEmbedding, DataEmbedding_wo_pos
 from layers.TransformerBlocks import Encoder, Decoder
 from layers.Invertible import RevIN
 
@@ -29,10 +29,10 @@ class Model(nn.Module):
                 configs.dec_in, configs.d_model, configs.embed, configs.freq, configs.dropout
             )
         elif configs.embed_type == 1:
-            self.enc_embedding = DataEmbedding_wo_temp(
+            self.enc_embedding = DataEmbedding_wo_pos(
                 configs.enc_in, configs.d_model, configs.dropout
             )
-            self.dec_embedding = DataEmbedding_wo_temp(
+            self.dec_embedding = DataEmbedding_wo_pos(
                 configs.dec_in, configs.d_model, configs.dropout
             )
         # Encoder

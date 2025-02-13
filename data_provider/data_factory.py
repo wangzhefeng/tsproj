@@ -34,7 +34,7 @@ from data_provider.data_loader import (
     Dataset_Pred,
 )
 from data_provider.uea import collate_fn
-from data_provider.data_loader import Data_Loader
+# from data_provider.data_loader import Data_Loader
 
 from utils.log_util import logger
 
@@ -58,7 +58,7 @@ data_dict = {
     # ------------------------------
     # Basic Neural Network dataset
     # ------------------------------
-    "Data_Loader": Data_Loader,
+    # "Data_Loader": Data_Loader,
 }
 
 

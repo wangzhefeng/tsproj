@@ -127,6 +127,10 @@ def R2(pred, true):
     return r2_score(true, pred)
 
 
+def R2_V2(pred, true):
+    return 1 - np.mean((pred - true) ** 2) / np.var(true)
+
+
 def metric(pred, true):
     rse = RSE(pred, true)
     # corr = CORR(pred, true)

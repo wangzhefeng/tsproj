@@ -29,11 +29,11 @@ import torch
 import torch.nn as nn
 
 from utils.log_util import logger
-from data_provider.data_factory import data_provider
-from models import Transformer
+from data_provider.data_factory import data_provider_new
+from models import Transformer_original
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.metrics import metric, DTW
+from utils.metrics_dl import metric, DTW
 from utils.visual import test_result_visual
 
 # global variable
@@ -76,7 +76,7 @@ class Exp_Forecast:
             logger.info('Use CPU')
             
         # 构建 Transformer 模型
-        model = Transformer.Model(self.args).float().to(device)
+        model = Transformer_original.Model(self.args).float().to(device)
         
         # 多 GPU 训练
         if self.args.use_multi_gpu:
@@ -92,7 +92,7 @@ class Exp_Forecast:
         """
         数据集构建
         """
-        data_set, data_loader = data_provider(self.args, flag, pre_data)
+        data_set, data_loader = data_provider_new(self.args, flag, pre_data)
         
         return data_set, data_loader
 
