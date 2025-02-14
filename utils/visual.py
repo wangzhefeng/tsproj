@@ -36,7 +36,7 @@ def test_result_visual(trues, preds=None, path='./pic/test.pdf'):
     # 设置绘图风格
     # plt.style.use('ggplot')
     # 画布
-    fig = plt.figure(figsize = (12, 8))
+    fig = plt.figure(figsize = (25, 8))
     # 创建折线图
     plt.plot(trues, label='Trues', linewidth=1)  # 实际值
     plt.plot(preds, label='Preds', linewidth=1, linestyle="--")  # 预测值

@@ -1,11 +1,35 @@
+# -*- coding: utf-8 -*-
+
+# ***************************************************
+# * File        : exp_basic.py
+# * Author      : Zhefeng Wang
+# * Email       : zfwang7@gmail.com
+# * Date        : 2025-02-13
+# * Version     : 1.0.021317
+# * Description : description
+# * Link        : link
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
+# ***************************************************
+
+__all__ = []
+
+# python libraries
 import os
+import sys
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 
 import torch
+
 from models import (
-    # TimesNet, 
-    # Autoformer, 
     DLinear, 
-    # FEDformer
+    Autoformer, 
+    PatchTST,
+    TimesNet, 
+    Transformer,
+    Transformer_original,
 )
 # from models_dl import (
 #     MLP,
@@ -25,6 +49,10 @@ from models import (
 #     TCN,
 #     Transformer,
 # )
+from utils.log_util import logger
+
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Exp_Basic:
@@ -37,9 +65,10 @@ class Exp_Basic:
             # ------------------------------
             # Time Series Library models
             # ------------------------------
-            # 'TimesNet': TimesNet,
-            # 'Autoformer': Autoformer,
-            # 'Transformer': Transformer,
+            "Transformer_original": Transformer_original,
+            'TimesNet': TimesNet,
+            'Autoformer': Autoformer,
+            'Transformer': Transformer,
             # 'Nonstationary_Transformer': Nonstationary_Transformer,
             'DLinear': DLinear,
             # 'FEDformer': FEDformer,
@@ -47,7 +76,7 @@ class Exp_Basic:
             # 'LightTS': LightTS,
             # 'Reformer': Reformer,
             # 'ETSformer': ETSformer,
-            # 'PatchTST': PatchTST,
+            'PatchTST': PatchTST,
             # 'Pyraformer': Pyraformer,
             # 'MICN': MICN,
             # 'Crossformer': Crossformer,
@@ -60,7 +89,12 @@ class Exp_Basic:
             # 'TimeMixer': TimeMixer,
             # 'TSMixer': TSMixer,
             # 'SegRNN': SegRNN,
-            # 'TemporalFusionTransformer': TemporalFusionTransformer
+            # 'TemporalFusionTransformer': TemporalFusionTransformer,
+            # "SCINet": SCINet,
+            # 'PAttn': PAttn,
+            # 'TimeXer': TimeXer,
+            # 'WPMixer': WPMixer,
+            # 'MultiPatchFormer': MultiPatchFormer
             # ------------------------------
             # Basic Neural Network model
             # ------------------------------
@@ -82,23 +116,25 @@ class Exp_Basic:
             # "Transformer": Transformer,
         }
         if args.model == 'Mamba':
-            print('Please make sure you have successfully installed mamba_ssm')
+            logger.info('Please make sure you have successfully installed mamba_ssm')
             from models import Mamba
-            self.model_dict[Mamba] = Mamba
+            self.model_dict["Mamba"] = Mamba
         # 设备
         self.device = self._acquire_device()
         # 模型构建
         self.model = self._build_model().to(self.device)
     
     def _acquire_device(self):
-        if self.args.use_gpu: 
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu) if not self.args.use_multi_gpu else self.args.devices
+        if self.args.use_gpu and self.args.gpu_type == "cuda": 
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu)
             device = torch.device(f'cuda:{self.args.gpu}')
-            # device = torch.device('cuda')
-            print(f'Use GPU: cuda:{self.args.gpu}.')
+            logger.info(f'Use GPU: cuda:{self.args.gpu}.')
+        elif self.args.use_gpu and self.args.gpu_type == "mps":
+            device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+            logger.info(f"Use GPU: mps.")
         else:
             device = torch.device('cpu')
-            print('Use CPU.')
+            logger.info('Use CPU.')
 
         return device
     
@@ -117,3 +153,14 @@ class Exp_Basic:
 
     def test(self):
         pass
+
+
+
+
+
+# 测试代码 main 函数
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()

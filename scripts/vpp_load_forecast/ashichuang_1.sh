@@ -3,11 +3,11 @@ export LOG_NAME=asc2
 
 model_name=Transformer_original
 
-# small model: ashichuang asc2 data-epoch=10
+# small model: ashichuang asc1 data-epoch=10
 # python -u tf_power_forecasting.py \
 #     --is_training 1 \
 #     --is_predicting 1 \
-#     --root_path ./dataset/ashichuang_dev_20250206_hist30days_pred1days/asc2/pred/ \
+#     --root_path ./dataset/ashichuang_dev_20250206_hist30days_pred1days/asc1/pred/ \
 #     --data_path df_history.csv \
 #     --rolling_data_path ETTh1-Test.csv \
 #     --target load \
@@ -53,11 +53,11 @@ model_name=Transformer_original
 #     --num_workers 0
 
 
-# small model: ashichuang asc2 data-epoch=20
+# small model: ashichuang asc1 data-epoch=20
 python -u tf_power_forecasting.py \
     --is_training 1 \
     --is_predicting 1 \
-    --root_path ./dataset/ashichuang_dev_20250206_hist30days_pred1days/asc2/pred/ \
+    --root_path ./dataset/ashichuang_dev_20250206_hist30days_pred1days/asc1/pred/ \
     --data_path df_history.csv \
     --rolling_data_path ETTh1-Test.csv \
     --target load \

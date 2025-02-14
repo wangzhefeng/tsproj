@@ -347,12 +347,12 @@ def main():
     start_time = now_time_start.replace(hour=0, minute=0, second=0) - datetime.timedelta(days=history_days - 1)  # 历史数据开始时刻 
     now_time_end = now_time_start + datetime.timedelta(minutes=15)  # 未来数据开始时刻
     future_time = now_time_start + datetime.timedelta(days=predict_days)  # 未来数据结束时刻
-    is_workday = False
+    is_workday = True
     # training params
     is_training = True  # 是否进行模型训练
     is_predicting = True  # 是否进行模型预测
-    pred_method = "multip-step-directly"  # 预测方法 
-    # pred_method = "multip-step-recursion"  # 预测方法 
+    # pred_method = "multip-step-directly"  # 预测方法
+    pred_method = "multip-step-recursion"  # 预测方法
     lags = 0 if pred_method == "multip-step-directly" else 96  # 滞后特征构建
     n_windows = 15  # cross validation 窗口数量
     data_length = 15 * 96 if n_windows > 1 else history_days * 24 * 4  # 训练数据长度
@@ -362,7 +362,7 @@ def main():
     data_path = f"./dataset/{project}_dev_{now_time_start.strftime('%Y%m%d')}_hist{history_days}days_pred{predict_days}days/{node}/pred/" 
     # result save path
     result_path = f"./saved_results/predict_results/{project}/{node}_dev_{now_time_start.strftime('%Y%m%d')}_hist{history_days}days_pred{predict_days}days/" 
-    os.makedirs(result_path, exist_ok=True) 
+    os.makedirs(result_path, exist_ok=True)
     # model params
     model_cfgs = {
         "project": project,
@@ -480,7 +480,7 @@ def main():
     training_predicting(model_cfgs, df_history, df_future)
 
     # ------------------------------
-    logger.info(f"Model training and multip-step-recursion predict...")
+    # logger.info(f"Model training and multip-step-recursion predict...")
     # training_predicting(model_cfgs, df_history, df_future)
 
 if __name__ == "__main__":

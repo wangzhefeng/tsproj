@@ -22,7 +22,6 @@ import random
 
 import numpy as np
 import torch
-from loguru import logger
 
 from exp.exp_anomaly_detection import Exp_Anomaly_Detection
 from exp.exp_classification import Exp_Classification
@@ -30,6 +29,7 @@ from exp.exp_imputation import Exp_Imputation
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
 from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 from utils.print_args import print_args
+from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -47,7 +47,7 @@ def set_seed():
         torch.cuda.manual_seed_all(fix_seed)
         torch.cuda.manual_seed(fix_seed)
         torch.backends.cudnn.deterministic = True
- 
+
 
 def args_define():
     # ------------------------------
@@ -159,16 +159,22 @@ def args_parse(parser):
     # ------------------------------
     # arguments
     args = parser.parse_args()
-    # device
-    args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
-    # device-gpu
-    args.devices = args.devices.replace(" ", "")
+    # use gpu
+    args.use_gpu = True if (
+        torch.cuda.is_available() or torch.backends.mps.is_available()) and args.use_gpu else False
+    # gpu type: "cuda", "mps"
+    args.gpu_type = args.gpu_type.lower().strip()
+    # devices string: "0,1,2,3", "0", "1", "2", "3", "0,1", "0,2"...
+    args.devices = args.devices.replace(" ", "")  # str
+    # device ids: [0,1,2,3], [0], [1], [2], [3], [0,1], [0,2]...
+    args.device_ids = [int(id_) for id_ in args.devices.split(",")]  # list
+    # gpu: [0,1,2,3], "0"
     if args.use_gpu and args.use_multi_gpu:
         args.gpu = args.devices
     elif args.use_gpu and not args.use_multi_gpu:
         args.gpu = [int(id_) for id_ in args.devices.split(",")][0]
     
-    print(f"Args in experiment: \n{args}")
+    logger.info(f"Args in experiment: \n{args}")
 
     return args
 
@@ -181,12 +187,12 @@ def args_usage(args):
         Exp = Exp_Long_Term_Forecast
     elif args.task_name == 'short_term_forecast':
         Exp = Exp_Short_Term_Forecast
-    # elif args.task_name == 'imputation':
-    #     Exp = Exp_Imputation
-    # elif args.task_name == 'anomaly_detection':
-    #     Exp = Exp_Anomaly_Detection
-    # elif args.task_name == 'classification':
-    #     Exp = Exp_Classification
+    elif args.task_name == 'imputation':
+        Exp = Exp_Imputation
+    elif args.task_name == 'anomaly_detection':
+        Exp = Exp_Anomaly_Detection
+    elif args.task_name == 'classification':
+        Exp = Exp_Classification
     else:
         Exp = Exp_Long_Term_Forecast
     # ------------------------------
@@ -202,14 +208,17 @@ def args_usage(args):
             # set experiments
             exp = Exp(args)
             # model training
-            print(f">>>>>>>start training : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            logger.info(f">>>>>>>start training : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
             exp.train(setting)
             # model testing
-            print(f">>>>>>>testing : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+            logger.info(f">>>>>>>testing : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
             exp.test(setting)
             # empty cache
             torch.cuda.empty_cache()
-    else:
+    # ------------------------------
+    # 模型测试
+    # ------------------------------
+    if args.is_testing:
         ii = 0
         # setting record of experiments
         setting = f"{args.task_name}_{args.model_id}_{args.model}_{args.data}_ft{args.features} \
@@ -218,9 +227,17 @@ def args_usage(args):
                     _fc{args.factor}_eb{args.embed}_dt{args.distil}_{args.des}_{ii}"
         # set experiments
         exp = Exp(args)
-        print(f">>>>>>>testing : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        logger.info(f">>>>>>>testing : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         exp.test(setting, test = 1)
         torch.cuda.empty_cache()
+    # ------------------------------
+    # 模型推理预测
+    # ------------------------------
+    if args.is_predict:
+        logger.info(f">>>>>>>predicting : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        prediction = exp.predict(setting, True)
+        torch.cuda.empty_cache()
+        logger.info(prediction.shape)
 
 
 

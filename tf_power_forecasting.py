@@ -126,7 +126,7 @@ def run_task(args):
     if args.is_training:
         for ii in range(args.iters):
             # setting record of experiments
-            setting = f'forecasting-{args.model}-data-{args.data_path[:-4]}-{args.target}-V1'
+            setting = f'forecasting-{args.model}-data-{args.data_path[:-4]}-{args.target}-asc1-V1'
             # 模型训练、验证、测试
             logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
             exp.train(setting, ii)
@@ -136,7 +136,7 @@ def run_task(args):
     # 模型预测
     if args.is_predicting:
         # setting record of experiments
-        setting = f'forecasting-{args.model}-data-{args.data_path[:-4]}-{args.target}-V1'
+        setting = f'forecasting-{args.model}-data-{args.data_path[:-4]}-{args.target}-asc1-V1'
         logger.info(f">>>>>>>start predicting: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
         exp.test(setting)
 
