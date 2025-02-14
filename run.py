@@ -161,7 +161,8 @@ def args_parse(parser):
     args = parser.parse_args()
     # use gpu
     args.use_gpu = True if (
-        torch.cuda.is_available() or torch.backends.mps.is_available()) and args.use_gpu else False
+        torch.cuda.is_available() or torch.backends.mps.is_available()
+    ) and args.use_gpu else False
     # gpu type: "cuda", "mps"
     args.gpu_type = args.gpu_type.lower().strip()
     # devices string: "0,1,2,3", "0", "1", "2", "3", "0,1", "0,2"...
