@@ -336,7 +336,7 @@ def main():
     logger.info("=" * 50)
     # project params
     project = "ashichuang"
-    node = "asc2"
+    node = "asc1"
     # data params
     now = datetime.datetime(2025, 2, 6, 23, 46, 0)  # 模型预测的日期时间
     history_days = 30  # 历史数据天数

@@ -366,6 +366,33 @@ class Model:
             logger.info(f"X_test length is 0!")
             return Y_pred
 
+    def recursive_forecast_v2(self, model, initial_features, steps):
+        """
+        递归多步预测
+        """
+        preds = []
+        current_features = initial_features.copy()
+        for _ in range(steps):
+            next_pred = self.predict(model, current_features.reshape(1, -1))
+            preds.append(next_pred[0])
+            current_features = np.roll(current_features, shift=-1)
+            current_features[-1] = next_pred
+            logger.info(f"predictions: \n{preds}")
+        
+        return preds
+
+    def recursive_forecast_v1(self, model, X_future):
+        preds = np.array([])
+        for step in range(self.model_cfgs["horizon"]):
+            logger.info(f'step {step} predict...')
+            df_future_x_row = X_future.iloc[step, ].values
+            df_future_x_row = np.delete(df_future_x_row, np.where(np.isnan(df_future_x_row)))
+            X_future = np.concatenate([df_future_x_row, preds])
+            pred_value = self.predict(model, X_future.reshape(1, -1))
+            preds = np.concatenate([preds, pred_value])
+    
+        return preds
+
     @staticmethod
     def evaluate(Y_test, Y_pred, window: int):
         """
@@ -444,7 +471,7 @@ class Model:
     def model_save(self):
         pass
 
-    def run(self):
+    def train(self):
         # ------------------------------
         # 模型训练、验证
         # ------------------------------
@@ -469,29 +496,45 @@ class Model:
 
             # 模型重新训练
             final_model = self.train(X_train=df_history_X, Y_train=df_history_Y)
+            logger.info(f"model training over...")
+        
+        return final_model, df_history_X, cv_plot_df, eval_scores_df
+    
+    def forecast(self, final_model, df_history_X):
         # ------------------------------
         # 模型预测
         # ------------------------------
         if self.model_cfgs["is_predicting"]: 
+            # 数据处理
             logger.info(f"future data process...")
             df_future_X = self.process_input_future_data()
-            
+
+            # 模型预测
             logger.info(f"model predict...")
-            if self.model_cfgs["pred_method"] == "multip-step-directly":  # 模型单步预测
-                pred_df = self.predict(final_model, df_future_X)
-            elif self.model_cfgs["pred_method"] == "multip-step-recursion":  # 模型多步递归预测
-                pred_df = np.array([])
-                for step in range(self.model_cfgs["horizon"]):
-                    logger.info(f'step {step} predict...')
-                    df_future_x_row = df_future_X.iloc[step, ].values
-                    df_future_x_row = np.delete(df_future_x_row, np.where(np.isnan(df_future_x_row)))
-                    X_future = np.concatenate([df_future_x_row, pred_df])
-                    pred_value = self.predict(final_model, X_future.reshape(1, -1))
-                    pred_df = np.concatenate([pred_df, pred_value])
-            elif self.model_cfgs["pred_method"] == "multip-step-directly-lags":  # TODO 模型多步直接预测
-                pred_df = []
-            # logger.info(f"model predict result: \n{pred_df}")
+            if self.model_cfgs["pred_method"] == "multip-step-directly":  # 模型多步直接预测(无滞后特征)
+                pred_df = self.predict(
+                    model = final_model, 
+                    X_future = df_future_X,
+                )
+            elif self.model_cfgs["pred_method"] == "multip-step-recursion v1":  # 模型多步递归预测
+                pred_df = self.recursive_forecast_v1(
+                    model=final_model,
+                    X_future = df_future_X,
+                )
+            elif self.model_cfgs["pred_method"] == "multip-step-recursion v2":  # 模型多步递归预测
+                initial_features = df_history_X.iloc[-1].values
+                pred_df = self.recursive_forecast_v2(
+                    model = final_model, 
+                    initial_features = initial_features, 
+                    steps = self.model_cfgs["horizon"]
+                )
             logger.info(f"model predict over...")
+ 
+    def run(self):
+        # 模型训练
+        final_model, df_history_X, cv_plot_df, eval_scores_df = self.train()
+        # 模型测试
+        pred_df = self.forecast(final_model, df_history_X)
         # ------------------------------
         # 模型输出
         # ------------------------------
