@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : run_demo4.py
+# * File        : run_demo5.py
 # * Author      : Zhefeng Wang
 # * Email       : zfwang7@gmail.com
-# * Date        : 2025-03-07
-# * Version     : 1.0.030716
+# * Date        : 2025-03-10
+# * Version     : 1.0.031018
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
@@ -21,16 +21,16 @@ ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
-# global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
-
-
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def generate_time_series_data(n_samples=1000, start_date='2020-01-01'):
@@ -64,6 +64,20 @@ def add_datetime_features(df):
     return df
 
 
+def normalize_data(df, feature_columns, target_column):
+    """归一化数据"""
+    scaler_features = MinMaxScaler()
+    scaler_target = MinMaxScaler()
+
+    # 归一化特征
+    df[feature_columns] = scaler_features.fit_transform(df[feature_columns])
+
+    # 归一化目标
+    df[target_column] = scaler_target.fit_transform(df[[target_column]])
+
+    return df, scaler_features, scaler_target
+
+
 def prepare_data(df, train_size=0.8):
     """准备训练和测试数据"""
     X = df.drop(columns=['value', 'date'])
@@ -90,38 +104,40 @@ def train_lightgbm(X_train, y_train):
     return model
 
 
-def recursive_forecast(model, initial_features, initial_date, steps, window_size=7):
+def recursive_forecast(model, initial_features, initial_date, steps, window_size, scaler_features, scaler_target):
     """递归多步预测"""
     predictions = []
     current_features = initial_features.copy()
-    print(f"current_features 0: \n{current_features}")
     current_date = initial_date
-    print(f"current_date: \n{current_date}")
+
     # 初始化移动平均值的计算窗口
     moving_avg_window = list(current_features[-window_size:])  # 取最后 window_size 个值作为初始窗口
-    print(f"moving_avg_window: \n{moving_avg_window}")
+
     for _ in range(steps):
+        # 归一化输入特征
+        current_features_scaled = scaler_features.transform(current_features.reshape(1, -1))
+
         # 预测下一步
-        next_pred = model.predict(current_features.reshape(1, -1))
-        predictions.append(next_pred[0])
+        next_pred_scaled = model.predict(current_features_scaled)
+        next_pred = scaler_target.inverse_transform(next_pred_scaled.reshape(-1, 1))[0][0]  # 逆归一化
+        predictions.append(next_pred)
 
         # 更新特征：将预测值作为新的滞后特征
         current_features = np.roll(current_features, shift=1)  # 向右滚动
         current_features[0] = next_pred  # 将预测值放在第一个位置
-        print(f"current_features 1: \n{current_features}")
 
         # 更新移动平均特征
-        moving_avg_window.append(next_pred[0])  # 将预测值加入窗口
+        moving_avg_window.append(next_pred)  # 将预测值加入窗口
         if len(moving_avg_window) > window_size:
             moving_avg_window.pop(0)  # 移除最旧的值
-        current_features[-5] = np.mean(moving_avg_window)  # 更新移动平均值
+        current_features[-1] = np.mean(moving_avg_window)  # 更新移动平均值
 
         # 更新日期时间特征
         current_date += timedelta(days=1)
-        current_features[-4] = current_date.year  # 更新年
-        current_features[-3] = current_date.month  # 更新月
-        current_features[-2] = current_date.day  # 更新日
-        current_features[-1] = current_date.weekday()  # 更新星期
+        current_features[-5] = current_date.year  # 更新年
+        current_features[-4] = current_date.month  # 更新月
+        current_features[-3] = current_date.day  # 更新日
+        current_features[-2] = current_date.weekday()  # 更新星期
 
     return predictions
 
@@ -134,10 +150,9 @@ def plot_results(y_train, y_test, predictions, future_steps):
     plt.plot(np.arange(len(y_train), len(y_train) + future_steps), predictions, label='Predictions', color='red', linestyle='--')
     plt.axvline(x=len(y_train), color='gray', linestyle='--', label='Train/Test Split')
     plt.legend()
-    plt.title('Recursive Multi-step Forecasting with Moving Average Features')
+    plt.title('Recursive Multi-step Forecasting with Normalization')
     plt.xlabel('Time')
     plt.ylabel('Value')
-    plt.grid(True)
     plt.show()
 
 
@@ -152,7 +167,11 @@ def main():
 
     # 添加日期时间特征
     df = add_datetime_features(df)
-    print(df.columns)
+
+    # 归一化数据
+    feature_columns = [f'lag_{lag}' for lag in lags] + ['moving_avg', 'year', 'month', 'day', 'weekday']
+    target_column = 'value'
+    df, scaler_features, scaler_target = normalize_data(df, feature_columns, target_column)
 
     # 准备训练和测试数据
     X_train, X_test, y_train, y_test = prepare_data(df, train_size=0.8)
@@ -164,10 +183,12 @@ def main():
     initial_features = X_train.iloc[-1].values  # 使用训练集的最后一条样本
     initial_date = df.iloc[len(X_train) - 1]['date']  # 最后一条样本的日期
     future_steps = 50  # 预测未来50步
-    predictions = recursive_forecast(model, initial_features, initial_date, future_steps, window_size=window_size)
+    predictions = recursive_forecast(model, initial_features, initial_date, future_steps, window_size, scaler_features, scaler_target)
 
     # 可视化结果
-    # plot_results(y_train, y_test, predictions, future_steps)
+    plot_results(scaler_target.inverse_transform(y_train.values.reshape(-1, 1)),
+                scaler_target.inverse_transform(y_test.values.reshape(-1, 1)),
+                predictions, future_steps)
 
 
 if __name__ == '__main__':
