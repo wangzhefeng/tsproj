@@ -46,7 +46,7 @@ learning_rate = 1e-3
 # data download
 data_url, data_path = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/00616/Tetuan%20City%20power%20consumption.csv", 
-    "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/Tetuan City power consumption.csv",
+    "E:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/Tetuan City power consumption.csv",
 )
 if not os.path.exists(data_path):
     os.system(f"wget {data_url}")

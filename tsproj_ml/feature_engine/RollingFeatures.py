@@ -39,7 +39,7 @@ class RollingFeatures:
 def main():
     # 数据读取
     series = pd.read_csv(
-        "D:/projects/timeseries_forecasting/tsproj/dataset/daily-minimum-temperatures-in-me.csv",
+        "E:/projects/timeseries_forecasting/tsproj/dataset/daily-minimum-temperatures-in-me.csv",
         header = 0,
         index_col = 0,
         # parse_dates = [0],

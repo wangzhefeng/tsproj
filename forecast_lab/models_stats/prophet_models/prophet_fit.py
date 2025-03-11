@@ -47,7 +47,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 # ------------------------------
 # data load
 df = pd.read_csv(
-    "D:/projects/timeseries_forecasting/tsproj/models/dataset/PJME_hourly.csv", 
+    "E:/projects/timeseries_forecasting/tsproj/models/dataset/PJME_hourly.csv", 
     index_col = [0], 
     parse_dates = [0]
 )

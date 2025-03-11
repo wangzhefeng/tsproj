@@ -28,7 +28,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 # 数据读取
 series = pd.read_csv(
-    "D:/projects/timeseries_forecasting/tsproj/dataset/shampoo-sales.csv",
+    "E:/projects/timeseries_forecasting/tsproj/dataset/shampoo-sales.csv",
     header = 0,
     index_col = 0,
     parse_dates = [0],

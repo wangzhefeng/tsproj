@@ -28,7 +28,7 @@ class Config:
     features = "MS"
     pred_method = "recursive_multi_step"  # "recursive_multi_step", "direct_multi_step_output", "direct_recursive_mix"
     if sys.platform == "win32":
-        data_path = "D:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
+        data_path = "E:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/wind_dataset.csv"
     else:
         data_path = "/Users/wangzf/tsproj/tsproj_dl/dataset/wind_dataset.csv"
     target = "WIND"
@@ -51,7 +51,7 @@ class Config:
     devices = "cuda:0"
     device_ids = "0,1,2,3"
     if sys.platform == "win32":
-        save_path = f"D:/projects/timeseries_forecasting/tsproj/tsproj_dl/saved_models/{model}-sl{seq_len}-fz{feature_size}-nl{num_layers}-os{output_size}.pth"
+        save_path = f"E:/projects/timeseries_forecasting/tsproj/tsproj_dl/saved_models/{model}-sl{seq_len}-fz{feature_size}-nl{num_layers}-os{output_size}.pth"
     else:
         save_path = f"/Users/wangzf/tsproj/tsproj_dl/saved_models/{model_name}-sl{seq_len}-fz{feature_size}-nl{num_layers}-os{output_size}.pth"
 
