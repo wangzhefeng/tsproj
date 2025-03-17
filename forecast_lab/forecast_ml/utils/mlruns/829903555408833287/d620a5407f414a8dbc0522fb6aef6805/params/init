@@ -1,1 +1,0 @@
-{'models': {}, 'freq': 'h', 'lags': [24], 'lag_transforms': {1: [ExponentiallyWeightedMean(alpha=0.9)]}, 'num_threads': 2}

@@ -1,1 +1,0 @@
-{'static_features': ['unique_id'], 'prediction_intervals': PredictionIntervals(n_windows=2, h=10, method='conformal_distribution')}
