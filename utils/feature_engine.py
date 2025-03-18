@@ -20,7 +20,10 @@ import sys
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+import math
+from typing import List
 
+import numpy as np
 import pandas as pd
 
 from utils.log_util import logger
@@ -124,6 +127,156 @@ def extend_lag_feature(df: pd.DataFrame, target: str, group_col: str = None, num
         tmp = tmp.reset_index(drop = True)
     
     return tmp
+
+
+def extend_datetime_features(df: pd.DataFrame):
+    """
+    增加日期、时间特征
+    """
+    df["datetime_minute"] = df["ds"].apply(lambda x: x.minute)
+    df["datetime_hour"] = df["ds"].apply(lambda x: x.hour)
+    df["datetime_day"] = df["ds"].apply(lambda x: x.day)
+
+    df["datetime_weekday"] = df["ds"].apply(lambda x: x.weekday())
+    df["datetime_week"] = df["ds"].apply(lambda x: x.week)
+    df["datetime_day_of_week"] = df["ds"].apply(lambda x: x.dayofweek)
+
+    df["datetime_week_of_year"] = df["ds"].apply(lambda x: x.weekofyear)
+    df["datetime_month"] = df["ds"].apply(lambda x: x.month)
+    df["datetime_days_in_month"] = df["ds"].apply(lambda x: x.daysinmonth)
+
+    df["datetime_quarter"] = df["ds"].apply(lambda x: x.quarter)
+    df["datetime_day_of_year"] = df["ds"].apply(lambda x: x.dayofyear)
+    df["datetime_year"] = df["ds"].apply(lambda x: x.year)
+
+    datetime_features = [
+        "datetime_minute",
+        "datetime_hour",
+        "datetime_day",
+        "datetime_weekday",
+        "datetime_week",
+        "datetime_day_of_week",
+        "datetime_week_of_year",
+        "datetime_month",
+        "datetime_days_in_month",
+        "datetime_quarter",
+        "datetime_day_of_year",
+        "datetime_year"
+    ]
+    
+    return df, datetime_features
+
+
+def extend_date_type_features(df: pd.DataFrame, df_date: pd.DataFrame):
+    """
+    增加日期类型特征：
+    1-工作日 2-非工作日 3-删除计算日 4-元旦 5-春节 6-清明节 7-劳动节 8-端午节 9-中秋节 10-国庆节
+    """
+    df["date"] = df["ds"].apply(lambda x: x.replace(hour=0, minute=0, second=0, microsecond=0))
+    df["date_type"] = df["date"].map(df_date.set_index("date")["date_type"])
+    
+    date_features = ["date_type"]
+
+    return df, date_features
+
+
+def extend_weather_features(df_history: pd.DataFrame, df_weather: pd.DataFrame):
+    """
+    处理天气特征
+    """
+    weather_features_raw = ["rt_ssr", "rt_ws10", "rt_tt2", "rt_dt", "rt_ps", "rt_rain"]
+    df_weather = df_weather[["ds"] + weather_features_raw]
+    # 删除含空值的行
+    df_weather.dropna(inplace=True, ignore_index=True)
+    # 将除了timeStamp的列转为float类型
+    for col in weather_features_raw:
+        df_weather[col] = df_weather[col].apply(lambda x: float(x))
+    # 计算相对湿度
+    df_weather["cal_rh"] = np.nan
+    for i in df_weather.index:
+        if (df_weather.loc[i, "rt_tt2"] is not np.nan
+            and df_weather.loc[i, "rt_dt"] is not np.nan):
+            # 通过温度和露点温度计算相对湿度
+            temp = (
+                math.exp(17.2693
+                    * (df_weather.loc[i, "rt_dt"] - 273.15)
+                    / (df_weather.loc[i, "rt_dt"] - 35.86))
+                / math.exp(17.2693
+                    * (df_weather.loc[i, "rt_tt2"] - 273.15)
+                    / (df_weather.loc[i, "rt_tt2"] - 35.86))
+                * 100
+            )
+            if temp < 0: 
+                temp = 0
+            elif temp > 100:
+                temp = 100
+            df_weather.loc[i, "cal_rh"] = temp
+        else:
+            rt_tt2 = df_weather.loc[i, "rt_tt2"]
+            rt_dt = df_weather.loc[i, "rt_dt"]
+            logger.info(f"rt_tt2 is {rt_tt2}, rt_dt is {rt_dt}")
+    
+    # 特征筛选
+    weather_features = [
+        "rt_ssr",   # 太阳总辐射
+        "rt_ws10",  # 10m 风速
+        "rt_tt2",   # 2M 气温
+        "cal_rh",   # 相对湿度
+        "rt_ps",    # 气压
+        "rt_rain",  # 降雨量
+    ]
+    df_weather = df_weather[["ds"] + weather_features]
+    
+    # 合并目标数据和天气数据
+    df_history = pd.merge(df_history, df_weather, on="ds", how="left")
+    # 插值填充缺失值
+    df_history = df_history.interpolate()
+    df_history.dropna(inplace=True, ignore_index=True)
+        
+    return df_history, weather_features
+
+
+def extend_lag_features(df: pd.DataFrame, target: str, lags: List):
+    """
+    添加滞后特征
+    """
+    for lag in lags:
+        df[f'lag_{lag}'] = df[target].shift(lag)
+    df.dropna(inplace=True)
+    
+    lag_features = [f'lag_{lag}' for lag in lags]
+    
+    for lag_feature in lag_features:
+        df[lag_feature] = df[lag_feature].apply(lambda x: float(x))
+
+    return df, lag_features 
+
+
+def extend_future_weather_features(df_future, df_weather_future):
+    """
+    未来天气数据特征构造
+    """
+    # 筛选天气预测数据
+    pred_weather_features = ["pred_ssrd", "pred_ws10", "pred_tt2", "pred_rh", "pred_ps", "pred_rain"] 
+    df_weather_future = df_weather_future[["ds"] + pred_weather_features]
+    # 删除含空值的行
+    df_weather_future.dropna(inplace=True, ignore_index=True)
+    # 数据类型转换
+    for col in pred_weather_features:
+        df_weather_future[col] = df_weather_future[col].apply(lambda x: float(x))
+    # 将预测天气数据整理到预测df中
+    df_future["rt_ssr"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ssrd"])
+    df_future["rt_ws10"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ws10"])
+    df_future["rt_tt2"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_tt2"])
+    df_future["cal_rh"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_rh"])
+    df_future["rt_ps"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ps"])
+    df_future["rt_rain"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_rain"])
+    # features
+    weather_features = [
+        "rt_ssr", "rt_ws10", "rt_tt2", "cal_rh", "rt_ps", "rt_rain"
+    ]
+    
+    return df_future, weather_features
 
 
 
