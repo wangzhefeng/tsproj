@@ -30,14 +30,6 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-# gpu setting
-logger.info(f"GPU available: {torch.cuda.is_available()}")
-logger.info(f"GPU count: {torch.cuda.device_count()}")
-if torch.cuda.is_available():
-    logger.info(f"current GPU name: {torch.cuda.get_device_name()}")
-    logger.info(f"current GPU id: {torch.cuda.current_device()}")
-    torch.cuda.set_device(0)
-
 # params
 args = {}
 
@@ -51,7 +43,6 @@ model = exp.model
 setting = "ETTh1_96_24_Autoformer_ETTh1_ftM_sl96_ll48_pl24_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0"
 path = os.path.join(args.checkpoints, setting, "checkpoint.pth")
 model.load_state_dict(torch.load(path))
-
 
 
 

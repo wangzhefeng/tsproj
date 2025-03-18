@@ -288,7 +288,7 @@ def main():
     # data_provider_new test
     # ------------------------------
     from scripts.aidc_load_forecast.get_args import get_args_script_ETTh
-    from exp.exp_forecast_dl import Exp_Forecast
+    from exp.todo.exp_forecast_dl import Exp_Forecast
     # params
     args = get_args_script_ETTh()
     

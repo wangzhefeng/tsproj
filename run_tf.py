@@ -26,7 +26,7 @@ import random
 import numpy as np
 import torch
 
-from exp.exp_forecast_dl import Exp_Forecast
+from exp.todo.exp_forecast_dl import Exp_Forecast
 from utils.log_util import logger
 
 # global variable
@@ -117,7 +117,7 @@ def args_parse():
     return args
 
 
-def run_task(args):
+def run(args):
     # params
     # args = get_args_script_A3_3()
     # 实例化模型
@@ -150,7 +150,7 @@ def main():
     # 参数解析
     args = args_parse()
     # 参数使用
-    run_task(args)
+    run(args)
 
 if __name__ == "__main__":
     main()

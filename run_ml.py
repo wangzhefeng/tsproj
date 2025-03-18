@@ -36,3 +36,17 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
+def args_parse():
+    pass
+
+
+
+
+
+
+# 测试代码 main 函数
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()
