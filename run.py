@@ -35,11 +35,11 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def set_seed():
+def set_seed(seed: int = 123):
     """
     设置可重复随机数
     """
-    fix_seed = 2023
+    fix_seed = seed
     random.seed(fix_seed)
     np.random.seed(fix_seed)
     torch.manual_seed(fix_seed)
@@ -246,7 +246,7 @@ def args_usage(args):
 # 测试代码 main 函数
 def main():
     # 设置随机数
-    set_seed()
+    set_seed(seed = 2023)
     # 参数定义
     parser = args_define()
     # 参数解析

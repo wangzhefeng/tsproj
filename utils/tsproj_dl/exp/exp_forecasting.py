@@ -37,9 +37,9 @@ from tsproj_dl.exp.exp_basic import Exp_Basic
 
 from tsproj_dl.data_provider.data_loader import Data_Loader, Data_Loader_todo
 from utils.losses import mape_loss, mase_loss, smape_loss
-from tsproj_dl.utils.plot_results import plot_results, plot_results_multiple
+from utils.plot_results import plot_results, plot_results_multiple
 from tsproj_dl.utils.timer import Timer
-from tsproj_dl.utils.log_util import logger
+from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
