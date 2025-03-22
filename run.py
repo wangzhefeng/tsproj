@@ -18,9 +18,7 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
-import random
 
-import numpy as np
 import torch
 
 from exp.exp_anomaly_detection import Exp_Anomaly_Detection
@@ -29,24 +27,11 @@ from exp.exp_imputation import Exp_Imputation
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
 from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 from utils.print_args import print_args
+from utils.random_seed import set_seed
 from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-
-
-def set_seed(seed: int = 123):
-    """
-    设置可重复随机数
-    """
-    fix_seed = seed
-    random.seed(fix_seed)
-    np.random.seed(fix_seed)
-    torch.manual_seed(fix_seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(fix_seed)
-        torch.cuda.manual_seed(fix_seed)
-        torch.backends.cudnn.deterministic = True
 
 
 def args_define():

@@ -32,32 +32,7 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-# TODO
-# def extend_datetime_stamp_feature(df: pd.DataFrame):
-#     """
-#     增加时间特征
-#     """    
-#     df["datetime_minute"] = df["ds"].apply(lambda x: x.minute)
-#     df["datetime_hour"] = df["ds"].apply(lambda x: x.hour)
-#     df["datetime_day"] = df["ds"].apply(lambda x: x.day)
-
-#     df["datetime_weekday"] = df["ds"].apply(lambda x: x.weekday())
-#     df["datetime_week"] = df["ds"].apply(lambda x: x.week)
-#     df["datetime_day_of_week"] = df["ds"].apply(lambda x: x.dayofweek)
-
-#     df["datetime_week_of_year"] = df["ds"].apply(lambda x: x.weekofyear)
-#     df["datetime_month"] = df["ds"].apply(lambda x: x.month)
-#     df["datetime_days_in_month"] = df["ds"].apply(lambda x: x.daysinmonth)
-
-#     df["datetime_quarter"] = df["ds"].apply(lambda x: x.quarter)
-#     df["datetime_day_of_year"] = df["ds"].apply(lambda x: x.dayofyear)
-#     df["datetime_year"] = df["ds"].apply(lambda x: x.year)
-
-#     return df
-
-
-# TODO
-def extend_datetime_stamp_feature(df: pd.DataFrame, feature_names: str):
+def extend_datetime_features(df: pd.DataFrame, feature_names: str):
     """
     增加时间特征
     """
@@ -78,24 +53,37 @@ def extend_datetime_stamp_feature(df: pd.DataFrame, feature_names: str):
     for feature_name in feature_names:
         func = feature_map[feature_name]
         df[f"datetime_{feature_name}"] = df["ds"].apply(func)
+    
+    datetime_features = [
+        col for col in df.columns 
+        if col.startswith("datetime")
+    ]
+    # OR
+    # datetime_features = [
+    #     "datetime_minute",
+    #     "datetime_hour",
+    #     "datetime_day",
+    #     "datetime_weekday",
+    #     "datetime_week",
+    #     "datetime_day_of_week",
+    #     "datetime_week_of_year",
+    #     "datetime_month",
+    #     "datetime_days_in_month",
+    #     "datetime_quarter",
+    #     "datetime_day_of_year",
+    #     "datetime_year"
+    # ]
 
-    return df
+    return df, datetime_features
 
 
-def extend_date_type_feature(df: pd.DataFrame, df_date: pd.DataFrame):
-    """
-    增加日期类型特征：
-    1-工作日 2-非工作日 3-删除计算日 4-元旦 5-春节 6-清明节 7-劳动节 8-端午节 9-中秋节 10-国庆节
-    """
-    df["date"] = df["ds"].apply(
-        lambda x: x.replace(hour=0, minute=0, second=0, microsecond=0)
-    )
-    df["date_type"] = df["date"].map(df_date.set_index("ds")["date_type"])
-
-    return df
-
-
-def extend_lag_feature(df: pd.DataFrame, target: str, group_col: str = None, numLags: int = 3, numHorizon: int = 0, dropna: bool = False):
+# TODO
+def extend_lag_features_TODO(df: pd.DataFrame, 
+                        target: str, 
+                        group_col: str = None, 
+                        numLags: int = 3, 
+                        numHorizon: int = 0, 
+                        dropna: bool = False):
     """
     Time delay embedding.
     Time series for supervised learning.
@@ -108,76 +96,63 @@ def extend_lag_feature(df: pd.DataFrame, target: str, group_col: str = None, num
         dropna (bool, optional): _description_. Defaults to False.
     """
     # 滞后特征构造
-    tmp = df.copy()
+    df_with_lags = df.copy()
     # for i in range(1, self.numLags + 1):
     for i in range(numLags, -numHorizon, -1):
         if group_col is None:
             if i <= 0:
-                tmp[f"{target}(t+{abs(i)+1})"] = tmp[target].shift(i)
+                df_with_lags[f"{target}(t+{abs(i)+1})"] = df_with_lags[target].shift(i)
             else:
-                tmp[f"{target}(t-{numLags + 1 - i})"] = tmp[target].shift(i)
+                df_with_lags[f"{target}(t-{numLags + 1 - i})"] = df_with_lags[target].shift(i)
         else:
             if i <= 0:
-                tmp[f"{target}(t+{abs(i)+1})"] = tmp.groupby(group_col)[target].shift(i)
+                df_with_lags[f"{target}(t+{abs(i)+1})"] = df_with_lags.groupby(group_col)[target].shift(i)
             else:
-                tmp[f"{target}(t-{numLags + 1 - i})"] = tmp.groupby(group_col)[target].shift(i)
+                df_with_lags[f"{target}(t-{numLags + 1 - i})"] = df_with_lags.groupby(group_col)[target].shift(i)
     # 缺失值处理
     if dropna:
-        tmp = tmp.dropna()
-        tmp = tmp.reset_index(drop = True)
+        df_with_lags = df_with_lags.dropna()
+        df_with_lags = df_with_lags.reset_index(drop = True)
     
-    return tmp
-
-
-def extend_datetime_features(df: pd.DataFrame):
-    """
-    增加日期、时间特征
-    """
-    df["datetime_minute"] = df["ds"].apply(lambda x: x.minute)
-    df["datetime_hour"] = df["ds"].apply(lambda x: x.hour)
-    df["datetime_day"] = df["ds"].apply(lambda x: x.day)
-
-    df["datetime_weekday"] = df["ds"].apply(lambda x: x.weekday())
-    df["datetime_week"] = df["ds"].apply(lambda x: x.week)
-    df["datetime_day_of_week"] = df["ds"].apply(lambda x: x.dayofweek)
-
-    df["datetime_week_of_year"] = df["ds"].apply(lambda x: x.weekofyear)
-    df["datetime_month"] = df["ds"].apply(lambda x: x.month)
-    df["datetime_days_in_month"] = df["ds"].apply(lambda x: x.daysinmonth)
-
-    df["datetime_quarter"] = df["ds"].apply(lambda x: x.quarter)
-    df["datetime_day_of_year"] = df["ds"].apply(lambda x: x.dayofyear)
-    df["datetime_year"] = df["ds"].apply(lambda x: x.year)
-
-    datetime_features = [
-        "datetime_minute",
-        "datetime_hour",
-        "datetime_day",
-        "datetime_weekday",
-        "datetime_week",
-        "datetime_day_of_week",
-        "datetime_week_of_year",
-        "datetime_month",
-        "datetime_days_in_month",
-        "datetime_quarter",
-        "datetime_day_of_year",
-        "datetime_year"
+    # 滞后特征
+    lag_features = [
+        col for col in df_with_lags 
+        if col.startswith(f"{target}(")
     ]
     
-    return df, datetime_features
+    return df_with_lags, lag_features
 
 
-def extend_date_type_features(df: pd.DataFrame, df_date: pd.DataFrame):
+# TODO
+def extend_lag_features(df: pd.DataFrame, target: str, lags: List):
+    """
+    添加滞后特征
+    """
+    for lag in lags:
+        df[f'lag_{lag}'] = df[target].shift(lag)
+    df.dropna(inplace=True)
+    
+    lag_features = [f'lag_{lag}' for lag in lags]
+    
+    for lag_feature in lag_features:
+        df[lag_feature] = df[lag_feature].apply(lambda x: float(x))
+
+    return df, lag_features 
+
+
+def extend_date_type_features(df_history: pd.DataFrame, df_date: pd.DataFrame):
     """
     增加日期类型特征：
     1-工作日 2-非工作日 3-删除计算日 4-元旦 5-春节 6-清明节 7-劳动节 8-端午节 9-中秋节 10-国庆节
     """
-    df["date"] = df["ds"].apply(lambda x: x.replace(hour=0, minute=0, second=0, microsecond=0))
-    df["date_type"] = df["date"].map(df_date.set_index("date")["date_type"])
+    df_history["date"] = df_history["ds"].apply(
+        lambda x: x.replace(hour=0, minute=0, second=0, microsecond=0)
+    )
+    df_history["date_type"] = df_history["date"].map(df_date.set_index("date")["date_type"])
     
     date_features = ["date_type"]
 
-    return df, date_features
+    return df_history, date_features
 
 
 def extend_weather_features(df_history: pd.DataFrame, df_weather: pd.DataFrame):
@@ -229,30 +204,15 @@ def extend_weather_features(df_history: pd.DataFrame, df_weather: pd.DataFrame):
     
     # 合并目标数据和天气数据
     df_history = pd.merge(df_history, df_weather, on="ds", how="left")
-    # 插值填充缺失值
+ 
+    # TODO 插值填充缺失值
     df_history = df_history.interpolate()
     df_history.dropna(inplace=True, ignore_index=True)
-        
+    
     return df_history, weather_features
 
 
-def extend_lag_features(df: pd.DataFrame, target: str, lags: List):
-    """
-    添加滞后特征
-    """
-    for lag in lags:
-        df[f'lag_{lag}'] = df[target].shift(lag)
-    df.dropna(inplace=True)
-    
-    lag_features = [f'lag_{lag}' for lag in lags]
-    
-    for lag_feature in lag_features:
-        df[lag_feature] = df[lag_feature].apply(lambda x: float(x))
-
-    return df, lag_features 
-
-
-def extend_future_weather_features(df_future, df_weather_future):
+def extend_future_weather_features(df_future: pd.DataFrame, df_weather_future: pd.DataFrame):
     """
     未来天气数据特征构造
     """
@@ -269,7 +229,9 @@ def extend_future_weather_features(df_future, df_weather_future):
     df_future["rt_ws10"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ws10"])
     df_future["rt_tt2"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_tt2"])
     df_future["cal_rh"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_rh"])
+    df_weather_future["pred_ps"] = df_weather_future["pred_ps"].apply(lambda x: x - 50.0)
     df_future["rt_ps"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_ps"])
+    df_weather_future["pred_rain"] = df_weather_future["pred_rain"].apply(lambda x: x - 2.5)
     df_future["rt_rain"] = df_future["ds"].map(df_weather_future.set_index("ds")["pred_rain"])
     # features
     weather_features = [
