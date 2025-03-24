@@ -30,14 +30,13 @@ class Dataset_Train(Dataset):
     def __init__(self, 
                  root_path, 
                  data_path,
-                 pre_data=None,
                  flag='train', 
                  size=None,  # size [seq_len, label_len, pred_len]
                  features='S', 
                  target='OT',
-                 scale=True,
                  timeenc=0,
                  freq='h',
+                 scale=True,
                  inverse = True,
                  cols = None):
         self.root_path = root_path
@@ -146,14 +145,13 @@ class Dataset_Test(Dataset):
     def __init__(self, 
                  root_path, 
                  data_path,
-                 pre_data=None,
                  flag='train', 
                  size=None,  # size [seq_len, label_len, pred_len]
                  features='S', 
                  target='OT',
-                 scale=True,
                  timeenc=0,
                  freq='h',
+                 scale=True,
                  inverse = True,
                  cols = None):
         self.root_path = root_path
@@ -266,20 +264,18 @@ class Dataset_Pred(Dataset):
     def __init__(self, 
                  root_path, 
                  data_path,
-                 pre_data=None, 
                  flag='pred', 
                  size=None,  # size: [seq_len, label_len, pred_len]
                  features='S',
                  target='OT', 
-                 scale=True, 
                  timeenc=0, 
                  freq='15min',
+                 scale=True, 
                  inverse=True,
                  cols=None):
         # data file path
         self.root_path = root_path
         self.data_path = data_path
-        self.pre_data = pre_data
         # data type
         assert flag in ['pred']
         # data size
@@ -287,14 +283,14 @@ class Dataset_Pred(Dataset):
         self.label_len = 24 * 4 if size is None else size[1]
         self.pred_len = 24 * 4 if size is None else size[2]
         # data freq, feature columns, and target
-        self.freq = freq
         self.features = features
-        self.cols = cols
-        self.timeenc = timeenc
         self.target = target
+        self.timeenc = timeenc
+        self.freq = freq
         # data preprocess
         self.scale = scale
         self.inverse = inverse
+        self.cols = cols
         # data read
         self.__read_data__()
 
@@ -302,7 +298,7 @@ class Dataset_Pred(Dataset):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         df_raw.dropna(axis=1, how='any', inplace=True)
-        # 因为进行预测的时候代码会自动帮我们取最后的数据我们只需做好拼接即可
+        # TODO 因为进行预测的时候代码会自动帮我们取最后的数据我们只需做好拼接即可
         if self.pre_data is not None and not self.pre_data.empty:
             df_raw = pd.concat([df_raw, self.pre_data], axis=0, ignore_index=True)
         # 数据特征排序
@@ -349,10 +345,7 @@ class Dataset_Pred(Dataset):
             df_stamp['minute'] = df_stamp.minute.map(lambda x: x // 15)
             data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
-            data_stamp = time_features(
-                pd.to_datetime(df_stamp['date'].values), 
-                freq=self.freq
-            )
+            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
         # 数据切分
         self.data_x = data[border1:border2]
@@ -388,7 +381,7 @@ class Dataset_Pred(Dataset):
         return len(self.data_x) - self.seq_len + 1
 
     def inverse_transform(self, data):
-        return self.scaler.inverse_transform(data.detach().cpu().numpy())
+        return self.scaler.inverse_transform(data)
 
 
 class Dataset_Custom(Dataset):

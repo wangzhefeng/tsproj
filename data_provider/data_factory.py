@@ -146,7 +146,7 @@ def data_provider(args, flag: str):
         return data_set, data_loader
 
 
-def data_provider_new(args, flag, pre_data):
+def data_provider_new(args, flag, pre_data = None):
     """
     数据集构造
 
@@ -159,44 +159,40 @@ def data_provider_new(args, flag, pre_data):
         _type_: _description_
     """
     # 是否对时间戳进行编码
-    timeenc = 0 if args.embed != 'timeF' else 1
-    # 区别在 test 和 train/valid 任务下是否进行 shuffle 数据
-    shuffle_flag = False# if (flag == 'test' or flag == 'TEST') else True
+    timeenc = 0 if args.embed != 'timeF' else 1 
     # 是否丢弃最后一个 batch
     drop_last = True
     # 数据集参数
-    if flag == "train":
-        batch_size = args.batch_size
-        Data = Dataset_Train
-    elif flag == 'val':
+    if flag == ["train", "vali"]:
+        shuffle_flag = True
+        drop_last = True
         batch_size = args.batch_size
         Data = Dataset_Train
     elif flag == 'test':
+        shuffle_flag = False
+        drop_last = False
         batch_size = args.batch_size
         Data = Dataset_Test
     elif flag == 'pred':
+        shuffle_flag = False
+        drop_last = False
         batch_size = 1
-        pre_data = pre_data
         Data = Dataset_Pred
-    
     # 构建 Dataset 和 DataLoader
-    # Dataset
     data_set = Data(
         root_path = args.root_path,
         data_path = args.data_path,
-        pre_data = pre_data,
         flag = flag,
         size = [args.seq_len, args.label_len, args.pred_len],
         features = args.features,
         target = args.target,
-        scale = args.scale,
         timeenc = timeenc,
         freq = args.freq,
+        scale = args.scale,
         inverse = args.inverse,
         cols = None,
     )
-    logger.info(f"Task: {flag}, data_set len: {len(data_set)}")
-    # DataLoader
+    logger.info(f"{flag} dataset length: {len(data_set)}")
     data_loader = DataLoader(
         data_set,
         batch_size = batch_size,
@@ -288,7 +284,7 @@ def main():
     # data_provider_new test
     # ------------------------------
     from scripts.aidc_load_forecast.get_args import get_args_script_ETTh
-    from exp.todo.exp_forecast_dl import Exp_Forecast
+    from exp.exp_forecast_transformer_original import Exp_Forecast
     # params
     args = get_args_script_ETTh()
     

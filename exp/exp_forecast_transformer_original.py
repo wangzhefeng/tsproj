@@ -28,57 +28,75 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from exp.exp_basic import Exp_Basic
+from utils.log_util import logger
 from data_provider.data_factory import data_provider_new
+from models import Transformer_original
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics_dl import metric, DTW
 from utils.visual import test_result_visual
-from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Exp_Forecast(Exp_Basic):
+# 设置随机数
+fix_seed = 2021
+random.seed(fix_seed)
+np.random.seed(fix_seed)
+torch.manual_seed(fix_seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(fix_seed)
+    torch.backends.cudnn.deterministic = True
+
+
+class Exp_Forecast:
     """
     搭建模型 Transoformer 模型
     """
 
     def __init__(self, args):
-        super(Exp_Forecast, self).__init__(args)
+        super(Exp_Forecast, self).__init__()
+        self.args = args
+        self.model, self.device = self._build_model()
 
     def _build_model(self):
         """
         模型构建
         """
+        # 设备配置
+        if torch.cuda.is_available():
+            device = torch.device(f"cuda:{self.args.gpu}")
+            logger.info(f'Use GPU: cuda:{self.args.gpu}')
+        # if self.args.use_gpu:
+        #     device = torch.device(f'cuda:{self.args.device_id}')
+        #     logger.info(f'Use GPU: cuda:{self.args.device_id}')
+        else:
+            device = torch.device('cpu')
+            logger.info('Use CPU')
+            
         # 构建 Transformer 模型
-        model = self.model_dict[self.args.model_name].Model(self.args).float()
+        model = Transformer_original.Model(self.args).float().to(device)
+        
         # 多 GPU 训练
-        if self.args.use_gpu and self.args.use_multi_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.devices)
+        if self.args.use_multi_gpu:
+            model = nn.DataParallel(model, device_ids=[device])
         
         # 打印模型参数量
         total = sum([param.nelement() for param in model.parameters()])
         logger.info(f'Number of parameters: {(total / 1e6):.2f}M')
 
-        return model
+        return model, device
 
-    def _get_data(self, flag: str):
+    def _get_data(self, flag, pre_data=None):
         """
         数据集构建
-
-        Args:
-            flag (str): 任务类型, ["train", "val", "test"]
-
-        Returns:
-            _type_: Dataset, DataLoader
         """
-        data_set, data_loader = data_provider_new(self.args, flag)
+        data_set, data_loader = data_provider_new(self.args, flag, pre_data)
         
         return data_set, data_loader
 
-    def _select_criterion(self, loss_name: str = "MSE"):
+    def _select_criterion(self, loss_name = "MSE"):
         """
         评价指标
         """
@@ -101,27 +119,6 @@ class Exp_Forecast(Exp_Basic):
         )
         
         return model_optim
-    
-    # TODO
-    def _get_path(self, setting):
-        """
-        模型及其结果保存路径
-        """
-        # 模型保存路径
-        model_path = os.path.join(self.args.checkpoints, setting)
-        os.makedirs(model_path, exist_ok=True)
-        # 最优模型保存路径
-        best_model_path = f"{model_path}/checkpoint.pth"
-
-        # 测试结果保存路径 
-        test_results_path = os.path.join(self.args.test_results, setting + "/")
-        os.makedirs(test_results_path, exist_ok=True)
-
-        # 预测结果保存路径
-        preds_results_path = os.path.join(self.args.predict_results, setting + "/")
-        os.makedirs(preds_results_path, exist_ok=True)
-
-        return best_model_path, test_results_path, preds_results_path
 
     def _get_model_path(self, setting):
         """
@@ -129,7 +126,8 @@ class Exp_Forecast(Exp_Basic):
         """
         # 模型保存路径
         model_path = os.path.join(self.args.checkpoints, setting)
-        os.makedirs(model_path, exist_ok=True)
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
         # 最优模型保存路径
         best_model_path = f"{model_path}/checkpoint.pth"
         
@@ -140,7 +138,8 @@ class Exp_Forecast(Exp_Basic):
         结果保存路径
         """
         results_path = os.path.join(self.args.test_results, setting + "/")
-        os.makedirs(results_path, exist_ok=True)
+        if not os.path.exists(results_path):
+            os.makedirs(results_path)
         
         return results_path
 
@@ -149,20 +148,12 @@ class Exp_Forecast(Exp_Basic):
         结果保存路径
         """
         results_path = os.path.join(self.args.predict_results, setting + "/")
-        os.makedirs(results_path, exist_ok=True)
+        if not os.path.exists(results_path):
+            os.makedirs(results_path)
         
         return results_path
 
     def _test_results_save(self, preds, trues, setting, test_results_path):
-        """
-        测试结果保存
-
-        Args:
-            preds (_type_): _description_
-            trues (_type_): _description_
-            setting (_type_): _description_
-            test_results_path (_type_): _description_
-        """
         # 计算测试结果评价指标
         mse, rmse, mae, mape, accuracy, mspe = metric(preds, trues)
         dtw = DTW(preds, trues) if self.args.use_dtw else -999
@@ -533,7 +524,6 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
-    # TODO
     def predict_rolling(self, setting, load = False):
         # ------------------------------
         # 滑动窗口预测，读取 pre_data
@@ -635,7 +625,6 @@ class Exp_Forecast(Exp_Basic):
         if self.args.show_results:
             test_result_visual(df, os.path.join(predict_results_path, f"{self.args.target}-ForecastResults.png"))
 
-    # TODO
     def predict(self, setting, load = False):
         # ------------------------------
         # 构建预测数据集

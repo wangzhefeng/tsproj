@@ -102,10 +102,13 @@ class Model(nn.Module):
                 norm_layer = my_Layernorm(configs.d_model),
                 projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
             )
+        
         if self.task_name == 'imputation':
             self.projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
+        
         if self.task_name == 'anomaly_detection':
             self.projection = nn.Linear(configs.d_model, configs.c_out, bias = True)
+        
         if self.task_name == 'classification':
             self.act = F.gelu
             self.dropout = nn.Dropout(configs.dropout)
