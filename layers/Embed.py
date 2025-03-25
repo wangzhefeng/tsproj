@@ -142,21 +142,55 @@ class TemporalEmbedding(nn.Module):
 class TimeFeatureEmbedding(nn.Module):
     """
     Time Feature Embedding
+
+    args.freq: freq for time features encoding, 
+    options: [
+        s:secondly, t:minutely, h:hourly, d:daily, 
+        b:business days, w:weekly, m:monthly
+    ], 
+    you can also use more detailed freq like 15min or 3h'
     """
 
     def __init__(self, d_model, embed_type = 'timeF', freq = 'h'):
         super(TimeFeatureEmbedding, self).__init__()
-        freq_map = {
-            'h': 4, 
-            't': 5, 
-            's': 6,
-            'm': 1, 
-            'a': 1,
-            'w': 2, 
-            'd': 3, 
-            'b': 3,
-        }
-        d_inp = freq_map[freq]
+
+        # freq_map = {
+        #     'h': 4, 
+        #     't': 5, 
+        #     's': 6,
+        #     'm': 1, 
+        #     'a': 1,
+        #     'w': 2, 
+        #     'd': 3, 
+        #     'b': 3,
+        # }
+        # d_inp = freq_map[freq]
+        
+        def freq_to_dim(freq):
+            """
+            https://github.com/thuml/Time-Series-Library/pull/261
+            """
+            while freq[0].isdigit():
+                freq = freq[1:]
+            freq = freq.lower()
+            if freq == "min":
+                freq = 't'
+            elif freq == "A":
+                freq = 'y'
+
+            freq_map = {
+                'h': 4,  # hourly
+                't': 5,  # minutely
+                's': 6,  # secondly
+                'm': 1,  # monthly
+                'a': 1,  # TODO
+                'w': 2,  # weekly
+                'd': 3,  # daily
+                'b': 3,  # business days
+            }
+            return freq_map[freq]
+        d_inp = freq_to_dim(freq)
+        
         self.embed = nn.Linear(d_inp, d_model, bias = False)
 
     def forward(self, x):

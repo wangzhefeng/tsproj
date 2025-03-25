@@ -28,59 +28,68 @@ warnings.filterwarnings('ignore')
 class Dataset_Train(Dataset):
     
     def __init__(self, 
+                 args,
                  root_path, 
                  data_path,
                  flag='train', 
                  size=None,  # size [seq_len, label_len, pred_len]
-                 features='S', 
+                 features='MS', 
                  target='OT',
                  timeenc=0,
-                 freq='h',
+                 freq='15min',
+                 seasonal_patterns=None,
                  scale=True,
                  inverse = True,
                  cols = None):
+        self.args = args
         self.root_path = root_path
         self.data_path = data_path
+        
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
+        
         self.seq_len = 24 * 4 * 4 if size is None else size[0]
         self.label_len = 24 * 4 if size is None else size[1]
         self.pred_len = 24 * 4 if size is None else size[2]
+        
         self.features = features
         self.target = target
         self.freq = freq
+        self.timeenc = timeenc
+        
         self.scale = scale
         self.inverse = inverse
-        self.timeenc = timeenc
+        
         # 读取数据
         self.__read_data__()
 
     def __read_data__(self):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
         # 数据特征排序
         cols = list(df_raw.columns)
         cols.remove(self.target)
         cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
-        # 预测特征变量数据
+        # 根据预测任务进行特征筛选
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
-            df_data = df_raw[[self.target]]
-        # 训练/测试/验证数据集分割
+            df_data = df_raw[[self.target]] 
+        # 训练/测试/验证数据集分割: 选取当前flag下的数据
         # 数据分割比例
-        true_train = int(len(df_raw))                  # 1.0
-        num_train = int(len(df_raw) * 0.7)             # 0.7
-        num_test = int(len(df_raw) * 0.0)              # 0.0
-        num_vali = len(df_raw) - num_train - num_test  # 0.3
+        num_train = int(len(df_raw) * self.args.train_ratio)  # 0.7
+        num_test = int(len(df_raw) * self.args.test_ratio)    # 0.2
+        num_vali = len(df_raw) - num_train - num_test  # 0.1
+        # logger.info(f"debug::num_train: {num_train}, num_vali: {num_vali}")
         # 数据分割索引
-        border1s = [0,          num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        # border2s = [num_train, num_train + num_vali,     len(df_raw)]
-        border2s = [true_train, num_train + num_vali,     len(df_raw)]
+        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        border2s = [num_train, num_train + num_vali,     len(df_raw)]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
+        # logger.info(f"debug::border1:border2={border1}:{border2}")
         # 数据标准化
         self.scaler = StandardScaler()
         if self.scale:
@@ -108,19 +117,28 @@ class Dataset_Train(Dataset):
         #     self.data_y = df_data.values[border1:border2]
         # else:
         #     self.data_y = data[border1:border2]
+
+        # 数据增强
+        if self.set_type == 0 and self.args.augmentation_ratio > 0:
+            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(self.data_x, self.data_y, self.args)
+
         self.data_stamp = data_stamp
 
     def __getitem__(self, index):
-        # data_x 索引
-        # s_begin = index
-        s_begin = index * self.pred_len
+        # data_x 索引 
+        # s_begin = index * self.pred_len
+        s_begin = index
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
+        # logger.info(f"debug::index: {index}")
+        # logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
+        # logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
+
         # if self.inverse:
         #     seq_y = np.concatenate(
         #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
@@ -128,125 +146,7 @@ class Dataset_Train(Dataset):
         #     )
         # else:
         #     seq_y = self.data_y[r_begin:r_end]
-        seq_x_mark = self.data_stamp[s_begin:s_end]
-        seq_y_mark = self.data_stamp[r_begin:r_end]
 
-        return seq_x, seq_y, seq_x_mark, seq_y_mark
-
-    def __len__(self):
-        return len(self.data_x) - self.seq_len - self.pred_len + 1
-
-    def inverse_transform(self, data):
-        return self.scaler.inverse_transform(data)
-
-
-class Dataset_Test(Dataset):
-    
-    def __init__(self, 
-                 root_path, 
-                 data_path,
-                 flag='train', 
-                 size=None,  # size [seq_len, label_len, pred_len]
-                 features='S', 
-                 target='OT',
-                 timeenc=0,
-                 freq='h',
-                 scale=True,
-                 inverse = True,
-                 cols = None):
-        self.root_path = root_path
-        self.data_path = data_path
-        assert flag in ['test']
-        type_map = {'test': 0}
-        self.set_type = type_map[flag]
-        self.seq_len = 24 * 4 * 4 if size is None else size[0]
-        self.label_len = 24 * 4 if size is None else size[1]
-        self.pred_len = 24 * 4 if size is None else size[2]
-        self.features = features
-        self.target = target
-        self.freq = freq
-        self.scale = scale
-        self.inverse = inverse
-        self.timeenc = timeenc
-        # 读取数据
-        self.__read_data__()
-
-    def __read_data__(self):
-        # 数据文件(CSV)
-        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        df_raw.dropna(axis=1, how='any', inplace=True)
-        # 数据特征排序
-        cols = list(df_raw.columns)
-        cols.remove(self.target)
-        cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]]
-        # 预测特征变量数据
-        if self.features == 'M' or self.features == 'MS':
-            df_data = df_raw[df_raw.columns[1:]]
-        elif self.features == 'S':
-            df_data = df_raw[[self.target]]
-        # 训练/测试/验证数据集分割
-        # 数据分割比例
-        true_train = int(len(df_raw))                  # 1.0
-        num_train = int(len(df_raw) * 1.0)             # 1.0
-        num_test = int(len(df_raw) * 0.0)              # 0.0
-        num_vali = len(df_raw) - num_train - num_test  # 0.0
-        # 数据分割索引
-        border1s = [0,          num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        # border2s = [num_train, num_train + num_vali,     len(df_raw)]
-        border2s = [true_train, num_train + num_vali,     len(df_raw)]
-        border1, border2 = border1s[self.set_type], border2s[self.set_type]
-        # 数据标准化
-        self.scaler = StandardScaler()
-        if self.scale:
-            train_data = df_data[border1s[0]:border2s[0]]
-            self.scaler.fit(train_data.values)
-            data = self.scaler.transform(df_data.values)
-        else:
-            data = df_data.values
-        # 时间特征处理
-        df_stamp = df_raw[['date']][border1:border2]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        if self.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            data_stamp = df_stamp.drop(['date'], axis=1).values
-        elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-            data_stamp = data_stamp.transpose(1, 0)
-        # 数据切分
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
-        # if self.inverse:
-        #     self.data_y = df_data.values[border1:border2]
-        # else:
-        #     self.data_y = data[border1:border2]
-        self.data_stamp = data_stamp
-
-    def __getitem__(self, index):
-        # data_x 索引
-        # s_begin = index
-        s_begin = index * self.pred_len
-        s_end = s_begin + self.seq_len
-        # logger.info(f"s_begin: {s_begin}")
-        # logger.info(f"s_end: {s_end}")
-        # data_y 索引
-        r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
-        # logger.info(f"r_begin: {r_begin}")
-        # logger.info(f"r_end: {r_end}")
-        # 数据索引分割
-        seq_x = self.data_x[s_begin:s_end]
-        seq_y = self.data_y[r_begin:r_end]
-        # if self.inverse:
-        #     seq_y = np.concatenate(
-        #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
-        #         axis = 0
-        #     )
-        # else:
-        #     seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
@@ -262,17 +162,20 @@ class Dataset_Test(Dataset):
 class Dataset_Pred(Dataset):
     
     def __init__(self, 
+                 args,
                  root_path, 
                  data_path,
                  flag='pred', 
                  size=None,  # size: [seq_len, label_len, pred_len]
-                 features='S',
+                 features='MS',
                  target='OT', 
                  timeenc=0, 
                  freq='15min',
+                 seasonal_patterns=None,
                  scale=True, 
                  inverse=True,
                  cols=None):
+        self.args = args
         # data file path
         self.root_path = root_path
         self.data_path = data_path
@@ -297,10 +200,11 @@ class Dataset_Pred(Dataset):
     def __read_data__(self):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
-        # TODO 因为进行预测的时候代码会自动帮我们取最后的数据我们只需做好拼接即可
-        if self.pre_data is not None and not self.pre_data.empty:
-            df_raw = pd.concat([df_raw, self.pre_data], axis=0, ignore_index=True)
+        # 因为进行预测的时候代码会自动帮我们取最后的数据我们只需做好拼接即可
+        # if self.pre_data is not None and not self.pre_data.empty:
+        #     df_raw = pd.concat([df_raw, self.pre_data], axis=0, ignore_index=True)
         # 数据特征排序
         if self.cols:
             cols = self.cols.copy()
@@ -372,6 +276,7 @@ class Dataset_Pred(Dataset):
             seq_y = self.data_x[r_begin:r_begin + self.label_len]
         else:
             seq_y = self.data_y[r_begin:r_begin + self.label_len]
+        # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
@@ -384,6 +289,7 @@ class Dataset_Pred(Dataset):
         return self.scaler.inverse_transform(data)
 
 
+# TODO --------------------------------------------------------
 class Dataset_Custom(Dataset):
 
     def __init__(self, 
@@ -576,7 +482,7 @@ class Dataset_Custom(Dataset):
         return self.scaler.inverse_transform(data)
 
 
-class Dataset_Pred(Dataset):
+class Dataset_Pred_TODO(Dataset):
     
     def __init__(self, 
                  root_path, 
@@ -954,7 +860,6 @@ class Dataset_ETT_minute(Dataset):
         return self.scaler.inverse_transform(data)
 
 
-# TODO
 class Dataset_M4(Dataset):
     
     def __init__(self, 

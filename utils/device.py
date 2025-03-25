@@ -35,6 +35,19 @@ else:
 logger.info(f"Using device: {device}")
 
 
+def clear_gpu_cache(gpu_type: str = "cuda"):
+    """
+    empty cache
+
+    Args:
+        gpu_type (str, optional): _description_. Defaults to "cuda".
+    """
+    if gpu_type == "cuda":
+        torch.cuda.empty_cache()
+    elif gpu_type == "mps":
+        torch.backends.mps.empty_cache()
+
+
 
 
 # 测试代码 main 函数
