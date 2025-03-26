@@ -22,10 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-import torch
-
 from exp.exp_forecast_ltf import Exp_Forecast
-from utils.device import clear_gpu_cache
+from utils.device import device, torch_gc
 from utils.random_seed import set_seed
 from utils.log_util import logger
 
@@ -184,11 +182,11 @@ def run(args):
             
             # 模型训练
             logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            exp.train(setting)
+            # exp.train(setting)
             
             # 模型测试
             logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            exp.test(setting, test = 0)
+            # exp.test(setting, test = 0)
             
             # 模型预测
             if args.do_forecasting:
@@ -196,18 +194,23 @@ def run(args):
                 exp.forecast(setting, load = True)
             
             # empty cache
-            clear_gpu_cache(gpu_type=args.gpu_type)
+            logger.info(f"empty cuda cache and memory pecices")
+            torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
     else:
         ii = 0
         # setting record of experiments
         setting = setting + str(ii)
+        
         # 实例化模型
         exp = Exp_Forecast(args)
+        
         # 模型测试
         logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
         exp.test(setting, test = 1)
+        
         # empty cache
-        clear_gpu_cache(gpu_type=args.gpu_type)
+        logger.info(f"empty cuda cache and memory pecices")
+        torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
 
 
 

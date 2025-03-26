@@ -37,6 +37,9 @@ from utils.metrics_dl import metric, DTW
 # log
 from utils.log_util import logger
 
+plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
@@ -442,8 +445,9 @@ class Exp_Forecast(Exp_Basic):
                 # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # TODO
-                if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
-                    break
+                # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
+                #     print(f"debug::here!!!")
+                #     break
                 # 前向传播 
                 outputs, batch_y = self._predict(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 outputs = outputs.detach().cpu().numpy()
@@ -457,17 +461,16 @@ class Exp_Forecast(Exp_Basic):
         # 最终预测值
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])#.squeeze()
-        preds_df = pd.DataFrame({
-            "timestamp": pd.date_range(self.args.pred_start_time, self.args.pred_end_time, freq=self.args.freq),
-            "predict_value": preds, 
-        })
+        # preds_df = pd.DataFrame({
+        #     "timestamp": pd.date_range(self.args.pred_start_time, self.args.pred_end_time, freq=self.args.freq),
+        #     "predict_value": preds, 
+        # })
         logger.info(f"preds: \n{preds} \npreds.shape: {preds.shape}")
-        logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
+        # logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
         
         # 最终预测值保存
         np.save(os.path.join(predict_results_path, "prediction.npy"), preds) 
-        preds_df.to_csv(os.path.join(predict_results_path, "prediction.csv"), 
-                        encoding="utf_8_sig", index=False)
+        # preds_df.to_csv(os.path.join(predict_results_path, "prediction.csv"), encoding="utf_8_sig", index=False)
 
         return
 

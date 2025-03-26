@@ -7,7 +7,7 @@ python -u run_autoformer.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
-    --do_forecasting 0 \
+    --do_forecasting 1 \
     --model_id ETTm1_96_96 \
     --model $model_name \
     --root_path ./dataset/long_term_forecast/ETT-small \
