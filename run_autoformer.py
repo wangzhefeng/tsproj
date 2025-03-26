@@ -37,8 +37,9 @@ def args_parse():
     parser.add_argument('--task_name', type=str, required=True, default='long_term_forecasting', 
                         help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
     parser.add_argument('--des', type=str, default='test', help='exp description')
-    parser.add_argument('--is_training', type=int, required=True, default=1, help='Whether to conduct training')
-    parser.add_argument('--do_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
+    parser.add_argument('--is_training', type=int, required=True, default=0, help='Whether to conduct training')
+    parser.add_argument('--is_testing', type=int, required=True, default=0, help='Whether to conduct testing')
+    parser.add_argument('--is_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
     parser.add_argument('--model', type=str, required=True, default='Transformer', help='model name, options: [Autoformer, Transformer, TimesNet]')
     # input and output config
@@ -95,7 +96,6 @@ def args_parse():
                         help='the length of segmen-wise iteration of SegRNN') 
     parser.add_argument('--rev', type=int, default=1, help='whether to apply RevIN')
     parser.add_argument('--output_attention', type=int, default=0, help='whether to output attention in ecoder')
-    parser.add_argument('--padding', type=int, default=0, help='padding')  
     # model training
     parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
     parser.add_argument('--iters', type=int, default=10, help='train iters')
@@ -103,23 +103,20 @@ def args_parse():
     parser.add_argument('--batch_size', type=int, default=1, help='batch size of train input data')
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
     parser.add_argument('--activation', type=str, default='gelu', help='activation')
-    parser.add_argument('--use_dtw', type=bool, default=False,
-                        help='the controller of using dtw metric (dtw is time consuming, not suggested unless necessary)')
+    parser.add_argument('--use_dtw', type=int, default=0, help='the controller of using dtw metric (dtw is time consuming, not suggested unless necessary)')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='optimizer learning rate')
-    parser.add_argument('--patience', type = int, default = 3, help = 'early stopping patience')
+    parser.add_argument('--patience', type = int, default=3, help = 'early stopping patience')
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
-    parser.add_argument('--use_amp', action='store_true', default=False, help='use automatic mixed precision training') 
-    parser.add_argument('--scale', type=int, default = 1, help = 'data transform')
-    parser.add_argument('--inverse', action='store_true', default=False, help='inverse output data')
+    parser.add_argument('--use_amp', type=int, default=0, help='use automatic mixed precision training') 
+    parser.add_argument('--scale', type=int, default=1, help = 'data transform')
+    parser.add_argument('--inverse', type=int, default=1, help='inverse output data')
     # Augmentation
     parser.add_argument('--augmentation_ratio', type=int, default=0, help="How many times to augment")
     parser.add_argument('--seed', type=int, default=2, help="Randomization seed")
     parser.add_argument('--jitter', default=False, action="store_true", help="Jitter preset augmentation")
     parser.add_argument('--scaling', default=False, action="store_true", help="Scaling preset augmentation")
-    parser.add_argument('--permutation', default=False, action="store_true",
-                        help="Equal Length Permutation preset augmentation")
-    parser.add_argument('--randompermutation', default=False, action="store_true",
-                        help="Random Length Permutation preset augmentation")
+    parser.add_argument('--permutation', default=False, action="store_true", help="Equal Length Permutation preset augmentation")
+    parser.add_argument('--randompermutation', default=False, action="store_true", help="Random Length Permutation preset augmentation")
     parser.add_argument('--magwarp', default=False, action="store_true", help="Magnitude warp preset augmentation")
     parser.add_argument('--timewarp', default=False, action="store_true", help="Time warp preset augmentation")
     parser.add_argument('--windowslice', default=False, action="store_true", help="Window slice preset augmentation")
@@ -129,15 +126,13 @@ def args_parse():
     parser.add_argument('--dtwwarp', default=False, action="store_true", help="DTW warp preset augmentation")
     parser.add_argument('--shapedtwwarp', default=False, action="store_true", help="Shape DTW warp preset augmentation")
     parser.add_argument('--wdba', default=False, action="store_true", help="Weighted DBA preset augmentation")
-    parser.add_argument('--discdtw', default=False, action="store_true",
-                        help="Discrimitive DTW warp preset augmentation")
-    parser.add_argument('--discsdtw', default=False, action="store_true",
-                        help="Discrimitive shapeDTW warp preset augmentation")
+    parser.add_argument('--discdtw', default=False, action="store_true", help="Discrimitive DTW warp preset augmentation")
+    parser.add_argument('--discsdtw', default=False, action="store_true",help="Discrimitive shapeDTW warp preset augmentation")
     parser.add_argument('--extra_tag', type=str, default="", help="Anything extra")
     # GPU
     parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
     parser.add_argument('--gpu_type', type=str, default='cuda', help='gpu type')
-    parser.add_argument('--use_multi_gpu', type=bool, default = False, help = 'use multiple gpus')
+    parser.add_argument('--use_multi_gpu', type=bool, default=False, help = 'use multiple gpus')
     parser.add_argument('--devices', type=str, default="0,1,2,3,4,5,6,7,8", help='device ids of multile gpus')
     # 命令行参数解析 
     args = parser.parse_args()    
@@ -176,41 +171,52 @@ def run(args):
         for ii in range(args.iters):
             # setting record of experiments
             setting = setting + str(ii)
-            
             # 实例化模型
             exp = Exp_Forecast(args)
-            
             # 模型训练
             logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            # exp.train(setting)
-            
+            train_results = exp.train(setting)
             # 模型测试
             logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            # exp.test(setting, test = 0)
-            
-            # 模型预测
-            if args.do_forecasting:
-                logger.info(f">>>>>>>start forecasting: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-                exp.forecast(setting, load = True)
-            
-            # empty cache
-            logger.info(f"empty cuda cache and memory pecices")
-            torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
-    else:
+            exp.test(setting, test = 0)
+    
+    # 模型测试
+    if args.is_testing:
         ii = 0
         # setting record of experiments
         setting = setting + str(ii)
-        
         # 实例化模型
         exp = Exp_Forecast(args)
-        
         # 模型测试
         logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
         exp.test(setting, test = 1)
+    
+    # 模型最终训练
+    if not args.is_training and not args.is_testing and not args.is_forecasting:
+        ii = "final"
+        # setting record of experiments
+        setting = setting + str(ii)
+        # 实例化模型
+        exp = Exp_Forecast(args)
+        # 模型在所有训练数据上训练
+        logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        train_results = exp.train(setting)
+        logger.info(f"train_results: {train_results}")
+    
+    # 模型预测
+    if args.is_forecasting:
+        ii = "0"
+        # setting record of experiments
+        setting = setting + str(ii)
+        # 实例化模型
+        exp = Exp_Forecast(args)
+        # 模型预测
+        logger.info(f">>>>>>>start forecasting: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        exp.forecast(setting, load = True)
         
-        # empty cache
-        logger.info(f"empty cuda cache and memory pecices")
-        torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
+    # empty cache
+    logger.info(f"empty cuda cache and memory pecices")
+    torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
 
 
 

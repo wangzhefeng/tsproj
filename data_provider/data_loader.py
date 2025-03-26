@@ -39,7 +39,7 @@ class Dataset_Train(Dataset):
                  freq='15min',
                  seasonal_patterns=None,
                  scale=True,
-                 inverse = True,
+                 inverse = None,
                  cols = None):
         self.args = args
         self.root_path = root_path
@@ -59,7 +59,6 @@ class Dataset_Train(Dataset):
         self.timeenc = timeenc
         
         self.scale = scale
-        self.inverse = inverse
         
         # 读取数据
         self.__read_data__()
@@ -113,11 +112,6 @@ class Dataset_Train(Dataset):
         # 数据切分
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
-        # if self.inverse:
-        #     self.data_y = df_data.values[border1:border2]
-        # else:
-        #     self.data_y = data[border1:border2]
-
         # 数据增强
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(self.data_x, self.data_y, self.args)
@@ -138,15 +132,6 @@ class Dataset_Train(Dataset):
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
-
-        # if self.inverse:
-        #     seq_y = np.concatenate(
-        #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
-        #         axis = 0
-        #     )
-        # else:
-        #     seq_y = self.data_y[r_begin:r_end]
-
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
@@ -202,9 +187,6 @@ class Dataset_Pred(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
-        # 因为进行预测的时候代码会自动帮我们取最后的数据我们只需做好拼接即可
-        # if self.pre_data is not None and not self.pre_data.empty:
-        #     df_raw = pd.concat([df_raw, self.pre_data], axis=0, ignore_index=True)
         # 数据特征排序
         if self.cols:
             cols = self.cols.copy()
@@ -479,130 +461,6 @@ class Dataset_Custom(Dataset):
         """
         数据逆转换
         """
-        return self.scaler.inverse_transform(data)
-
-
-class Dataset_Pred_TODO(Dataset):
-    
-    def __init__(self, 
-                 root_path, 
-                 data_path = "ETTh1.csv",
-                 flag = "pred", 
-                 size = None,  # [seq_len, label_len, pred_len]
-                 freq = "15min",
-                 features = "S",
-                 cols = None, 
-                 timeenc = 0,
-                 target = "OT", 
-                 scale = True, 
-                 inverse = False) -> None:
-        # data file path
-        self.root_path = root_path  # 数据根路径
-        self.data_path = data_path  # 数据文件路径
-        # data type
-        assert flag in ["pred"]
-        # data size
-        if size is None:
-            self.seq_len = 24 * 4 * 4
-            self.label_len = 24 * 4
-            self.pred_len = 24 * 4
-        else:
-            self.seq_len = size[0]
-            self.label_len = size[1]
-            self.pred_len = size[2]
-        # data freq, feature columns, and target
-        self.freq = freq  # 频率
-        self.features = features  # 特征类型 'S': 单序列, "M": 多序列, "MS": 多序列
-        self.cols = cols  # 表列名
-        self.timeenc = timeenc  # 时间特征
-        self.target = target  # 预测目标标签
-        # data preprocess
-        self.scale = scale  # 是否进行标准化
-        self.inverse = inverse
-        # data read
-        self.__read_data__()  # 数据读取
-    
-    def __read_data__(self):
-        # ------------------------------
-        # data read
-        # df_raw: (date, features, target)
-        # df_data: (features, target) or (target)
-        # ------------------------------
-        # data read(df_raw.columns: ["date", ...(other features), target feature])
-        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        # data columns sort
-        if self.cols:
-            cols = self.cols.copy()
-            cols.remove(self.target)
-        else:
-            cols = list(df_raw.columns)
-            cols.remove(self.target)
-            cols.remove("date")
-        df_raw = df_raw["date"] + cols + [self.target]
-        # 根据数据格式进行数据处理
-        if self.features == "M" or self.features == "MS":  # 多序列(date, feature1, feature2, feature3, ..., target)
-            cols_data = df_raw.columns[1:]
-            df_data = df_raw[cols_data]  # 不包含 'date' 列的预测特征列(包含 target)
-        elif self.features == "S":  # 单序列(date, target)
-            df_data = df_raw[[self.target]]  # 不包含 'date' 列的预测标签列(target)
-        # ------------------------------
-        # train/val/test split
-        # ------------------------------
-        border1 = len(df_raw) - self.seq_len
-        border2 = len(df_raw)
-        # ------------------------------
-        # 预测特征(features)和预测标签(target)标准化
-        # data: (features, target) or (target)
-        # ------------------------------
-        # 特征和预测标签标准化(不包含 'date' 列)
-        self.scaler = StandardScaler()
-        if self.scale:
-            self.scaler.fit(df_data.values)
-            data = self.scaler.transform(df_data.values)  # 标准化
-        else:
-            data = df_data.values  # 非标准化
-        # ------------------------------
-        # 特征构造
-        # [self.data_stamp:, self.data_x] -> [time_features, features, target]
-        # ------------------------------
-        # 日期时间动态特征
-        tmp_stamp = df_raw[["date"]][border1:border2]
-        tmp_stamp["date"] = pd.to_datetime(tmp_stamp.date)
-        pred_dates = pd.date_range(tmp_stamp.date.values[-1], periods = self.pred_len + 1, freq = self.freq)
-        df_stamp = pd.DataFrame(columns = ["date"])
-        df_stamp.date = list(tmp_stamp.date.values) + list(pred_dates[1:])
-        data_stamp = time_features(df_stamp, timeenc = self.timeenc, freq = self.freq[-1:])
-        self.data_stamp = data_stamp 
-        # 预测特征和预测标签(不包含日期时间特征、'date' 列)
-        self.data_x = data[border1:border2]
-        if self.inverse:
-            self.data_y = df_data.values[border1:border2]  # 非标准化
-        else:
-            self.data_y = data[border1:border2]  # 标准化
-     
-    def __getitem__(self, index):
-        # history
-        s_begin = index
-        s_end = s_begin + self.seq_len
-        seq_x = self.data_x[s_begin:s_end]
-        
-        # target history and predict
-        r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
-        if self.inverse:
-            seq_y = self.data_x[r_begin:(r_begin + self.label_len)]
-        else:
-            seq_y = self.data_y[r_begin:(r_begin + self.label_len)]
-        
-        # 日期时间动态特征
-        seq_x_mark = self.data_stamp[s_begin:s_end]
-        seq_y_mark = self.data_stamp[r_begin:r_end]
-        return seq_x, seq_y, seq_x_mark, seq_y_mark
-            
-    def __len__(self):
-        return len(self.data_x) - self.seq_len + 1
-
-    def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
 
 

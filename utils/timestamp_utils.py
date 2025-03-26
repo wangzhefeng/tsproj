@@ -12,8 +12,13 @@
 # ***************************************************
 
 # python libraries
-from typing import Union
+import os
+import sys
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 import pytz
+from typing import Union
 from datetime import datetime
 
 # global variable
@@ -46,11 +51,11 @@ def from_unix_time(unix_time: int, tz: str = None) -> datetime:
     if tz:
         local_tz = pytz.timezone(tz)
         timestamp = datetime \
-            .utcfromtimestamp(int(unix_time)) \
+            .fromtimestamp(int(unix_time)) \
             .replace(tzinfo = pytz.utc) \
             .astimezone(local_tz)
     else:
-        timestamp = datetime.utcfromtimestamp(int(unix_time))   
+        timestamp = datetime.fromtimestamp(int(unix_time))
 
     return timestamp
 

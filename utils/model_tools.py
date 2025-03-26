@@ -60,7 +60,7 @@ def adjust_learning_rate(optimizer, epoch, args):
         lr = lr_adjust[epoch]
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
-        logger.info(f'Updating learning rate to {lr}')
+        logger.info(f'Epoch: {epoch}, \tUpdating learning rate to {lr}')
 
 
 class EarlyStopping:
@@ -74,25 +74,33 @@ class EarlyStopping:
         self.val_loss_min = np.inf
         self.delta = delta
 
-    def __call__(self, val_loss, model, path):
+    def __call__(self, val_loss, epoch, model, optimizer=None, scheduler=None, model_path=""):
         score = -val_loss
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
+            self.save_checkpoint(val_loss, epoch, model, optimizer, scheduler, model_path)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            logger.info(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            logger.info(f'Epoch: {epoch+1}, \tEarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
             self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
+            self.save_checkpoint(val_loss, epoch, model, optimizer, scheduler, model_path)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, model, path):
+    def save_checkpoint(self, val_loss, epoch, model, optimizer=None, scheduler=None, model_path: str=""):
+        # 日志打印
         if self.verbose:
-            logger.info(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model ...')
-        torch.save(model.state_dict(), path)
+            logger.info(f'Epoch: {epoch+1}, \tValidation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model ...')
+        # 模型保存
+        training_state = {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optmizer": optimizer.state_dict() if optimizer is not None else None,
+            # "scheduler": scheduler.state_dict() if scheduler is not None else None,
+        }
+        torch.save(training_state, model_path)
         self.val_loss_min = val_loss
 
 
