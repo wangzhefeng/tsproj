@@ -167,7 +167,7 @@ class Exp_Forecast(Exp_Basic):
         if os.path.exists(log_dir):
             load_input = self._train_model_load()
             start_epoch = load_input["epoch"]
-            logger.info(f"加载 Epoch: {load_input['epoch']} 成功.")
+            logger.info(f"加载 Epoch: {load_input['epoch']} 成功")
         else:
             start_epoch = 0
             logger.info(f"无保存模型，将从头开始训练...")
@@ -279,7 +279,7 @@ class Exp_Forecast(Exp_Basic):
         # checkpoint 保存路径
         # ------------------------------
         model_checkpoint_path = self._get_model_path(setting)
-        logger.info(f"Train model will be saved in path: {model_checkpoint_path}.")
+        logger.info(f"Train model will be saved in path: {model_checkpoint_path}")
         # ------------------------------
         # 模型训练
         # ------------------------------
@@ -359,8 +359,8 @@ class Exp_Forecast(Exp_Basic):
 
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues = self.vali(vali_loader, criterion)
-            # test_loss, test_preds, test_trues = self.vali(test_loader, criterion)
+            vali_loss, vali_preds, vali_trues = self._vali(vali_loader, criterion)
+            # test_loss, test_preds, test_trues = self._vali(test_loader, criterion)
             # logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}, Test Loss: {test_loss:.7f}")
             logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             
@@ -380,7 +380,7 @@ class Exp_Forecast(Exp_Basic):
         
         return self.model, train_result
 
-    def vali(self, vali_loader, criterion):
+    def _vali(self, vali_loader, criterion):
         """
         模型验证
         """
@@ -418,14 +418,14 @@ class Exp_Forecast(Exp_Basic):
         
         return total_loss, preds, trues
 
-    def test(self, setting, test = 0):
+    def test(self, setting, load = 0):
         """
         模型测试
         """
         # 数据集构建
         test_data, test_loader = self._get_data(flag='test')
         # 模型加载
-        if test:
+        if load:
             logger.info("Loading pretrained model...")
             model_checkpoint_path = self._get_model_path(setting)
             # self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
@@ -512,7 +512,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Test results visual saved in {test_results_path}")
 
         return
- 
+
     def forecast(self, setting, load = False):
         """
         模型预测
@@ -524,7 +524,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info("Loading pretrained model...")
             model_checkpoint_path = self._get_model_path(setting)
             self.model.load_state_dict(torch.load(model_checkpoint_path))
-            logger.info(f"Pretrained model has loaded from {model_checkpoint_path}.")
+            logger.info(f"Pretrained model has loaded from {model_checkpoint_path}")
         # 模型预测结果保存地址
         predict_results_path = self._get_predict_results_path(setting)
         logger.info(f"Forecast results will be saved in path: {predict_results_path}")
@@ -544,33 +544,43 @@ class Exp_Forecast(Exp_Basic):
                 logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # 前向传播
-                outputs, batch_y = self._predict(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                outputs, batch_y = self._predict_test(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 outputs = outputs.detach().cpu().numpy()
-                logger.info(f"debug::outputs: {outputs} \noutputs.shape: {outputs.shape}")
+                logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+                logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
                 # 预测值逆转换
                 if pred_data.scale and self.args.inverse:
-                    outputs = pred_data.inverse_transform(outputs)
-                logger.info(f"debug::outputs: {outputs} \noutputs.shape: {outputs.shape}")
-                # 预测值
-                pred = outputs
-                logger.info(f"debug::pred: {pred} \npred.shape: {pred.shape}")
+                    shape = outputs.shape
+                    if outputs.shape[-1] != batch_y.shape[-1]:
+                        outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
+                    # TODO raw outputs = pred_data.inverse_transform(outputs)
+                    outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+                # 预测值提取
+                f_dim = -1 if self.args.features == 'MS' else 0
+                pred = outputs[:, :, f_dim:]
+                logger.info(f"debug::pred: \n{pred} \npred.shape: {pred.shape}")
                 # 预测值收集
                 preds.append(pred)
         # 最终预测值
         preds = np.array(preds)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])#.squeeze()
-        # preds_df = pd.DataFrame({
-        #     "timestamp": pd.date_range(self.args.pred_start_time, self.args.pred_end_time, freq=self.args.freq),
-        #     "predict_value": preds, 
-        # })
+        # preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        preds = preds.squeeze()
         logger.info(f"preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
+        preds_df = pd.DataFrame({
+            "timestamp": pd.date_range("2018-06-26 19:45:00", periods=self.args.pred_len, freq=self.args.freq),
+            "predict_value": preds, 
+        })
+        logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
         
         # 最终预测值保存
         np.save(os.path.join(predict_results_path, "prediction.npy"), preds) 
-        # preds_df.to_csv(os.path.join(predict_results_path, "prediction.csv"), encoding="utf_8_sig", index=False)
+        preds_df.to_csv(
+            os.path.join(predict_results_path, "prediction.csv"), 
+            encoding="utf_8_sig", 
+            index=False
+        )
 
-        return
+        return preds, preds_df
 
 
 

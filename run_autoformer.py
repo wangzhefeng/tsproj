@@ -170,49 +170,49 @@ def run(args):
     if args.is_training:
         for ii in range(args.iters):
             # setting record of experiments
-            setting = setting + str(ii)
+            training_setting = setting + str(ii)
             # 实例化模型
             exp = Exp_Forecast(args)
             # 模型训练
-            logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            train_results = exp.train(setting)
+            logger.info(f">>>>>>>start training: iter-{ii}: {training_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            train_results = exp.train(training_setting)
             # 模型测试
-            logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            exp.test(setting, test = 0)
+            logger.info(f">>>>>>>start testing: iter-{ii}: {training_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            exp.test(training_setting, load = 0)
     
     # 模型测试
     if args.is_testing:
         ii = 0
         # setting record of experiments
-        setting = setting + str(ii)
+        test_setting = setting + str(ii)
         # 实例化模型
         exp = Exp_Forecast(args)
         # 模型测试
-        logger.info(f">>>>>>>start testing: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        exp.test(setting, test = 1)
+        logger.info(f">>>>>>>start testing: iter-{ii}: {test_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        exp.test(test_setting, load = 1)
     
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
         ii = "final"
         # setting record of experiments
-        setting = setting + str(ii)
+        final_training_setting = setting + str(ii)
         # 实例化模型
         exp = Exp_Forecast(args)
         # 模型在所有训练数据上训练
-        logger.info(f">>>>>>>start training: iter-{ii}: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        train_results = exp.train(setting)
+        logger.info(f">>>>>>>start training: iter-{ii}: {final_training_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        train_results = exp.train(final_training_setting)
         logger.info(f"train_results: {train_results}")
     
     # 模型预测
     if args.is_forecasting:
-        ii = "0"
+        ii = 0
         # setting record of experiments
-        setting = setting + str(ii)
+        forecasting_setting = setting + str(ii)
         # 实例化模型
         exp = Exp_Forecast(args)
         # 模型预测
-        logger.info(f">>>>>>>start forecasting: {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        exp.forecast(setting, load = True)
+        logger.info(f">>>>>>>start forecasting: {forecasting_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        exp.forecast(forecasting_setting, load = True)
         
     # empty cache
     logger.info(f"empty cuda cache and memory pecices")

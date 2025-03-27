@@ -185,8 +185,10 @@ class Dataset_Pred(Dataset):
     def __read_data__(self):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
+        
         # 数据特征排序
         if self.cols:
             cols = self.cols.copy()
@@ -196,16 +198,19 @@ class Dataset_Pred(Dataset):
             cols.remove(self.target)
             cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
+        
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
+        
         # 数据窗口索引
         border1 = len(df_raw) - self.seq_len
         border2 = len(df_raw)
-        # logger.info(f"border1: {border1}")
-        # logger.info(f"border2: {border2}")
+        logger.info(f"debug::border1: {border1}")
+        logger.info(f"debug::border2: {border2}")
+        
         # 数据标准化
         self.scaler = StandardScaler()
         if self.scale:
@@ -213,15 +218,20 @@ class Dataset_Pred(Dataset):
             data = self.scaler.transform(df_data.values)
         else:
             data = df_data.values
-        # logger.info(f"data: \n{data}")
-        # logger.info(f"data.shape: {data.shape}")
+        logger.info(f"debug::data: \n{data}")
+        logger.info(f"debug::data.shape: {data.shape}")
+        
         # 时间戳特征处理
+        # history date
         tmp_stamp = df_raw[['date']][border1:border2]
         tmp_stamp['date'] = pd.to_datetime(tmp_stamp.date, format='mixed')
+        # future date
         pred_dates = pd.date_range(tmp_stamp.date.values[-1], periods=self.pred_len + 1, freq=self.freq)
-        
+        logger.info(f"debug::pred_dates: \n{pred_dates}")
+        # history + future date
         df_stamp = pd.DataFrame(columns=['date'])
         df_stamp.date = list(tmp_stamp.date.values) + list(pred_dates[1:])
+        logger.info(f"debug::df_stamp: \n{df_stamp}")
         if self.timeenc == 0:
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
@@ -252,12 +262,12 @@ class Dataset_Pred(Dataset):
         # data_y 索引
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        # 数据索引分割
+        # TODO 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
-            seq_y = self.data_x[r_begin:r_begin + self.label_len]
+            seq_y = self.data_x[r_begin:(r_begin+self.label_len)]
         else:
-            seq_y = self.data_y[r_begin:r_begin + self.label_len]
+            seq_y = self.data_y[r_begin:(r_begin+self.label_len)]
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
