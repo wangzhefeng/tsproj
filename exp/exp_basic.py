@@ -144,18 +144,20 @@ class Exp_Basic:
             self.gpu = "0"
         
         # device
+        logger.info(f"Device Info:")
+        logger.info(f"{20 * '-'}")
         if self.args.use_gpu and self.args.gpu_type == "cuda":
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu) if not self.args.use_multi_gpu else self.args.devices
             device = torch.device(f"cuda:{self.args.gpu}")
-            logger.info(f"Use GPU: cuda:{self.args.gpu}.")
+            logger.info(f"Use device GPU: cuda:{self.args.gpu}.")
         elif self.args.use_gpu and self.args.gpu_type == "mps":
             device = torch.device("mps") \
                 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() \
                 else torch.device("cpu")
-            logger.info(f"Use GPU: mps.")
+            logger.info(f"Use device GPU: mps.")
         else:
             device = torch.device("cpu")
-            logger.info("Use CPU.")
+            logger.info("Use device CPU.")
 
         return device
     

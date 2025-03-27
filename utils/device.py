@@ -12,7 +12,7 @@
 # ***************************************************
 
 __all__ = [
-    "device",
+    "device_setting",
     "torch_gc",
 ]
 
@@ -31,27 +31,39 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-# ------------------------------
-# device setting
-# ------------------------------
-logger.info(f"GPU available: {torch.cuda.is_available()}")
-logger.info(f"GPU count: {torch.cuda.device_count()}")
-if torch.cuda.is_available():
-    logger.info(f"current GPU name: {torch.cuda.get_device_name()}")
-    logger.info(f"current GPU id: {torch.cuda.current_device()}")
-    # torch.cuda.set_device(0)
-    device = torch.device("cuda")
-elif torch.backends.mps.is_available():
-    device = torch.device("mps")
-else:
-    device = torch.device("cpu")
-logger.info(f"Using device: {device.type.upper()}.")
+def device_setting(verbose: bool = False):
+    """
+    device setting
+    """
+    if verbose:
+        logger.info(f"{50 * '='}")
+        logger.info(f"Device Info:")
+        logger.info(f"{50 * '='}")
+        logger.info(f"GPU available: {torch.cuda.is_available()}")
+        logger.info(f"GPU count: {torch.cuda.device_count()}")
+    if torch.cuda.is_available():
+        if verbose:
+            logger.info(f"current GPU name: {torch.cuda.get_device_name()}")
+            logger.info(f"current GPU id: {torch.cuda.current_device()}")
+        # torch.cuda.set_device(0)
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    if verbose:
+        logger.info(f"Using device: {device.type.upper()}.")
+
+    return device
 
 
 def torch_gc(gpu_type: str = "cuda", cuda_device: int = 0):
     """
     empty cuda cache and memory pecices
     """
+    # device
+    device = device_setting(verbose=False)
+    # clear cuda cache
     if device.type == "cpu":
         pass
     else:

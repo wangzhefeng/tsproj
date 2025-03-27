@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 import argparse
 
 from exp.exp_forecast_ltf import Exp_Forecast
-from utils.device import device, torch_gc
+from utils.device import torch_gc
 from utils.random_seed import set_seed
 from utils.log_util import logger
 
@@ -135,8 +135,10 @@ def args_parse():
     parser.add_argument('--use_multi_gpu', type=bool, default=False, help = 'use multiple gpus')
     parser.add_argument('--devices', type=str, default="0,1,2,3,4,5,6,7,8", help='device ids of multile gpus')
     # 命令行参数解析 
-    args = parser.parse_args()    
-    print(f"Args in experiment: \n{args}")
+    args = parser.parse_args()
+    logger.info(f"Args in experiment:")
+    logger.info(f"{20 * '-'}")
+    logger.info(f"{args}")
 
     return args
 
@@ -167,7 +169,9 @@ def run(args):
         args.des
     )
     # 模型训练
-    if args.is_training:
+    if args.is_training: 
+        logger.info(f"Training...")
+        logger.info(f"{20 * '-'}")
         for ii in range(args.iters):
             # setting record of experiments
             training_setting = setting + str(ii)
@@ -178,10 +182,12 @@ def run(args):
             train_results = exp.train(training_setting)
             # 模型测试
             logger.info(f">>>>>>>start testing: iter-{ii}: {training_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-            exp.test(training_setting, load = 0)
+            exp.test(training_setting, load = True)
     
     # 模型测试
     if args.is_testing:
+        logger.info(f"Testing...")
+        logger.info(f"{20 * '-'}")
         ii = 0
         # setting record of experiments
         test_setting = setting + str(ii)
@@ -189,10 +195,12 @@ def run(args):
         exp = Exp_Forecast(args)
         # 模型测试
         logger.info(f">>>>>>>start testing: iter-{ii}: {test_setting}>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        exp.test(test_setting, load = 1)
+        exp.test(test_setting, load = True)
     
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
+        logger.info(f"Training final model...")
+        logger.info(f"{20 * '-'}")
         ii = "final"
         # setting record of experiments
         final_training_setting = setting + str(ii)
@@ -205,6 +213,8 @@ def run(args):
     
     # 模型预测
     if args.is_forecasting:
+        logger.info(f"Forecasting...")
+        logger.info(f"{20 * '-'}")
         ii = 0
         # setting record of experiments
         forecasting_setting = setting + str(ii)
@@ -215,7 +225,7 @@ def run(args):
         exp.forecast(forecasting_setting, load = True)
         
     # empty cache
-    logger.info(f"empty cuda cache and memory pecices")
+    logger.info(f"Empty cuda cache and memory pecices...")
     torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
 
 

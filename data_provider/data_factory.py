@@ -148,7 +148,7 @@ def data_provider_new(args, flag):
         _type_: data_set, data_loader
     """
     # 是否对时间戳进行编码
-    timeenc = 0 if args.embed != 'timeF' else 1 
+    timeenc = 0 if args.embed != 'timeF' else 1
     # 数据集参数
     if flag in ["train", "val"]:
         shuffle_flag = True           # 是否进行 shuffle 数据
@@ -157,7 +157,7 @@ def data_provider_new(args, flag):
         Data = Dataset_Train          # 数据集类
     elif flag == 'test':
         shuffle_flag = False
-        drop_last = False
+        drop_last = True
         batch_size = args.batch_size
         Data = Dataset_Train
     elif flag == 'pred':
@@ -181,7 +181,7 @@ def data_provider_new(args, flag):
         inverse = args.inverse,
         cols = None,
     )
-    logger.info(f"{flag} dataset length: {len(data_set)}")
+    # logger.info(f"{flag} dataset length: {len(data_set)}")
     data_loader = DataLoader(
         data_set,
         batch_size = batch_size,
