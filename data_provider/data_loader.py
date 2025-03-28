@@ -65,10 +65,11 @@ class Dataset_Train(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
+        logger.info(f'{30 * '-'}')
+        logger.info(f"Load and Preprocessing {self.flag} data...")
+        logger.info(f'{30 * '-'}')
         # 数据文件(CSV)
-        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        logger.info(f"Preprocessing data...")
-        logger.info("-" *20)
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path)) 
         logger.info(f"Train data shape: {df_raw.shape}")
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
@@ -130,9 +131,9 @@ class Dataset_Train(Dataset):
                 self.data_x, self.data_y, self.args
             )
         self.data_stamp = data_stamp
-        logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
-        logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
-        logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
+        # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
+        # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
+        # logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
 
     def __getitem__(self, index):
         # data_x 索引
@@ -144,9 +145,9 @@ class Dataset_Train(Dataset):
         # data_y 索引
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        logger.info(f"debug::index: {index}")
-        logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
-        logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
+        # logger.info(f"debug::index: {index}")
+        # logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
+        # logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
@@ -201,6 +202,9 @@ class Dataset_Pred(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
+        logger.info(f'{30 * '-'}')
+        logger.info(f"Load and Preprocessing data...")
+        logger.info(f'{30 * '-'}')
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data shape: {df_raw.shape}")
@@ -259,10 +263,11 @@ class Dataset_Pred(Dataset):
         # logger.info(f"Forecast input data_stamp: \n{data_stamp} \ndata_stamp shape: {data_stamp.shape}")
         # 数据切分
         self.data_x = data[border1:border2]
-        if self.scale and self.inverse:
+        if self.inverse:
             self.data_y = df_data.values[border1:border2]
         else:
             self.data_y = data[border1:border2]
+        # self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
         # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
         # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
@@ -275,16 +280,18 @@ class Dataset_Pred(Dataset):
         # data_y 索引
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        # logger.info(f"debug::index: {index}")
-        # logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
-        # logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
-        # logger.info(f"debug::r_begin:(r_begin+label_len) {r_begin}:{r_begin+self.label_len}")
+        logger.info(f"debug::index: {index}")
+        logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
+        logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
+        logger.info(f"debug::seq_y index:      r_begin:(r_begin+label_len) {r_begin}:{r_begin+self.label_len}")
+        logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
-        if self.scale and self.inverse:
+        if self.inverse:
             seq_y = self.data_x[r_begin:(r_begin+self.label_len)]
         else:
             seq_y = self.data_y[r_begin:(r_begin+self.label_len)]
+        # seq_y = self.data_y[r_begin:(r_begin+self.label_len)]
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]

@@ -34,6 +34,12 @@ from utils.model_tools import adjust_learning_rate, EarlyStopping
 # metrics
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics_dl import metric, DTW
+from utils.polynomial import (
+    leg_torch,
+    chebyshev_torch, 
+    hermite_torch,
+    laguerre_torch,
+)
 # log
 from utils.log_util import logger
 from utils.timestamp_utils import from_unix_time
@@ -48,22 +54,24 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 class Exp_Forecast(Exp_Basic):
 
     def __init__(self, args):
+        logger.info(f"{30 * '-'}")
+        logger.info("Initializing Experiment...")
+        logger.info(f"{30 * '-'}")
         super(Exp_Forecast, self).__init__(args)
 
     def _build_model(self):
         """
         模型构建
-        """
+        """ 
         # 构建 Transformer 模型
-        model = self.model_dict[self.args.model].Model(self.args).float()
+        logger.info(f"Initializing model {self.args.model}...")
+        model = self.model_dict[self.args.model].Model(self.args)
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
             model = nn.DataParallel(model, device_ids=self.args.devices)
         # 打印模型参数量
         total = sum([param.nelement() for param in model.parameters()])
-        logger.info(f"Model Parameters:")
-        logger.info(f"{20 * '-'}")
-        logger.info(f'Number of parameters: {(total / 1e6):.2f}M')
+        logger.info(f'Number of model parameters: {(total / 1e6):.2f}M')
 
         return model
 
@@ -155,22 +163,25 @@ class Exp_Forecast(Exp_Basic):
         测试结果保存
         """
         # 计算测试结果评价指标
-        mse, rmse, mae, mape, accuracy, mspe = metric(preds, trues)
+        mse, rmse, mae, mape, mape_accuracy, mspe = metric(preds, trues)
         dtw = DTW(preds, trues) if self.args.use_dtw else -999
-        logger.info(f"Test results: mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, accuracy:{accuracy}, mspe:{mspe}")
+        logger.info(f"Test results: mse:{mse:.4f} rmse:{rmse:.4f} mae:{mae:.4f} mape:{mape:.4f} mape accuracy:{mape_accuracy:.4f} mspe:{mspe:.4f} dtw: {dtw:.4f}")
         # result1 保存
-        f = open(os.path.join(path, "result_forecast.txt"), 'a')
-        f.write(setting + "  \n")
-        f.write(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, accuracy:{accuracy}, mspe:{mspe}")
-        f.write('\n')
-        f.write('\n')
-        f.close()
+        with open(os.path.join(path, "result_forecast.txt"), 'a') as file:
+            file.write(setting + "  \n")
+            file.write(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, mape accuracy:{mape_accuracy}, mspe:{mspe}, dtw: {dtw}")
+            file.write('\n')
+            file.write('\n')
+            file.close()
         # result2 保存
-        np.save(os.path.join(path, 'metrics.npy'), np.array([mae, mse, rmse, mape, accuracy, mspe, dtw]))
+        np.save(
+            os.path.join(path, 'metrics.npy'), 
+            np.array([mae, mse, rmse, mape, mape_accuracy, mspe, dtw])
+        )
         np.save(os.path.join(path, 'preds.npy'), preds)
         np.save(os.path.join(path, 'trues.npy'), trues)
     
-    def _predict_test(self, batch_x, batch_y, batch_x_mark, batch_y_mark):
+    def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark):
         # decoder input
         dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
@@ -191,11 +202,120 @@ class Exp_Forecast(Exp_Basic):
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
 
         return outputs, batch_y 
+    
+    def _fredf_Loss(self, batch_index: int, outputs, batch_y, criterion):
+        """
+        FreDF: Learning to Forecast in the Frequency Domain LOSS
+        https://github.com/Master-PLC/FreDF?tab=readme-ov-file#fredf-learning-to-forecast-in-the-frequency-domain
+
+        Args:
+            batch_index (_type_): _description_
+            outputs (_type_): _description_
+            batch_y (_type_): _description_
+            criterion (_type_): _description_
+
+        Raises:
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+        """
+        # ------------------------------
+        # mask
+        # ------------------------------
+        if self.args.add_noise and self.args.noise_amp > 0:
+            seq_len = self.args.pred_len
+            cutoff_freq_percentage = self.args.noise_freq_percentage
+            cutoff_freq = int((seq_len // 2 + 1) * cutoff_freq_percentage)
+            if self.args.auxi_mode == "rfft":
+                low_pass_mask = torch.ones(seq_len // 2 + 1)
+                low_pass_mask[-cutoff_freq:] = 0.
+            else:
+                raise NotImplementedError
+            self.mask = low_pass_mask.reshape(1, -1, 1).to(self.device)
+        else:
+            self.mask = None
+        
+        # init LOSS
+        loss = 0
+        # ------------------------------
+        # rec lambda
+        # ------------------------------
+        if self.args.rec_lambda:
+            loss_rec = criterion(outputs, batch_y)
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_rec: {loss_rec.item()}")
+            # LOSS
+            loss += self.args.rec_lambda * loss_rec 
+        # ------------------------------
+        # auxi lambda
+        # ------------------------------
+        if self.args.auxi_lambda:
+            # fft shape: [B, P, D]
+            if self.args.auxi_mode == "fft":
+                loss_auxi = torch.fft.fft(outputs, dim=1) - torch.fft.fft(batch_y, dim=1)
+            elif self.args.auxi_mode == "rfft":
+                if self.args.auxi_type == 'complex':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)
+                elif self.args.auxi_type == 'complex-phase':
+                    loss_auxi = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                elif self.args.auxi_type == 'complex-mag-phase':
+                    loss_auxi_mag = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).abs()
+                    loss_auxi_phase = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                elif self.args.auxi_type == 'phase':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                elif self.args.auxi_type == 'mag':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                elif self.args.auxi_type == 'mag-phase':
+                    loss_auxi_mag = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                    loss_auxi_phase = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                else:
+                    raise NotImplementedError
+            elif self.args.auxi_mode == "rfft-D":
+                loss_auxi = torch.fft.rfft(outputs, dim=-1) - torch.fft.rfft(batch_y, dim=-1)
+            elif self.args.auxi_mode == "rfft-2D":
+                loss_auxi = torch.fft.rfft2(outputs) - torch.fft.rfft2(batch_y)
+            elif self.args.auxi_mode == "legendre":
+                loss_auxi = leg_torch(outputs, self.args.leg_degree, device=self.device) - leg_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "chebyshev":
+                loss_auxi = chebyshev_torch(outputs, self.args.leg_degree, device=self.device) - chebyshev_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "hermite":
+                loss_auxi = hermite_torch(outputs, self.args.leg_degree, device=self.device) - hermite_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "laguerre":
+                loss_auxi = laguerre_torch(outputs, self.args.leg_degree, device=self.device) - laguerre_torch(batch_y, self.args.leg_degree, device=self.device)
+            else:
+                raise NotImplementedError
+            
+            # mask
+            if self.mask is not None:
+                loss_auxi *= self.mask
+            
+            # auxi loss
+            if self.args.auxi_loss == "MAE":
+                # MAE, 最小化 element-wise error 的模长
+                loss_auxi = loss_auxi.abs().mean() if self.args.module_first else loss_auxi.mean().abs()  # check the dim of fft
+            elif self.args.auxi_loss == "MSE":
+                # MSE, 最小化 element-wise error 的模长
+                loss_auxi = (loss_auxi.abs()**2).mean() if self.args.module_first else (loss_auxi**2).mean().abs()
+            else:
+                raise NotImplementedError
+            # log
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_auxi: {loss_auxi.item()}")
+            
+            # LOSS
+            loss += self.args.auxi_lambda * loss_auxi
+        
+        return loss
 
     def train(self, setting):
         """
         模型训练
         """
+        # logger.info(f"{30 * '='}")
+        # logger.info(f"Training...")
+        # logger.info(f"{30 * '='}")
         # ------------------------------
         # 数据集构建
         # ------------------------------
@@ -205,6 +325,9 @@ class Exp_Forecast(Exp_Basic):
         # ------------------------------
         # checkpoint 保存路径
         # ------------------------------
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Model start training...")       
+        logger.info(f"{30 * '-'}")
         model_checkpoint_path = self._get_model_path(setting)
         logger.info(f"Train model will be saved in path: {model_checkpoint_path}")
         # ------------------------------
@@ -251,6 +374,9 @@ class Exp_Forecast(Exp_Basic):
                 batch_y = batch_y.float().to(self.device)
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
+                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                    logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
+                    break
                 # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
@@ -258,13 +384,15 @@ class Exp_Forecast(Exp_Basic):
                 # ------------------------------
                 # 前向传播
                 # ------------------------------
-                outputs, batch_y = self._predict(batch_x, batch_y, batch_x_mark, batch_y_mark)
-                # output
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:].to(self.device)
                 # 计算训练损失
-                loss = criterion(outputs, batch_y)
+                if self.args.use_amp and self.args.:
+                    loss = criterion(outputs, batch_y)
+                else:
+                    loss = self._fredf_loss(batch_index = i, outputs=outputs, batch_y=batch_y, criterion=criterion)
                 # 训练损失收集
                 train_loss.append(loss.item())
                 train_result[f"epoch-{epoch+1}"]["preds"].append(outputs.detach().cpu().numpy())
@@ -294,7 +422,13 @@ class Exp_Forecast(Exp_Basic):
             test_loss, test_preds, test_trues = self._vali(test_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存
-            early_stopping(vali_loss, epoch, self.model, optimizer, model_checkpoint_path)
+            early_stopping(
+                vali_loss, 
+                epoch=epoch, 
+                model=self.model, 
+                optimizer=optimizer, 
+                scheduler=None, model_path=model_checkpoint_path
+            )
             if early_stopping.early_stop:
                 logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
                 break
@@ -305,13 +439,20 @@ class Exp_Forecast(Exp_Basic):
         # ------------------------------
         logger.info("Loading best model...")
         self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-        
+        # log
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Experiment Finished!")       
+        logger.info(f"{30 * '-'}")
+
         return self.model, train_result
 
     def _vali(self, vali_loader, criterion):
         """
         模型验证
         """
+        # logger.info(f"{30 * '='}")
+        # logger.info(f"Validating...")
+        # logger.info(f"{30 * '='}")
         # 模型推理模式开启
         self.model.eval()
         # 验证损失收集
@@ -326,10 +467,16 @@ class Exp_Forecast(Exp_Basic):
                 batch_y = batch_y.float()
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
+                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                    logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
+                    break
                 # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # 前向传播
-                outputs, batch_y = self._predict(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                f_dim = -1 if self.args.features == 'MS' else 0
+                outputs = outputs[:, :, f_dim:]
+                batch_y = batch_y[:, :, f_dim:].to(self.device)
                 # 预测值、真实值
                 pred = outputs.detach().cpu()
                 true = batch_y.detach().cpu()
@@ -350,6 +497,9 @@ class Exp_Forecast(Exp_Basic):
         """
         模型测试
         """
+        # logger.info(f"{30 * '='}")
+        # logger.info(f"Testing...")
+        # logger.info(f"{30 * '='}")
         # 数据集构建
         test_data, test_loader = self._get_data(flag='test')
         # 模型加载
@@ -357,8 +507,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info("Loading pretrained model...")
             logger.info("-" *20)
             model_checkpoint_path = self._get_model_path(setting)
-            # self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-            self.model.load_state_dict(torch.load(model_checkpoint_path))
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
             logger.info(f"Pretrained model has loaded from {model_checkpoint_path}")
         # 测试结果保存地址
         test_results_path = self._get_test_results_path(setting)
@@ -376,12 +525,13 @@ class Exp_Forecast(Exp_Basic):
                 batch_y = batch_y.float().to(self.device)
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
-                logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-                logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                    logger.info(f"Test Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
                 # 前向传播
-                outputs, batch_y = self._predict_test(
+                outputs, batch_y = self._model_forward(
                     batch_x = batch_x, 
                     batch_y = batch_y, 
                     batch_x_mark = batch_x_mark, 
@@ -406,45 +556,49 @@ class Exp_Forecast(Exp_Basic):
                 true = batch_y[:, :, f_dim:]
                 # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
                 # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
-                # 预测结果收集 
+                
+                # 预测结果收集
                 preds.append(pred)
                 trues.append(true) 
                 for batch_idx in range(self.args.batch_size):
                     preds_flat.append(pred[batch_idx, :, -1].tolist())
                     trues_flat.append(true[batch_idx, :, -1].tolist())
-                # TODO 预测数据可视化
-                # if i % 20 == 0:
-                #     inputs = batch_x.detach().cpu().numpy()
-                #     if test_data.scale and self.args.inverse:
-                #         shape = inputs.shape
-                #         inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
-                #     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
-                #     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                #     self._test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf'))
+                
+                # 预测数据可视化
+                if i % 20 == 0:
+                    inputs = batch_x.detach().cpu().numpy()
+                    if test_data.scale and self.args.inverse:
+                        shape = inputs.shape
+                        inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+                    pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
+                    true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
+                    self._test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf'))
         # 预测/实际标签处理
-        # logger.info(f"Test results: preds: \n{preds}")
-        # logger.info(f"Test results: trues: \n{trues}")
         preds = np.concatenate(preds, axis = 0)
         trues = np.concatenate(trues, axis = 0)
-        # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
         # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
-        
+
+        logger.info("-" * 30)
+        logger.info(f"Test result saving...")
+        logger.info("-" * 30)
         # 测试结果保存
         self._test_results_save(preds, trues, setting, path = test_results_path)
         logger.info(f"Test results have been saved in: {test_results_path}")
         
         # TODO 测试结果可视化
         preds_flat = np.concatenate(preds_flat, axis = 0)
-        trues_flat = np.concatenate(trues_flat, axis = 0)
-        logger.info(f"Test results: preds_flat: \n{preds_flat} \npreds_flat.shape: {preds_flat.shape}")
-        logger.info(f"Test results: trues_flat: \n{trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
-        
+        trues_flat = np.concatenate(trues_flat, axis = 0) 
         self._test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png"))
+        # logger.info(f"Test results: preds_flat: {preds_flat} \npreds_flat.shape: {preds_flat.shape}")
+        # logger.info(f"Test results: trues_flat: {trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
         logger.info(f"Test results visual saved in {test_results_path}")
+        # log
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Experiment Finished!")
+        logger.info(f"{30 * '-'}")
 
         return
 
@@ -452,14 +606,18 @@ class Exp_Forecast(Exp_Basic):
         """
         模型预测
         """
+        # logger.info(f"{30 * '='}")
+        # logger.info(f"Forecasting...")
+        # logger.info(f"{30 * '='}")
         # 构建预测数据集
         pred_data, pred_loader = self._get_data(flag='pred')
         # 模型加载
         if load:
+            logger.info("-" * 30)
             logger.info("Loading pretrained model...")
-            logger.info("-" *20)
+            logger.info("-" * 30)
             model_checkpoint_path = self._get_model_path(setting)
-            self.model.load_state_dict(torch.load(model_checkpoint_path))
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
             logger.info(f"Pretrained model has loaded from {model_checkpoint_path}")
         # 模型预测结果保存地址
         pred_results_path = self._get_predict_results_path(setting)
@@ -470,7 +628,9 @@ class Exp_Forecast(Exp_Basic):
         preds = []
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
+                logger.info("-" * 30)
                 logger.info(f"forecast step: {i}")
+                logger.info("-" * 30)
                 # logger.info("-" *20)
                 # 数据预处理
                 batch_x = batch_x.float().to(self.device)
@@ -480,12 +640,14 @@ class Exp_Forecast(Exp_Basic):
                 # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # 前向传播
-                outputs, batch_y = self._predict_test(
-                    batch_x = batch_x, 
-                    batch_y = batch_y, 
-                    batch_x_mark = batch_x_mark, 
-                    batch_y_mark = batch_y_mark
+                # logger.info(f"debug:: batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+                outputs, batch_y = self._model_forward(
+                    batch_x = batch_x,
+                    batch_y = batch_y,
+                    batch_x_mark = batch_x_mark,
+                    batch_y_mark = batch_y_mark,
                 )
+                # logger.info(f"debug:: batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
                 outputs = outputs.detach().cpu().numpy()
                 # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
                 # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
@@ -525,6 +687,9 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
         
         # 最终预测值保存
+        logger.info("-" * 30)
+        logger.info(f"Forecasting result saving...")
+        logger.info("-" * 30)
         np.save(os.path.join(pred_results_path, "prediction.npy"), preds) 
         preds_df.to_csv(
             os.path.join(pred_results_path, "prediction.csv"), 
@@ -532,6 +697,10 @@ class Exp_Forecast(Exp_Basic):
             index=False
         )
         logger.info(f"Forecast results have been saved in: {pred_results_path}")
+        # log
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Experiment Finished!")
+        logger.info(f"{30 * '-'}")
 
         return preds, preds_df
 

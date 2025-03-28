@@ -60,7 +60,7 @@ class Exp_Basic:
     def __init__(self, args):
         # 参数
         self.args = args
-        # 模型集
+        # 模型集 
         self.model_dict = {
             # ------------------------------
             # Time Series Library models
@@ -122,7 +122,7 @@ class Exp_Basic:
         # 设备
         self.device = self._acquire_device()
         # 模型构建
-        self.model = self._build_model().to(self.device)
+        self.model = self._build_model().float().to(self.device)
     
     def _acquire_device(self):
         # use gpu or not
@@ -144,8 +144,6 @@ class Exp_Basic:
             self.gpu = "0"
         
         # device
-        logger.info(f"Device Info:")
-        logger.info(f"{20 * '-'}")
         if self.args.use_gpu and self.args.gpu_type == "cuda":
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu) if not self.args.use_multi_gpu else self.args.devices
             device = torch.device(f"cuda:{self.args.gpu}")

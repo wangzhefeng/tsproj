@@ -95,7 +95,7 @@ class EarlyStopping:
             logger.info(f'Epoch: {epoch+1}, \tValidation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model ...')
         # 模型保存
         training_state = {
-            "epoch": epoch,
+            "epoch": epoch + 1,
             "model": model.state_dict(),
             "optmizer": optimizer.state_dict() if optimizer is not None else None,
             # "scheduler": scheduler.state_dict() if scheduler is not None else None,

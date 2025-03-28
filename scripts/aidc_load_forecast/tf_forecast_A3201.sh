@@ -44,7 +44,6 @@ python -u tf_power_forecasting.py \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
-    --show_results 1 \
     --inverse 1 \
     --scale 1 \
     --gpu 0 \
@@ -94,7 +93,6 @@ python -u tf_power_forecasting.py \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
-    --show_results 1 \
     --inverse 1 \
     --scale 1 \
     --gpu 0 \
