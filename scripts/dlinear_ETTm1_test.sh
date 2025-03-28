@@ -11,12 +11,12 @@ model_name=DLinear
 python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
-    --is_training 0 \
+    --is_training 1 \
     --is_testing 0 \
-    --is_forecasting 1 \
+    --is_forecasting 0 \
     --model_id ETTm1_96_96 \
     --model $model_name \
-    --root_path ./dataset/long_term_forecast/ETT-small \
+    --root_path ./dataset/ETT-small \
     --data_path ETTm1.csv \
     --data ETTm1 \
     --features MS \
@@ -62,11 +62,15 @@ python -u run_dl.py \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7
 
---rec_lambda
---auxi_lambda
---auxi_mode
---auxi_type
---leg_degree
---auxi_loss
---module_first
---add_noise
+
+    # --add_fredf 0 \
+    # --rec_lambda 0.0 \
+    # --auxi_lambda 1.0 \
+    # --auxi_mode 'rfft' \
+    # --auxi_type 'mag' \
+    # --leg_degree 2 \
+    # --auxi_loss 'MAE' \
+    # --module_first 1 \
+    # --add_noise 1 \
+    # --noise_amp 1.0 \
+    # --noise_freq_percentage 0.05

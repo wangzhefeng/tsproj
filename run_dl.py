@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting import Exp_Forecast
+from exp.exp_forecasting_dl import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
@@ -140,6 +140,18 @@ def args_parse():
     parser.add_argument('--gpu_type', type=str, default='cuda', help='gpu type')
     parser.add_argument('--use_multi_gpu', type=bool, default=False, help = 'use multiple gpus')
     parser.add_argument('--devices', type=str, default="0,1,2,3,4,5,6,7,8", help='device ids of multile gpus')
+    # TODO FreDF
+    # parser.add_argument('--add_fredf', type=int, default=0, help='weather add fredf loss')
+    # parser.add_argument('--rec_lambda', type=float, default=0., help='weight of reconstruction function')
+    # parser.add_argument('--auxi_lambda', type=float, default=1, help='weight of auxilary function')
+    # parser.add_argument('--auxi_mode', type=str, default='fft', help='auxi loss mode, options: [fft, rfft]')
+    # parser.add_argument('--auxi_type', type=str, default='complex', help='auxi loss type, options: [complex, mag, phase, mag-phase]')
+    # parser.add_argument('--leg_degree', type=int, default=2, help='degree of legendre polynomial')
+    # parser.add_argument('--auxi_loss', type=str, default='MAE', help='loss function')
+    # parser.add_argument('--module_first', type=int, default=1, help='calculate module first then mean ')
+    # parser.add_argument('--add_noise', type=int, default=1, help='add noise')
+    # parser.add_argument('--noise_amp', type=float, default=1, help='noise ampitude')
+    # parser.add_argument('--noise_freq_percentage', type=float, default=0.05, help='noise frequency percentage')
     # 命令行参数解析
     args = parser.parse_args()
 
@@ -147,9 +159,7 @@ def args_parse():
 
 
 def run(args):
-    # params
-    # args = get_args_script_A3_3()
-     # setting record of experiments
+    # setting record of experiments
     setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_'.format(
         args.task_name,
         args.model_id,
@@ -169,13 +179,14 @@ def run(args):
         args.factor,
         args.embed,
         args.distil,
-        args.des
+        args.des,
+        # TODO args.add_fredf,
     )
     # 模型训练
     if args.is_training: 
         for ii in range(args.iters):
             # setting record of experiments
-            training_setting = setting + str(ii) 
+            training_setting = setting + str(ii)
             # 模型训练
             logger.info(f">>>>>>>>> start training: iter-{ii}: {training_setting}>>>>>>>>>>")
             exp = Exp_Forecast(args)

@@ -203,7 +203,7 @@ class Exp_Forecast(Exp_Basic):
 
         return outputs, batch_y 
     
-    def _fredf_Loss(self, batch_index: int, outputs, batch_y, criterion):
+    def _fredf_loss(self, batch_index: int, outputs, batch_y, criterion):
         """
         FreDF: Learning to Forecast in the Frequency Domain LOSS
         https://github.com/Master-PLC/FreDF?tab=readme-ov-file#fredf-learning-to-forecast-in-the-frequency-domain
@@ -389,10 +389,12 @@ class Exp_Forecast(Exp_Basic):
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:].to(self.device)
                 # 计算训练损失
-                if self.args.use_amp and self.args.:
-                    loss = criterion(outputs, batch_y)
-                else:
-                    loss = self._fredf_loss(batch_index = i, outputs=outputs, batch_y=batch_y, criterion=criterion)
+                loss = criterion(outputs, batch_y)
+                # TODO
+                # if not self.args.add_fredf:
+                #     loss = criterion(outputs, batch_y)
+                # else:
+                #     loss = self._fredf_loss(batch_index = i, outputs=outputs, batch_y=batch_y, criterion=criterion)
                 # 训练损失收集
                 train_loss.append(loss.item())
                 train_result[f"epoch-{epoch+1}"]["preds"].append(outputs.detach().cpu().numpy())
@@ -427,7 +429,8 @@ class Exp_Forecast(Exp_Basic):
                 epoch=epoch, 
                 model=self.model, 
                 optimizer=optimizer, 
-                scheduler=None, model_path=model_checkpoint_path
+                scheduler=None, 
+                model_path=model_checkpoint_path,
             )
             if early_stopping.early_stop:
                 logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
