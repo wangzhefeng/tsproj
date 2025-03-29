@@ -11,8 +11,8 @@ from data_provider.data_factory import data_provider
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics import metric, DTW
 # from utils.dtw_metric import accelerated_dtw, dtw
-from utils.tools import EarlyStopping, adjust_learning_rate
-from utils.visual import test_result_visual
+from utils.model_tools import EarlyStopping, adjust_learning_rate
+from utils.plot_results import test_result_visual
 
 warnings.filterwarnings('ignore')
 
