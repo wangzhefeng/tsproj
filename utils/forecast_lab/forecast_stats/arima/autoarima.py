@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import joblib
 
-from loguru import logger
+from utils.log_util import logger
 import numpy as np
 import pmdarima as pm
 from pmdarima.arima import auto_arima

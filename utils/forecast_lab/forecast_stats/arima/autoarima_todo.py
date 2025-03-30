@@ -15,7 +15,7 @@
 import sys
 from copy import deepcopy
 
-from loguru import logger
+from utils.log_util import logger
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm

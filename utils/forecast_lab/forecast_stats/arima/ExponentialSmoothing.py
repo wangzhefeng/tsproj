@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 import itertools
 import warnings
 
-from loguru import logger
+from utils.log_util import logger
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

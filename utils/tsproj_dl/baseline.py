@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import gc
 from tqdm import tqdm
-from loguru import logger
+from utils.log_util import logger
 
 import numpy as np
 import pandas as pd

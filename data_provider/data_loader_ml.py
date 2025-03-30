@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : data_loader_lgb.py
+# * File        : data_loader_ts.py
 # * Author      : Zhefeng Wang
 # * Email       : wangzhefengr@163.com
 # * Date        : 2024-10-17
 # * Version     : 0.1.101715
 # * Description : description
-# * Link        : link
+# * Link        : https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html#pandas.read_csv
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # * TODO        : 1.
 # ***************************************************
-
-__all__ = []
 
 # python libraries
 import os
@@ -20,6 +18,8 @@ import sys
 ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+from typing import Union
+import datetime
 
 import pandas as pd
 import lightgbm as lgb
@@ -59,11 +59,31 @@ def get_lgb_train_test_data(train_path, test_path, weight_paths = []):
         return X_train, y_train, X_test, y_test, lgb_train, lgb_eval
 
 
+# TODO
+class TimeseriesData:
+    pass
+
+
+# TODO
+class TimeseriesDataLoader:
+    pass
+
+
 
 
 # 测试代码 main 函数
 def main():
-    pass
+    series = pd.read_csv(
+        "https://raw.githubusercontent.com/jbrownlee/Datasets/master/shampoo.csv",
+        header = 0,
+        names = ["Month", "Sales"],
+        index_col = None,
+        parse_dates = False, 
+        date_format = None,
+    )
+    series["Month"] = series["Month"].apply(lambda x: pd.to_datetime("190" + x, format = "%Y-%m"))
+    print(series)
+    print(series.info())
 
 if __name__ == "__main__":
     main()

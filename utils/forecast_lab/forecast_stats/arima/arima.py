@@ -21,7 +21,7 @@ from random import random
 import joblib
 import datetime as dt
 
-from loguru import logger
+from utils.log_util import logger
 import numpy as np
 from numpy import newaxis
 from statsmodels.tsa.ar_model import AutoReg

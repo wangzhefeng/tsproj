@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 from typing import Union
 
-from loguru import logger
+from utils.log_util import logger
 import numpy as np
 from tsmoothie.smoother import KalmanSmoother, LowessSmoother
 
