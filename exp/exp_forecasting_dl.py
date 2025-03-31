@@ -420,8 +420,8 @@ class Exp_Forecast(Exp_Basic):
 
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues = self._vali(vali_loader, criterion)
-            test_loss, test_preds, test_trues = self._vali(test_loader, criterion)
+            vali_loss, vali_preds, vali_trues = self.vali(vali_loader, criterion)
+            test_loss, test_preds, test_trues = self.vali(test_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存
             early_stopping(
@@ -449,7 +449,7 @@ class Exp_Forecast(Exp_Basic):
 
         return self.model, train_result
 
-    def _vali(self, vali_loader, criterion):
+    def vali(self, vali_loader, criterion):
         """
         模型验证
         """

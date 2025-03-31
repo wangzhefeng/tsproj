@@ -29,7 +29,6 @@ from models import (
     PatchTST,
     TimesNet, 
     Transformer,
-    Transformer_original,
 )
 # from models_dl import (
 #     MLP,
@@ -65,7 +64,6 @@ class Exp_Basic:
             # ------------------------------
             # Time Series Library models
             # ------------------------------
-            "Transformer_original": Transformer_original,
             'TimesNet': TimesNet,
             'Autoformer': Autoformer,
             'Transformer': Transformer,
@@ -174,7 +172,9 @@ class Exp_Basic:
 
     def test(self):
         pass
-
+    
+    def forecast(self):
+        pass
 
 
 
