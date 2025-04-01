@@ -354,20 +354,6 @@ class Model:
 
         return train_start, train_end, test_start, test_end
 
-    def __hold_out_split(self, data_X, data_Y):
-        """
-        Hold-Out 训练、测试数据集分割
-        """
-        train_start, train_end, test_start, test_end = self.__split_index(window = 1)
-        X_train = data_X.iloc[train_start:train_end]
-        y_train = data_Y.iloc[train_start:train_end]
-        X_test = data_X.iloc[test_start:]
-        y_test = data_Y.iloc[test_start:]
-        logger.info(f"length of X_train: {len(X_train)}, length of y_train: {len(y_train)}")
-        logger.info(f"length of X_test: {len(X_test)}, length of y_test: {len(y_test)}")
-        
-        return X_train, y_train, X_test, y_test
-
     def __cross_validation_split(self, data_X, data_Y, window: int):
         """
         Cross-Validation 训练、测试数据集分割
@@ -582,35 +568,6 @@ class Model:
             logger.info(f"X_test length is 0!")
             return y_pred
     
-    def hold_out_validation(self, data_X, data_Y, model_params):
-        """
-        Hold-Out 测试
-        """
-        # 训练集、测试集划分
-        X_train, y_train, \
-        X_test, y_test = self.__hold_out_split(
-            data_X = data_X, 
-            data_Y = data_Y
-        )
-        # 模型训练
-        model, scaler_features = self.train(
-            X_train = X_train,
-            y_train = y_train,
-            model_params = model_params,
-        )
-        # 模型测试
-        y_pred = self.forecast(
-            model = model,
-            X_future = X_test,
-            X_history = X_train,
-            y_history = y_train,
-            scaler_features = scaler_features,
-        )
-        # 模型评价 
-        test_scores_df = self.__model_evaluate(y_test, y_pred, window = 1)
-        
-        return test_scores_df
-    
     def cross_validation(self, data_X, data_Y, model_params, n_windows: int, drop_last_window: bool = True):
         """
         训练数据交叉验证
@@ -716,20 +673,13 @@ class Model:
         # ------------------------------
         if self.args.is_test:
             logger.info(f"model testing...")
-            if self.args.cross_validation:
-                test_scores_df, plot_df = self.cross_validation(
-                    data_X = df_history_X,
-                    data_Y = df_history_Y,
-                    model_params = self.args.model_params,
-                    n_windows = self.args.n_windows,
-                    drop_last_window = True,
-                )
-            elif self.args.hold_out_validation:
-                test_scores_df, plot_df = self.hold_out_validation(
-                    data_X = df_history_X,
-                    data_Y = df_history_Y,
-                    model_params = self.args.model_params,
-                )
+            test_scores_df, plot_df = self.cross_validation(
+                data_X = df_history_X,
+                data_Y = df_history_Y,
+                model_params = self.args.model_params,
+                n_windows = self.args.n_windows,
+                drop_last_window = True,
+            )
             logger.info(f"model test scores: \n{test_scores_df}")
             logger.info(f"model test plot_df: \n{plot_df}") 
             logger.info(f"model testing over...")
