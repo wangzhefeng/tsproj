@@ -21,8 +21,6 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import time
-# import logging
-# logger = logging.getLogger()
 
 import numpy as np
 import pandas as pd

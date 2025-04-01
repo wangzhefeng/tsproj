@@ -30,10 +30,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from tsproj_dl.models.GRU import GRU
+# from tsproj_dl.models.GRU import GRU
 
 # global variable
 LOGGING_LABEL = __file__.split("/")[-1][:-3]
+
 lookback = int(5 * (60 / 10))  # 5 hours lookback to prediction
 batch_size = 32
 num_epochs = 20
@@ -46,7 +47,7 @@ learning_rate = 1e-3
 # data download
 data_url, data_path = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/00616/Tetuan%20City%20power%20consumption.csv", 
-    "E:/projects/timeseries_forecasting/tsproj/tsproj_dl/dataset/Tetuan City power consumption.csv",
+    "E:/projects/ts_projects/tsproj/dataset/Tetuan City power consumption.csv",
 )
 if not os.path.exists(data_path):
     os.system(f"wget {data_url}")
@@ -62,7 +63,6 @@ features_cols = ["Temperature", "Humidity", "Wind Speed", "general diffuse flows
 target_col = "Zone 1 Power Consumption"
 X = data[features_cols].values
 Y = data[target_col].values
-num_features = X.shape[1]
 
 X_org, Y_org = [], []
 for i in range(0, X.shape[0] - lookback, 1):
@@ -151,6 +151,9 @@ data_df_final.plot(
 plt.grid(which = 'minor', linestyle = ':', linewidth = '0.5', color = 'black');
 plt.show()
 """
+
+
+
 
 # 测试代码 main 函数
 def main():

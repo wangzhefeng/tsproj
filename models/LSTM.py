@@ -23,14 +23,13 @@ import torch.nn as nn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device {device}.")
 
 
 class LSTM(nn.Module):
     
     def __init__(self, feature_size: int, hidden_size: int, num_layers: int, output_size: int):
         super(LSTM, self).__init__()
+        
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # lstm
@@ -84,9 +83,11 @@ class LSTM(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from tsproj_dl.config.lstm import Config
+    """
+    from utils.tsproj_dl.config.lstm import Config
     from tsproj_dl.data_provider.data_loader import Data_Loader
     from tsproj_dl.exp.exp_forecasting import train, plot_train_results
+    
     # config
     config = config()
     
@@ -127,6 +128,7 @@ def main():
     # result plot
     plot_train_results(y_train_pred, y_train_true)
     plot_train_results(y_test_pred, y_test_true)  
+    """
 
 if __name__ == "__main__":
     main()

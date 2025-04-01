@@ -374,7 +374,7 @@ class Data_Loader_todo:
 
 # 测试代码 main 函数
 def main():
-    from tsproj_dl.config.gru import Config
+    from utils.tsproj_dl.config.gru import Config
     
     config = Config()
     # ------------------------------
@@ -382,11 +382,6 @@ def main():
     # ------------------------------
     data_loader = Data_Loader(cfgs = config)
     train_loader, test_loader = data_loader.run()
-    
-    
-    
-    
-    
     '''
     # ------------------------------
     # 读取数据
