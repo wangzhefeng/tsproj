@@ -354,7 +354,7 @@ class Model:
 
         return train_start, train_end, test_start, test_end
 
-    def __cross_validation_split(self, data_X, data_Y, window: int):
+    def __data_split(self, data_X, data_Y, window: int):
         """
         Cross-Validation 训练、测试数据集分割
         """
@@ -462,7 +462,7 @@ class Model:
         
         return test_scores_df
     
-    def __process_cv_prediction(self, y_test, y_pred, window: int):
+    def __process_prediction(self, y_test, y_pred, window: int):
         """
         测试集预测数据
         """
@@ -577,7 +577,7 @@ class Model:
         for window in range(1, n_windows + 1):  # 1 ~ n_windows-1
             # 数据分割: 训练集、测试集
             X_train, y_train, \
-            X_test, y_test = self.__cross_validation_split(
+            X_test, y_test = self.__data_split(
                 data_X = data_X, 
                 data_Y = data_Y, 
                 window = window,
@@ -603,14 +603,14 @@ class Model:
             test_scores_df_window = self.__model_evaluate(y_test, y_pred, window)
             test_scores_df = pd.concat([test_scores_df, test_scores_df_window], axis = 0)
             # 模型测试预测绘图数据
-            cv_plot_df_window = self.__process_cv_prediction(y_test, y_pred, window)
+            cv_plot_df_window = self.__process_prediction(y_test, y_pred, window)
             cv_plot_df = pd.concat([cv_plot_df, cv_plot_df_window], axis = 0)
         logger.info(f"cross validation scores: \n{test_scores_df}")
         # 模型评价指标数据处理
         test_scores_df_avg = test_scores_df.mean() \
             .to_frame().T \
             .reset_index(drop = True, inplace = False)
-        logger.info(f"cross validation average scores: \n{test_scores_df_avg}") 
+        logger.info(f"cross validation average scores: \n{test_scores_df_avg}")
 
         return test_scores_df_avg, cv_plot_df
  
@@ -713,8 +713,8 @@ class Model:
             )
             # 模型输出
             y_pred = self.process_output(y_pred)
-            logger.info(f"model forecast prediction: {y_pred}")
-            logger.info(f"model forecasting over...")
+            logger.info(f"model forecast result: {y_pred}")
+            logger.info(f"model forecast over...")
 
 
 
