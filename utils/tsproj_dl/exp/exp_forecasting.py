@@ -27,18 +27,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-os.environ["KERAS_BACKEND"] = "torch"
-from keras.utils import plot_model
-from keras.layers import LSTM, Activation, Dense, Dropout
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.models import Sequential, load_model
+# os.environ["KERAS_BACKEND"] = "torch"
+# from keras.utils import plot_model
+# from keras.layers import LSTM, Activation, Dense, Dropout
+# from keras.callbacks import EarlyStopping, ModelCheckpoint
+# from keras.models import Sequential, load_model
 
-from tsproj_dl.exp.exp_basic import Exp_Basic
-
+from exp.exp_basic import Exp_Basic
 from tsproj_dl.data_provider.data_loader import Data_Loader, Data_Loader_todo
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.plot_results import plot_results, plot_results_multiple
-from tsproj_dl.utils.timer import Timer
+from utils.timer import Timer
 from utils.log_util import logger
 
 # global variable
