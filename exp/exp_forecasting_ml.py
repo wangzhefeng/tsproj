@@ -48,11 +48,12 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 # feature engineering
 from utils.feature_engine import (
     extend_datetime_features,
-    extend_date_type_features,
+    extend_datetype_features,
     extend_weather_features,
     extend_future_weather_features,
     extend_lag_features,
 )
+from utils.model_save_load import ModelDeployPkl
 # utils
 from utils.log_util import logger
 
@@ -62,7 +63,10 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class Model:
 
-    def __init__(self, args: Dict, history_data, future_data) -> None:
+    def __init__(self, 
+                 args: Dict, 
+                 history_series = None, weather_history_data = None, date_history_data = None, 
+                 future_series = None, weather_future_data = None, date_future_data = None) -> None:
         self.args = args
         # datetime index
         self.train_start_time_str = self.args.train_start_time.strftime("%Y%m%d")
@@ -70,8 +74,12 @@ class Model:
         self.forecast_start_time_str = self.args.forecast_start_time.strftime("%Y%m%d")
         self.forecast_end_time_str = self.args.forecast_end_time.strftime("%Y%m%d")
         # data
-        self.history_data = history_data
-        self.future_data = future_data
+        self.history_series = history_series
+        self.weather_history_data = weather_history_data
+        self.date_history_data = date_history_data
+        self.future_series = future_series
+        self.weather_future_data = weather_future_data
+        self.date_future_data = date_future_data
 
     def load_csv_data(self):
         """
@@ -106,20 +114,22 @@ class Model:
             date_col (str): 原时间戳列
             new_date_col (str): 新的时间戳列
         """
-        # 数据拷贝
-        df_processed = copy.deepcopy(df)
-        # 转换时间戳类型
-        df_processed[new_date_col] = pd.to_datetime(df_processed[date_col])
-        del df_processed[date_col]
-        # 去除重复时间戳
-        df_processed.drop_duplicates(
-            subset = new_date_col,
-            keep = "last",
-            inplace = True,
-            ignore_index = True,
-        )
-
-        return df_processed
+        if df is None:
+            return None
+        else:
+            # 数据拷贝
+            df_processed = copy.deepcopy(df)
+            # 转换时间戳类型
+            df_processed[new_date_col] = pd.to_datetime(df_processed[date_col])
+            del df_processed[date_col]
+            # 去除重复时间戳
+            df_processed.drop_duplicates(
+                subset = new_date_col,
+                keep = "last",
+                inplace = True,
+                ignore_index = True,
+            )
+            return df_processed
 
     def __process_target_series(self, df_template, df, col_numeric: List, col_categorical: List):
         """
@@ -140,15 +150,15 @@ class Model:
         # 类别特征处理
         for col in col_categorical:
             if col not in ["ds", self.args.target]:
-                # TODO 类别特征处理
+                # 类别特征处理
                 df[col] = self.__categorical_feature_engineering(df, col)
                 # 将时序特征映射到时间戳完整的 df_template 中, 特征包括[ds, y, feature_categorical]
                 df_template[col] = df_template["ds"].map(df.set_index("ds")[col])    
         
-        return df_template
+        return df_template 
 
     # TODO
-    def __categorical_feature_engineering(self):
+    def __categorical_feature_engineering(self, df, col):
         pass
 
     # TODO
@@ -175,71 +185,71 @@ class Model:
             # "unique_id": None,
             # "y": None,
         })
+        
         # 特征工程：目标时间序列特征
         df_series_history = self.__process_df_timestamp(
-            df = input_data["df_series_history"] if input_data is not None else self.history_data, 
-            date_col = self.args.df_target_ds_col, 
+            df = input_data["df_series_history"] if input_data is not None else self.history_series,
+            date_col = self.args.df_target_ds_col,   # count_data_time
             new_date_col = "ds",
-        )  # count_data_time
-        df_history = self.__process_target_series(
-            df_history,
-            df_series_history, 
-            col_numeric = self.args.target_series_numeric_features, 
-            col_categorical = self.args.target_series_categorical_features,
         )
-        # TODO 特征工程：天气特征
-        df_weather_history = self.__process_df_timestamp(
-            input_data["df_weather_history"], 
-            self.args.df_weather_history_ds_col, 
-            "ds"
-        )  # ts
-        df_history, weather_features = extend_weather_features(df_history, df_weather_history)
-        # TODO 特征工程：日期时间特征
-        # 日期时间特征
+        df_history = self.__process_target_series(
+            df_template = df_history,
+            df = df_series_history, 
+            col_numeric = self.args.target_series_numeric_features, 
+            col_categorical = self.args.target_series_categorical_features
+        )
+        
+        # 特征工程：日期时间特征
         df_history, datetime_features = extend_datetime_features(
-            df_history, 
+            df = df_history, 
             feature_names = [
                 'minute', 
                 'hour', 'day', 'weekday', 'week', 
                 'day_of_week', 'week_of_year', 'month', 'days_in_month', 
                 'quarter', 'day_of_year', 'year'
             ],
-        )
-        # TODO 特征工程：日期类型(节假日、特殊事件)特征
+        ) 
+
+        # 特征工程：日期类型(节假日、特殊事件)特征
         df_date_history = self.__process_df_timestamp(
-            input_data["df_date_history"], 
-            self.args.df_date_history_ds_col, 
-            "ds"
-        )  # date
-        df_history, date_features = extend_date_type_features(df_history, df_date_history)
-        # TODO 特征工程：滞后特征
-        df_history, lag_features = extend_lag_features(
-            df=df_history, 
-            target=self.args.target, 
-            lags=self.args.lags
+            df = input_data["df_date_history"] if input_data is not None else self.date_history_data, 
+            date_col = self.args.df_date_history_ds_col,  # date
+            new_date_col = "ds",
         )
-        # df_history, lag_features = extend_lag_features(
-        #     df=df_history, 
-        #     target=self.args.target, 
-        #     group_col=None, 
-        #     numLags=self.args.lags,
-        #     numHorizon=0, 
-        #     dropna=True,
-        # )
-        # TODO 插值填充预测缺失值
+        df_history, date_features = extend_datetype_features(
+            df = df_history, 
+            df_date = df_date_history
+        )
+        
+        # 特征工程：天气特征
+        df_weather_history = self.__process_df_timestamp(
+            df = input_data["df_weather_history"] if input_data is not None else self.weather_history_data, 
+            date_col = self.args.df_weather_history_ds_col,  # ts
+            new_date_col = "ds",
+        )
+        df_history, weather_features = extend_weather_features(
+            df_history = df_history, 
+            df_weather = df_weather_history
+        ) 
+        
+        # 特征工程：滞后特征
+        df_history, lag_features = extend_lag_features(
+            df = df_history, 
+            target = self.args.target, 
+            lags = self.args.lags,
+        )
+
+        # 插值填充预测缺失值
         df_history = df_history.interpolate()
-        df_history = df_history.ffill()
-        df_history = df_history.bfill()
+        # df_history = df_history.ffill()
+        # df_history = df_history.bfill()
         df_history.dropna(inplace = True, ignore_index = True)
 
         # 特征排序
-        train_features = lag_features + \
-            weather_features + \
-            datetime_features + \
-            date_features
+        train_features = lag_features + datetime_features + date_features + weather_features
         df_history = df_history[["ds"] + train_features + ["y"]]
 
-        # TODO 样本筛选: 异常值处理
+        # 本筛选: 异常值处理
         df_history = df_history[df_history["y"] > self.args.threshold]
 
         # TODO 数据分割: 工作日预测特征，目标特征
@@ -273,31 +283,26 @@ class Model:
                 freq = self.args.freq,
                 inclusive = "left",
             ),
-            "unique_id": None,
-            "y": None,
+            # "unique_id": None,
+            # "y": None,
         })
-        # TODO 特征工程：除目标特征外的其他特征
+        
+        # 特征工程：除目标特征外的其他特征
         df_series_future = self.__process_df_timestamp(
-            input_data["df_series_future"], 
-            self.args.df_series_future_ds_col, 
-            "ds"
-        )  # count_data_time
-        df_future = self.__process_target_series(
-            df_future, 
-            df_series_future, 
-            col_numeric=self.args.target_series_numeric_features, 
-            col_categorical=self.args.target_series_categorical_features
+            df = input_data["df_series_future"] if input_data is not None else self.future_series, 
+            date_col = self.args.df_series_future_ds_col,  # count_data_time
+            new_date_col = "ds"
         )
-        # TODO 特征工程: 天气特征
-        df_weather_future = self.__process_df_timestamp(
-            input_data["df_weather_future"], 
-            self.args.df_weather_future_ds_col, 
-            "ds"
-        )  # ts
-        df_future, weather_features = extend_future_weather_features(df_future, df_weather_future)
-        # TODO 特征工程: 日期时间特征
-        df_history, datetime_features = extend_datetime_features(
-            df_history, 
+        df_future = self.__process_target_series(
+            df_template = df_future, 
+            df = df_series_future, 
+            col_numeric = self.args.target_series_numeric_features, 
+            col_categorical = self.args.target_series_categorical_features
+        )
+
+        # 特征工程: 日期时间特征
+        df_future, datetime_features = extend_datetime_features(
+            df = df_future, 
             feature_names = [
                 'minute', 
                 'hour', 'day', 'weekday', 'week', 
@@ -305,22 +310,37 @@ class Model:
                 'quarter', 'day_of_year', 'year'
             ],
         )
-        # TODO 特征工程: 日期类型(节假日、特殊事件)特征
+
+        # 特征工程: 日期类型(节假日、特殊事件)特征
         df_date_future = self.__process_df_timestamp(
-            input_data["df_date_future"], 
-            self.args.df_date_future_ds_col, 
-            "ds"
-        )  # date
-        df_future, date_features = extend_date_type_features(df_future, df_date_future)
+            df = input_data["df_date_future"] if input_data is not None else self.date_future_data, 
+            date_col = self.args.df_date_future_ds_col,  # date
+            new_date_col = "ds",
+        )
+        df_future, date_features = extend_datetype_features(
+            df = df_future, 
+            df_date = df_date_future,
+        )
+
+        # 特征工程: 天气特征
+        df_weather_future = self.__process_df_timestamp(
+            df = input_data["df_weather_future"] if input_data is not None else self.weather_future_data, 
+            date_col = self.args.df_weather_future_ds_col,  # ts
+            new_date_col = "ds",
+        )
+        df_future, weather_features = extend_future_weather_features(
+            df_future = df_future, 
+            df_weather_future = df_weather_future
+        ) 
         
-        # TODO 插值填充预测缺失值
+        # 插值填充预测缺失值
         df_future = df_future.interpolate()
-        df_history = df_history.ffill()
-        df_history = df_history.bfill()
+        # df_history = df_history.ffill()
+        # df_history = df_history.bfill()
         df_future.dropna(inplace = True, ignore_index = True) 
 
         # 特征排序
-        future_features = weather_features + datetime_features + date_features
+        future_features = datetime_features + date_features + weather_features
         df_future = df_future[["ds"] + future_features]
         
         # TODO 数据分割: 工作日预测特征, 目标特征
@@ -361,13 +381,11 @@ class Model:
         if test_end == -1:
             X_test = data_X.iloc[test_start:]
             y_test = data_Y.iloc[test_start:]
-            logger.info(f"split indexes:: \ntrain_start:train_end: {train_start}:{train_end} \
-                \ntest_start:test_end: {test_start}:{''}")
+            logger.info(f"split indexes:: \ntrain_start:train_end: {train_start}:{train_end} \ntest_start:test_end: {test_start}:{''}")
         else:
             X_test = data_X.iloc[test_start:(test_end+1)]
             y_test = data_Y.iloc[test_start:(test_end+1)]
-            logger.info(f"split indexes:: \ntrain_start:train_end: {train_start}:{train_end}, \
-                \ntest_start:test_end: {test_start}:{test_end+1}")
+            logger.info(f"split indexes:: \ntrain_start:train_end: {train_start}:{train_end}, \ntest_start:test_end: {test_start}:{test_end+1}")
         logger.info(f"length of X_train: {len(X_train)}, length of y_train: {len(y_train)}")
         logger.info(f"length of X_test: {len(X_test)}, length of y_test: {len(y_test)}")
 
@@ -529,9 +547,9 @@ class Model:
         if self.args.plot_importance:
             lgb.plot_importance(
                 model, 
-                importance_type="gain",  # gain, split
-                figsize=(7,6), 
-                title="LightGBM Feature Importance (Gain)"
+                importance_type = "gain",  # gain, split
+                figsize = (7,6), 
+                title = "LightGBM Feature Importance (Gain)"
             )
             plt.show();
         
@@ -555,7 +573,7 @@ class Model:
                     df_history = pd.concat([X_history, y_history], axis=1),
                     scaler_features = scaler_features,
                 )
-            else:  # TODO
+            else:
                 y_pred = []
             logger.info(f"y_pred: {y_pred} \ny_pred length: {len(y_pred)}")
             return y_pred
@@ -610,9 +628,9 @@ class Model:
 
         return test_scores_df_avg, cv_plot_df
  
-    # TODO
     def model_save(self, final_model):
-        pass
+        model_deploy = ModelDeployPkl(self.args.save_file_path)
+        model_deploy.save_model(final_model)
 
     # TODO
     def process_output(self, df_future, prediction):
@@ -661,7 +679,7 @@ class Model:
         df_future, future_features = self.preprocessing_future_data(input_data = input_data)
         df_future_X = df_future[future_features]
         # ------------------------------
-        # 模型选择/模型调参
+        # TODO 模型选择/模型调参
         # ------------------------------
         final_model_params = None
         # ------------------------------
