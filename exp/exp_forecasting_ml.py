@@ -47,13 +47,11 @@ from sklearn.metrics import (
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 # feature engineering
 from utils.feature_engine import (
-    extend_datetime_stamp_feature,
-    extend_lag_feature,
-    extend_date_type_features,
-    extend_lag_features,
     extend_datetime_features,
+    extend_date_type_features,
     extend_weather_features,
     extend_future_weather_features,
+    extend_lag_features,
 )
 # utils
 from utils.log_util import logger
@@ -64,15 +62,18 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 class Model:
 
-    def __init__(self, args: Dict) -> None:
+    def __init__(self, args: Dict, history_data, future_data) -> None:
         self.args = args
-        # TODO datetime index
+        # datetime index
         self.train_start_time_str = self.args.train_start_time.strftime("%Y%m%d")
         self.train_end_time_str = self.args.train_end_time.strftime("%Y%m%d")
         self.forecast_start_time_str = self.args.forecast_start_time.strftime("%Y%m%d")
         self.forecast_end_time_str = self.args.forecast_end_time.strftime("%Y%m%d")
+        # data
+        self.history_data = history_data
+        self.future_data = future_data
 
-    def load_data(self):
+    def load_csv_data(self):
         """
         数据加载
         """
@@ -159,7 +160,7 @@ class Model:
     
         return features_corr
 
-    def preprocessing_history_data(self, input_data: Dict):
+    def preprocessing_history_data(self, input_data: Dict = None):
         """
         历史数据预处理
         """
@@ -168,22 +169,23 @@ class Model:
             "ds": pd.date_range(
                 self.args.train_start_time, 
                 self.args.train_end_time, 
-                freq = self.args.freq
+                freq = self.args.freq,
+                inclusive = "left",
             ),
-            "unique_id": None,
-            "y": None,
+            # "unique_id": None,
+            # "y": None,
         })
-        # TODO 特征工程：目标时间序列特征
+        # 特征工程：目标时间序列特征
         df_series_history = self.__process_df_timestamp(
-            input_data["df_series_history"], 
-            self.args.df_target_ds_col, 
-            "ds"
+            df = input_data["df_series_history"] if input_data is not None else self.history_data, 
+            date_col = self.args.df_target_ds_col, 
+            new_date_col = "ds",
         )  # count_data_time
         df_history = self.__process_target_series(
-            df_history, 
+            df_history,
             df_series_history, 
-            col_numeric=self.args.target_series_numeric_features, 
-            col_categorical=self.args.target_series_categorical_features
+            col_numeric = self.args.target_series_numeric_features, 
+            col_categorical = self.args.target_series_categorical_features,
         )
         # TODO 特征工程：天气特征
         df_weather_history = self.__process_df_timestamp(
@@ -223,14 +225,6 @@ class Model:
         #     numLags=self.args.lags,
         #     numHorizon=0, 
         #     dropna=True,
-        # )
-        # df_future_lags = extend_lag_feature(
-        #     df=df_history, 
-        #     target=self.args.target, 
-        #     group_col=None, 
-        #     numLags=0, 
-        #     numHorizon=self.args.lags, 
-        #     dropna=False,
         # )
         # TODO 插值填充预测缺失值
         df_history = df_history.interpolate()
@@ -276,7 +270,8 @@ class Model:
             "ds": pd.date_range(
                 self.args.forecast_start_time,
                 self.args.forecast_end_time,
-                freq = self.args.freq
+                freq = self.args.freq,
+                inclusive = "left",
             ),
             "unique_id": None,
             "y": None,
@@ -473,7 +468,8 @@ class Model:
         cv_timestamp_df = pd.DataFrame({"ds": pd.date_range(
             self.args.train_start_time, 
             self.args.train_end_time, 
-            self.args.freq
+            self.args.freq,
+            inclusive = "left",
         )})
         cv_plot_df_window["ds"] = cv_timestamp_df[test_start:] \
             if test_end == -1 \
@@ -651,7 +647,7 @@ class Model:
         # 数据加载
         # ------------------------------
         logger.info(f"load history and future data...")
-        input_data = self.load_data()
+        input_data = self.load_csv_data()
         # ------------------------------
         # 历史数据处理
         # ------------------------------
