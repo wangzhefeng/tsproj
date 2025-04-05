@@ -50,12 +50,10 @@ class LSTM(nn.Module):
         batch_size = x.shape[0]  # x.shape=(batch_size, seq_len, feature_size)
         # 初始化隐藏状态
         if hidden is None:
-            h_0 = x.data.new(
-                self.num_layers, batch_size, self.hidden_size
-            ).fill_(0).float()  # (D*num_layers, batch_size, hidden_size)
-            c_0 = x.data.new(
-                self.num_layers, batch_size, self.hidden_size
-            ).fill_(0).float()  # (D*num_layers, batch_size, hidden_size)
+            # (D*num_layers, batch_size, hidden_size)
+            h_0 = x.data.new(self.num_layers, batch_size, self.hidden_size).fill_(0).float()
+           # (D*num_layers, batch_size, hidden_size) 
+            c_0 = x.data.new(self.num_layers, batch_size, self.hidden_size).fill_(0).float()
         else:
             h_0, c_0 = hidden
 
