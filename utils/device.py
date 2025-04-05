@@ -57,7 +57,7 @@ def device_setting(verbose: bool = False):
     return device
 
 
-def torch_gc(gpu_type: str = "cuda", cuda_device: int = 0):
+def torch_gc(gpu_type: str = "cuda", cuda_device: str = "cuda:0"):
     """
     empty cuda cache and memory pecices
     """

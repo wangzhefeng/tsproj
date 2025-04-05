@@ -29,25 +29,8 @@ from models import (
     PatchTST,
     TimesNet, 
     Transformer,
+    LSTM,
 )
-# from models_dl import (
-#     MLP,
-#     RNN,
-#     GRU,
-#     LSTM,
-#     BiLSTM,
-#     Attention,
-#     CNN_Attention,
-#     CNN_Conv1D,
-#     CNN_Conv2D,
-#     CNN_LSTM_Attention,
-#     InformerTodo, 
-#     Seq2Seq_LSTM,
-#     LSTM_Attention,
-#     LSTM_CNN,
-#     TCN,
-#     Transformer,
-# )
 from utils.log_util import logger
 
 # global variable
@@ -99,7 +82,7 @@ class Exp_Basic:
             # "MLP": MLP,
             # "RNN": RNN,
             # "GRU": GRU,
-            # "LSTM": LSTM,
+            "LSTM": LSTM,
             # "BiLSTM": BiLSTM,
             # "Attention": Attention,
             # "CNN_Attention": CNN_Attention,
@@ -144,8 +127,8 @@ class Exp_Basic:
         # device
         if self.args.use_gpu and self.args.gpu_type == "cuda":
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu) if not self.args.use_multi_gpu else self.args.devices
-            device = torch.device(f"cuda:{self.args.gpu}")
-            logger.info(f"Use device GPU: cuda:{self.args.gpu}.")
+            device = torch.device(f"cuda:{self.gpu}")
+            logger.info(f"Use device GPU: cuda:{self.gpu}.")
         elif self.args.use_gpu and self.args.gpu_type == "mps":
             device = torch.device("mps") \
                 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() \

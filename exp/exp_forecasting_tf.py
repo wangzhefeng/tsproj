@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : exp_forecasting.py
+# * File        : exp_forecast_dl.py
 # * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2023-05-27
-# * Version     : 0.1.052710
+# * Email       : zfwang7@gmail.com
+# * Date        : 2025-01-13
+# * Version     : 1.0.011321
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
 # ***************************************************
+
+__all__ = []
 
 # python libraries
 import os
@@ -25,71 +28,60 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
-from data_provider.data_loader_dl import Data_Loader
+from data_provider.data_factory import data_provider_new
 from exp.exp_basic import Exp_Basic
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # metrics
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics_dl import metric, DTW
+from utils.polynomial import (
+    leg_torch,
+    chebyshev_torch, 
+    hermite_torch,
+    laguerre_torch,
+)
 # log
 from utils.log_util import logger
 from utils.timestamp_utils import from_unix_time
+
+plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Exp_Forecast(Exp_Basic):
+class Exp_Forecast_TF(Exp_Basic):
 
     def __init__(self, args):
         logger.info(f"{30 * '-'}")
         logger.info("Initializing Experiment...")
         logger.info(f"{30 * '-'}")
-        super(Exp_Forecast, self).__init__(args)
-    
+        super(Exp_Forecast_TF, self).__init__(args)
+
     def _build_model(self):
         """
         模型构建
-        """
-        # 时间序列模型初始化
+        """ 
+        # 构建 Transformer 模型
         logger.info(f"Initializing model {self.args.model}...")
         model = self.model_dict[self.args.model].Model(self.args)
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
-            model = nn.DataParallel(model, device_ids = self.args.devices)
+            model = nn.DataParallel(model, device_ids=self.args.devices)
         # 打印模型参数量
         total = sum([param.nelement() for param in model.parameters()])
         logger.info(f'Number of model parameters: {(total / 1e6):.2f}M')
-        
+
         return model
-    
-    # TODO
-    def _get_data(self):
-        data_loader = Data_Loader(cfgs = self.args)
-        train_loader, test_loader = data_loader.run()
-        
-        return data_loader, train_loader, test_loader
-    
-    def _select_criterion(self, loss_name = "MSE"):
+
+    def _get_data(self, flag: str):
         """
-        评价指标
+        数据集构建
         """
-        if loss_name == "MSE":
-            return nn.MSELoss()
-        elif loss_name == "MAPE":
-            return mape_loss()
-        elif loss_name == "MASE":
-            return mase_loss()
-        elif loss_name == "SMAPE":
-            return smape_loss()
-    
-    def _select_optimizer(self):
-        optimizer = torch.optim.AdamW(
-            params = self.model.parameters(), 
-            lr = self.args.learning_rate
-        )
+        data_set, data_loader = data_provider_new(self.args, flag)
         
-        return optimizer
+        return data_set, data_loader
 
     def _select_criterion(self):
         """
@@ -188,38 +180,148 @@ class Exp_Forecast(Exp_Basic):
         )
         np.save(os.path.join(path, 'preds.npy'), preds)
         np.save(os.path.join(path, 'trues.npy'), trues)
+    
+    def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark):
+        # decoder input
+        dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+        # encoder-decoder
+        def _run_model():
+            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            if self.args.output_attention:
+                outputs = outputs[0]
+            return outputs
 
-    # TODO
-    def save_model(self, weights: bool = False):
-        """
-        模型保存
-        """
-        logger.info(f'[Model] Training Completed. Model saved as {self.args.checkpoints}')
-        if weights:
-            # model weights
-            torch.save(self.model.state_dict(), self.args.checkpoints)
+        if self.args.use_amp:
+            with torch.amp.autocast("cuda"):
+                outputs = _run_model()
         else:
-            # whole model
-            torch.save(self.model, self.args.checkpoints)
+            outputs = _run_model()
+        # output
+        outputs = outputs[:, -self.args.pred_len:, :]
+        batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
 
-    # TODO
-    def load_model(self, weights: str = False):
-        logger.info(f'[Model] Loading model from file {self.args.checkpoints}')
-        if weights:
-            self.model = self.model_dict[self.args.model].Model(self.args)
-            self.model.load_state_dict(torch.load(self.args.checkpoints))
+        return outputs, batch_y 
+    
+    def _fredf_loss(self, batch_index: int, outputs, batch_y, criterion):
+        """
+        FreDF: Learning to Forecast in the Frequency Domain LOSS
+        https://github.com/Master-PLC/FreDF?tab=readme-ov-file#fredf-learning-to-forecast-in-the-frequency-domain
+
+        Args:
+            batch_index (_type_): _description_
+            outputs (_type_): _description_
+            batch_y (_type_): _description_
+            criterion (_type_): _description_
+
+        Raises:
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+        """
+        # ------------------------------
+        # mask
+        # ------------------------------
+        if self.args.add_noise and self.args.noise_amp > 0:
+            seq_len = self.args.pred_len
+            cutoff_freq_percentage = self.args.noise_freq_percentage
+            cutoff_freq = int((seq_len // 2 + 1) * cutoff_freq_percentage)
+            if self.args.auxi_mode == "rfft":
+                low_pass_mask = torch.ones(seq_len // 2 + 1)
+                low_pass_mask[-cutoff_freq:] = 0.
+            else:
+                raise NotImplementedError
+            self.mask = low_pass_mask.reshape(1, -1, 1).to(self.device)
         else:
-            self.model = torch.load(self.args.checkpoints)
-        self.model.eval()
+            self.mask = None
+        
+        # init LOSS
+        loss = 0
+        # ------------------------------
+        # rec lambda
+        # ------------------------------
+        if self.args.rec_lambda:
+            loss_rec = criterion(outputs, batch_y)
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_rec: {loss_rec.item()}")
+            # LOSS
+            loss += self.args.rec_lambda * loss_rec 
+        # ------------------------------
+        # auxi lambda
+        # ------------------------------
+        if self.args.auxi_lambda:
+            # fft shape: [B, P, D]
+            if self.args.auxi_mode == "fft":
+                loss_auxi = torch.fft.fft(outputs, dim=1) - torch.fft.fft(batch_y, dim=1)
+            elif self.args.auxi_mode == "rfft":
+                if self.args.auxi_type == 'complex':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)
+                elif self.args.auxi_type == 'complex-phase':
+                    loss_auxi = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                elif self.args.auxi_type == 'complex-mag-phase':
+                    loss_auxi_mag = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).abs()
+                    loss_auxi_phase = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                elif self.args.auxi_type == 'phase':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                elif self.args.auxi_type == 'mag':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                elif self.args.auxi_type == 'mag-phase':
+                    loss_auxi_mag = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                    loss_auxi_phase = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                else:
+                    raise NotImplementedError
+            elif self.args.auxi_mode == "rfft-D":
+                loss_auxi = torch.fft.rfft(outputs, dim=-1) - torch.fft.rfft(batch_y, dim=-1)
+            elif self.args.auxi_mode == "rfft-2D":
+                loss_auxi = torch.fft.rfft2(outputs) - torch.fft.rfft2(batch_y)
+            elif self.args.auxi_mode == "legendre":
+                loss_auxi = leg_torch(outputs, self.args.leg_degree, device=self.device) - leg_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "chebyshev":
+                loss_auxi = chebyshev_torch(outputs, self.args.leg_degree, device=self.device) - chebyshev_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "hermite":
+                loss_auxi = hermite_torch(outputs, self.args.leg_degree, device=self.device) - hermite_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "laguerre":
+                loss_auxi = laguerre_torch(outputs, self.args.leg_degree, device=self.device) - laguerre_torch(batch_y, self.args.leg_degree, device=self.device)
+            else:
+                raise NotImplementedError
+            
+            # mask
+            if self.mask is not None:
+                loss_auxi *= self.mask
+            
+            # auxi loss
+            if self.args.auxi_loss == "MAE":
+                # MAE, 最小化 element-wise error 的模长
+                loss_auxi = loss_auxi.abs().mean() if self.args.module_first else loss_auxi.mean().abs()  # check the dim of fft
+            elif self.args.auxi_loss == "MSE":
+                # MSE, 最小化 element-wise error 的模长
+                loss_auxi = (loss_auxi.abs()**2).mean() if self.args.module_first else (loss_auxi**2).mean().abs()
+            else:
+                raise NotImplementedError
+            # log
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_auxi: {loss_auxi.item()}")
+            
+            # LOSS
+            loss += self.args.auxi_lambda * loss_auxi
+        
+        return loss
 
     def train(self, setting):
         """
         模型训练
         """
+        # logger.info(f"{30 * '='}")
+        # logger.info(f"Training...")
+        # logger.info(f"{30 * '='}")
         # ------------------------------
         # 数据集构建
         # ------------------------------
-        _, train_loader, test_loader = self._get_data()
+        train_data, train_loader = self._get_data(flag='train')
+        vali_data, vali_loader = self._get_data(flag='val')
+        test_data, test_loader = self._get_data(flag='test')
         # ------------------------------
         # checkpoint 保存路径
         # ------------------------------
@@ -249,6 +351,8 @@ class Exp_Forecast(Exp_Basic):
         if self.args.use_amp:
             logger.info(f"debug::self.args.use_amp: {self.args.use_amp}")
             scaler = torch.amp.GradScaler()
+        # 训练、验证结果收集
+        train_result = {}
         # 分 epoch 训练
         for epoch in range(self.args.train_epochs):
             # time: epoch 模型训练开始时间
@@ -257,25 +361,44 @@ class Exp_Forecast(Exp_Basic):
             # 模型训练
             iter_count = 0
             train_loss = []
+            train_result[f"epoch-{epoch+1}"] = {"preds": [], "trues": [], "preds_flat": [], "trues_flat": []}
             # 模型训练模式
             self.model.train()
-            for i, data in enumerate(train_loader): 
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
                 optimizer.zero_grad()
-                # 数据处理
-                x_train, y_train = data
-                x_train = x_train.float().to(self.device)
-                y_train = y_train.float().to(self.device)
+                # 数据预处理
+                batch_x = batch_x.float().to(self.device)
+                batch_y = batch_y.float().to(self.device)
+                batch_x_mark = batch_x_mark.float().to(self.device)
+                batch_y_mark = batch_y_mark.float().to(self.device)
+                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                    logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
+                    break
+                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
+                # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
                 # ------------------------------
                 # 前向传播
                 # ------------------------------
-                y_pred = self.model(x_train)
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                f_dim = -1 if self.args.features == 'MS' else 0
+                outputs = outputs[:, :, f_dim:]
+                batch_y = batch_y[:, :, f_dim:].to(self.device)
                 # 计算训练损失
-                loss = criterion(y_pred, y_train.reshape(-1, 1))
+                loss = criterion(outputs, batch_y)
+                # TODO
+                # if not self.args.add_fredf:
+                #     loss = criterion(outputs, batch_y)
+                # else:
+                #     loss = self._fredf_loss(batch_index = i, outputs=outputs, batch_y=batch_y, criterion=criterion)
                 # 训练损失收集
                 train_loss.append(loss.item())
+                train_result[f"epoch-{epoch+1}"]["preds"].append(outputs.detach().cpu().numpy())
+                train_result[f"epoch-{epoch+1}"]["trues"].append(batch_y.detach().cpu().numpy())
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 100 == 0:
                     speed = (time.time() - train_start_time) / iter_count
@@ -294,12 +417,10 @@ class Exp_Forecast(Exp_Basic):
                     loss.backward()
                     optimizer.step()
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
-            # ------------------------------
-            # model validation
-            # ------------------------------
+
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues = self.vali(test_loader, criterion)
+            vali_loss, vali_preds, vali_trues = self.vali(vali_loader, criterion)
             test_loss, test_preds, test_trues = self.vali(test_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存
@@ -326,7 +447,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Experiment Finished!")       
         logger.info(f"{30 * '-'}")
 
-        return self.model
+        return self.model, train_result
 
     def vali(self, vali_loader, criterion):
         """
@@ -343,29 +464,38 @@ class Exp_Forecast(Exp_Basic):
         preds, trues = [], []
         # 模型推理
         with torch.no_grad():
-            for data in vali_loader:
-                # batch data
-                x_vali, y_vali = data
-                x_vali = x_vali.float().to(self.device)
-                y_vali = y_vali.float().to(self.device)
-                # forward
-                y_pred = self.model(x_vali)
-                y_pred = y_pred.detach().cpu()
-                y_vali = y_vali.detach().cpu()
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+                # 数据预处理
+                batch_x = batch_x.float().to(self.device)
+                batch_y = batch_y.float()
+                batch_x_mark = batch_x_mark.float().to(self.device)
+                batch_y_mark = batch_y_mark.float().to(self.device)
+                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                    logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
+                    break
+                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                # 前向传播
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                f_dim = -1 if self.args.features == 'MS' else 0
+                outputs = outputs[:, :, f_dim:]
+                batch_y = batch_y[:, :, f_dim:]
+                # 预测值、真实值
+                pred = outputs.detach().cpu()
+                true = batch_y.detach().cpu()
                 # 计算/保存验证损失
-                loss = criterion(y_pred, y_vali.reshape(-1, 1))
+                loss = criterion(pred, true)
                 # 验证结果收集
                 total_loss.append(loss)
-                preds.append(y_pred)
-                trues.append(y_vali)
+                preds.append(pred)
+                trues.append(trues)
         # 计算验证集上所有 batch 的平均验证损失
         total_loss = np.average(total_loss)
         # 计算模型输出
         self.model.train()
         
         return total_loss, preds, trues
-    
-    # TODO
+
     def test(self, setting, load: bool=False):
         """
         模型测试
@@ -475,7 +605,6 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
-    # TODO
     def forecast(self, setting, load = False):
         """
         模型预测
@@ -577,159 +706,12 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{30 * '-'}")
 
         return preds, preds_df
-    # TODO ------------------------------
-    # TODO forecast
-    # TODO ------------------------------
-    def predict_single_step(self, data):
-        """
-        单步预测
-        """
-        logger.info('[Model] Predicting Point-by-Point...')
-        pred = self.model.predict(data)
-        pred = np.reshape(pred, (pred.size,))
-        
-        return pred
-
-    def predict_directly_multi_output(self, plot_size):
-        # data load
-        data_loader, _, _ = self._get_data()
-        # train result
-        y_train_pred = data_loader.scaler.inverse_transform(
-            (self.model(data_loader.x_train_tensor).detach().numpy()[:plot_size]).reshape(-1, 1)
-        )
-        y_train_true = data_loader.scaler.inverse_transform(
-            data_loader.y_train_tensor.detach().numpy().reshape(-1, 1)[:plot_size]
-        )
-        # test result
-        y_test_pred = data_loader.scaler.inverse_transform(
-            self.model(data_loader.x_test_tensor).detach().numpy()[:plot_size]
-        )
-        y_test_true = data_loader.scaler.inverse_transform(
-            data_loader.y_test_tensor.detach().numpy().reshape(-1, 1)[:plot_size]
-        )
-
-        return (y_train_pred, y_train_true), (y_test_pred, y_test_true)
-
-    def predict_recursive_multi_step(self, data, window_size: int, horizon: int):
-        """
-        时序多步预测
-            - 每次预测使用 window_size 个历史数据进行预测，预测未来 prediction_len 个预测值
-            - 每一步预测一个点，然后下一步将预测的点作为历史数据进行下一次预测
-
-        Args:
-            data (_type_): 测试数据
-            window_size (int): 窗口长度
-            prediction_len (int): 预测序列长度
-
-        Returns:
-            _type_: 预测序列
-        """
-        logger.info('[Model] Predicting Sequences Multiple...')
-        preds_seq = []  # (20, 50, 1)
-        for i in range(int(len(data) / horizon)):  # 951 / 50 = 19
-            curr_frame = data[i * horizon]  # (49, 1)
-            preds = []  # 50
-            for j in range(horizon):  # 50
-                pred = self.model.predict(curr_frame[np.newaxis, :, :])[0, 0]  # curr_frame[newaxis, :, :].shape: (1, 49, 1) => (1,)
-                preds.append(pred)
-                curr_frame = curr_frame[1:]  # (48, 1)
-                curr_frame = np.insert(curr_frame, [window_size - 2], preds[-1], axis = 0)
-            preds_seq.append(preds)
-        
-        return preds_seq
-    
-    def predict_direct_multi_step(self, data):
-        pass
-    
-    def predict_recursive_hybird(self, data):
-        pass
-
-    def predict_seq2seq_multi_step(self, data):
-        pass
-    
-    def predict_sequence_full(self, data, window_size: int):
-        """
-        单步预测
-
-        Args:
-            data (_type_): 测试数据
-            window_size (_type_): 窗口长度
-
-        Returns:
-            _type_: 预测序列
-        """
-        logger.info('[Model] Predicting Sequences Full...')
-        curr_frame = data[0]
-        preds_seq = []
-        for i in range(len(data)):
-            pred = self.model.predict(curr_frame[np.newaxis, :, :])[0, 0]
-            preds_seq.append(pred)
-            curr_frame = curr_frame[1:]
-            curr_frame = np.insert(curr_frame, [window_size - 2], preds_seq[-1], axis = 0)
-        
-        return preds_seq
-
-    @staticmethod
-    def plot_train_results(pred, true, task = "Train"):
-        plt.figure(figsize = (15, 8))
-        plt.plot(pred, "b", label = "Pred")
-        plt.plot(true, "r", label = "True")
-        plt.xlabel("Time")
-        plt.ylabel("Value")
-        plt.title(f"{task} Predictions")
-        plt.legend()
-        plt.grid()
-        plt.tight_layout()
-        plt.show();
 
 
 
 
-# 测试代码 main 函数
 def main():
-    from utils.tsproj_dl.config.gru import Config
-    # config
-    configs = Config()
-    exp = Exp_Forecast(args=configs)
-    # model train
-    exp.train()
-    # model predict
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = exp.predict_directly_multi_output(plot_size = 200)
-    logger.info(f"y_train_pred: \n{y_train_pred}")
-    logger.info(f"y_test_pred: \n{y_test_pred}")
-    # result plot
-    exp.plot_train_results(y_train_pred, y_train_true, task="Train")
-    exp.plot_train_results(y_test_pred, y_test_true, task="Test")
-    '''
-    # ------------------------------
-    # 模型测试
-    # ------------------------------
-    model = None
-    # multi-sequence
-    # --------------
-    predictions_multiseq = model.predict_sequences_multiple(
-        data = x_test, # shape: (656, 49, 1)
-        window_size = configs['data']['sequence_length'],  # 50
-        prediction_len = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(predictions_multiseq).shape)
-    plot_results_multiple(predictions_multiseq, y_test, configs['data']['sequence_length'], title = configs.data)
-    
-    # point by point
-    # --------------
-    predictions_pointbypoint = model.predict_point_by_point(data = x_test)
-    logger.info(np.array(predictions_pointbypoint).shape)
-    plot_results(predictions_pointbypoint, y_test, title = configs.data)
-    
-    # full-sequence
-    # --------------
-    prediction_fullseq = model.predict_sequence_full(
-        data = x_test,
-        window_size = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(prediction_fullseq).shape)
-    plot_results(prediction_fullseq, y_test, title = configs.data)
-    '''
-    
-if __name__ == "__main__":
+    pass
+
+if __name__ == '__main__':
     main()

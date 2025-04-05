@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
+from exp.exp_forecasting_tf import Exp_Forecast_TF
 from exp.exp_forecasting_dl import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
@@ -58,12 +59,12 @@ def args_parse():
     parser.add_argument('--predict_results', type=str, default='./saved_results/predict_results/', help='location of model models') 
     # forecasting task
     parser.add_argument('--seq_len', type=int, required=True, default=72, help='input sequence length')
-    parser.add_argument('--label_len', type=int, required=True, default=12, help='start token length')
-    parser.add_argument('--pred_len', type=int, required=True, default=24, help='prediction sequence length')
+    parser.add_argument('--label_len', type=int, default=12, help='start token length')
+    parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
     parser.add_argument('--train_ratio', type=float, required=True, default=0.7, help='train dataset ratio')
     parser.add_argument('--test_ratio', type=float, required=True, default=0.2, help='test dataset ratio')
     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
-    parser.add_argument('--embed', type=str, required=True, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
+    parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
     parser.add_argument('--scale', type=int, default=1, help = 'data transform')
     parser.add_argument('--inverse', type=int, default=1, help='inverse output data')
     # inputation task
@@ -136,9 +137,9 @@ def args_parse():
     # TimeXer
     parser.add_argument('--patch_len', type=int, default=16, help='patch length')
     # GPU
-    parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
+    parser.add_argument('--use_gpu', type=int, default=1, help='use gpu')
     parser.add_argument('--gpu_type', type=str, default='cuda', help='gpu type')
-    parser.add_argument('--use_multi_gpu', type=bool, default=False, help = 'use multiple gpus')
+    parser.add_argument('--use_multi_gpu', type=int, default=0, help = 'use multiple gpus')
     parser.add_argument('--devices', type=str, default="0,1,2,3,4,5,6,7,8", help='device ids of multile gpus')
     # TODO FreDF
     # parser.add_argument('--add_fredf', type=int, default=0, help='weather add fredf loss')
@@ -152,6 +153,13 @@ def args_parse():
     # parser.add_argument('--add_noise', type=int, default=1, help='add noise')
     # parser.add_argument('--noise_amp', type=float, default=1, help='noise ampitude')
     # parser.add_argument('--noise_freq_percentage', type=float, default=0.05, help='noise frequency percentage')
+    # TODO others
+    parser.add_argument("--target_index", type=int, default=0, help="Target index for forecasting")
+    parser.add_argument("--pred_method", type=str, default="recursive_multi_step", help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
+    parser.add_argument("--feature_size", type=int, default=1, help="feature size")
+    parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
+    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
+    parser.add_argument("--output_size", type=int, default=1, help="output size")
     # 命令行参数解析
     args = parser.parse_args()
 
@@ -191,9 +199,9 @@ def run(args):
             logger.info(f">>>>>>>>> start training: iter-{ii}: {training_setting}>>>>>>>>>>")
             exp = Exp_Forecast(args)
             train_results = exp.train(training_setting)
-            # 模型测试
-            logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
-            exp.test(training_setting, load = True)
+            # TODO 模型测试
+            # logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
+            # exp.test(training_setting, load = True)
     
     # 模型测试
     if args.is_testing:
@@ -228,7 +236,7 @@ def run(args):
         
     # empty cache
     logger.info(f">>>>>>>>>>>> Empty cuda cache and memory pecices...")
-    torch_gc(gpu_type=args.gpu_type, cuda_device=exp.gpu)
+    torch_gc(gpu_type=args.gpu_type, cuda_device=exp.device)
 
 
 

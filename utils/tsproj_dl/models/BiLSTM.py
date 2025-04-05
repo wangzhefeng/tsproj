@@ -143,8 +143,8 @@ class Model_V3(nn.Module):
 # 测试代码 main 函数
 def main():
     from tsproj_dl.config.bilstm import Config
-    from tsproj_dl.data_provider.data_loader import Data_Loader
-    from tsproj_dl.exp.exp_forecasting import train, plot_train_results
+    from data_provider.data_loader_dl import Data_Loader
+    from exp.exp_forecasting_dl import train, plot_train_results
 
     # config
     config = Config()

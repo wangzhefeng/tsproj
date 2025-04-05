@@ -18,31 +18,30 @@ ROOT = os.getcwd()
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-import torch
 import torch.nn as nn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class LSTM(nn.Module):
+class Model(nn.Module):
     
-    def __init__(self, feature_size: int, hidden_size: int, num_layers: int, output_size: int):
-        super(LSTM, self).__init__()
+    def __init__(self, configs):
+        super(Model, self).__init__()
         
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+        self.hidden_size = configs.hidden_size
+        self.num_layers = configs.num_layers
         # lstm
         self.lstm = nn.LSTM(
-            input_size = feature_size, 
-            hidden_size = hidden_size, 
-            num_layers = num_layers, 
+            input_size = configs.feature_size, 
+            hidden_size = configs.hidden_size, 
+            num_layers = configs.num_layers, 
             batch_first = True
         )
         # fc layer
         self.linear = nn.Linear(
-            in_features = hidden_size, 
-            out_features = output_size,
+            in_features = configs.hidden_size, 
+            out_features = configs.output_size,
         )
 
     def forward(self, x, hidden = None):
