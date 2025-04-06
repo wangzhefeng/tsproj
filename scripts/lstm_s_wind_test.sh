@@ -17,18 +17,17 @@ python -u run_dl.py \
     --data wind_dataset \
     --features S \
     --target WIND \
-    --target_index 0 \
     --pred_method recursive_multi_step \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
     --freq d \
-    --seq_len 1 \
+    --seq_len 2 \
     --feature_size 1 \
     --hidden_size 256 \
     --output_size 1 \
     --num_layers 2 \
-    --train_ratio 0.8 \
+    --train_ratio 0.7 \
     --test_ratio 0.2 \
     --iters 1 \
     --train_epochs 10 \
@@ -40,14 +39,9 @@ python -u run_dl.py \
     --use_dtw 0 \
     --patience 7 \
     --lradj type1 \
-    --scale 1 \
-    --inverse 1 \
+    --scale 0 \
+    --inverse 0 \
     --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7
-
-
-
-# --label_len 48 \
-# --pred_len 96 \

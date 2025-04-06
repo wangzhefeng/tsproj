@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
-from data_provider.data_loader_dl import Data_Loader
+from data_provider.data_factory import data_provider_dl
 from exp.exp_basic import Exp_Basic
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # metrics
@@ -63,12 +63,10 @@ class Exp_Forecast(Exp_Basic):
         
         return model
     
-    # TODO
-    def _get_data(self):
-        data_loader = Data_Loader(cfgs = self.args)
-        train_loader, test_loader = data_loader.run()
+    def _get_data(self, flag: str):
+        data_set, data_loader = data_provider_dl(self.args, flag)
         
-        return data_loader, train_loader, test_loader
+        return data_set, data_loader
     
     def _select_criterion(self, loss_name = "MSE"):
         """
@@ -219,12 +217,17 @@ class Exp_Forecast(Exp_Basic):
         # ------------------------------
         # 数据集构建
         # ------------------------------
-        _, train_loader, test_loader = self._get_data()
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Loading and Transforming data...")
+        logger.info(f"{30 * '-'}")
+        train_data, train_loader = self._get_data(flag='train')
+        vali_data, vali_loader = self._get_data(flag='val')
+        test_data, test_loader = self._get_data(flag='test')
         # ------------------------------
         # checkpoint 保存路径
         # ------------------------------
         logger.info(f"{30 * '-'}")
-        logger.info(f"Model start training...")       
+        logger.info(f"Model start training...")
         logger.info(f"{30 * '-'}")
         model_checkpoint_path = self._get_model_path(setting)
         logger.info(f"Train model will be saved in path: {model_checkpoint_path}")
@@ -299,7 +302,7 @@ class Exp_Forecast(Exp_Basic):
             # ------------------------------
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues = self.vali(test_loader, criterion)
+            vali_loss, vali_preds, vali_trues = self.vali(vali_loader, criterion)
             test_loss, test_preds, test_trues = self.vali(test_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存

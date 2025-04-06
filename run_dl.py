@@ -153,9 +153,9 @@ def args_parse():
     # parser.add_argument('--add_noise', type=int, default=1, help='add noise')
     # parser.add_argument('--noise_amp', type=float, default=1, help='noise ampitude')
     # parser.add_argument('--noise_freq_percentage', type=float, default=0.05, help='noise frequency percentage')
-    # TODO others
-    parser.add_argument("--target_index", type=int, default=0, help="Target index for forecasting")
-    parser.add_argument("--pred_method", type=str, default="recursive_multi_step", help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
+    # TODO RNNs
+    parser.add_argument("--pred_method", type=str, default="recursive_multi_step", 
+                        help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
     parser.add_argument("--feature_size", type=int, default=1, help="feature size")
     parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
     parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
