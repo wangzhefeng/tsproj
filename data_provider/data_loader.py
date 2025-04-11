@@ -75,8 +75,8 @@ class Dataset_Train(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path)) 
         logger.info(f"Train data shape: {df_raw.shape}")
         # TODO 缺失值处理
-        df_raw.dropna(axis=0, how='any', inplace=True)
-        # df_raw.dropna(axis=1, how='any', inplace=True)
+        # df_raw.dropna(axis=0, how='any', inplace=True)
+        df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after drop na: {df_raw.shape}")
         # 数据特征排序
         cols = list(df_raw.columns)
