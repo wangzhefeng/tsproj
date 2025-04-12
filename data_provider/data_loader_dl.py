@@ -82,9 +82,9 @@ class Dataset_Train_dl:
         data read
         """
         # TODO
-        # logger.info(f'{30 * '-'}')
+        # logger.info(f"{30 * '-'}")
         # logger.info(f"Load and Preprocessing {self.args.flag} data...")
-        # logger.info(f'{30 * '-'}')
+        # logger.info(f"{30 * '-'}")
         
         # 读取数据文件
         df_raw = pd.read_csv(os.path.join(self.args.root_path, self.args.data_path))
