@@ -156,7 +156,7 @@ def data_provider_new(args, flag):
     timeenc = 0 if args.embed != 'timeF' else 1
     # 数据集参数
     if flag in ["train", "val"]:
-        shuffle_flag = True           # 是否进行 shuffle 数据
+        shuffle_flag = True           # TODO 是否进行 shuffle 数据
         drop_last = False             # 是否丢弃最后一个 batch
         batch_size = args.batch_size
         Data = Dataset_Train          # 数据集类
