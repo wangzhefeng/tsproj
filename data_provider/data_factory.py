@@ -162,7 +162,7 @@ def data_provider_new(args, flag):
         Data = Dataset_Train          # 数据集类
     elif flag == 'test':
         shuffle_flag = False
-        drop_last = True
+        drop_last = False
         batch_size = args.batch_size
         Data = Dataset_Train
     elif flag == 'pred':
@@ -186,7 +186,7 @@ def data_provider_new(args, flag):
         inverse = args.inverse,
         cols = None,
     )
-    # logger.info(f"{flag} dataset length: {len(data_set)}")
+    logger.info(f"{flag.capitalize()} dataset length: {len(data_set)}")
     data_loader = DataLoader(
         data_set,
         batch_size = batch_size,

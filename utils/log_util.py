@@ -1,4 +1,5 @@
-"""日志工具模块
+"""
+日志工具模块
 
 该模块提供了日志记录功能，包括：
 - 控制台日志输出
@@ -16,12 +17,14 @@ from logging import handlers
 
 # 项目根路径
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 日志路径
+LOG_NAME = os.environ.get("LOG_NAME")
 if sys.platform == "win32":
-    LOG_DIR = f"{ROOT_PATH}\\logs\\"
+    LOG_DIR = f"{ROOT_PATH}\logs\{LOG_NAME}"
     os.makedirs(LOG_DIR, exist_ok=True)
     log_path = os.path.join(LOG_DIR, "service")
 else:
-    LOG_DIR = f"{ROOT_PATH}/logs/"
+    LOG_DIR = f"{ROOT_PATH}/logs/{LOG_NAME}"
     os.makedirs(LOG_DIR, exist_ok=True)
     log_path = os.path.join(LOG_DIR, "service")
 
