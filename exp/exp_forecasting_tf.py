@@ -322,12 +322,13 @@ class Exp_Forecast_TF(Exp_Basic):
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
-        # ------------------------------
-        # checkpoint 保存路径
-        # ------------------------------
+        
         logger.info(f"{30 * '-'}")
         logger.info(f"Model start training...")       
         logger.info(f"{30 * '-'}")
+        # ------------------------------
+        # checkpoint 保存路径
+        # ------------------------------ 
         model_checkpoint_path = self._get_model_path(setting)
         logger.info(f"Train model will be saved in path: {model_checkpoint_path}")
         # ------------------------------
