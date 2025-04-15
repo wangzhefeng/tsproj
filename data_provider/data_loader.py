@@ -64,9 +64,8 @@ class Dataset_Train(Dataset):
         logger.info(f"Load and Preprocessing {self.flag} data...")
         logger.info(f"{30 * '-'}")
         # 数据文件(CSV)
-        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path)) 
-        del df_raw["idx"]
-        logger.info(f"Train data shape: {df_raw.shape}")
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
         # 缺失值处理
         # df_raw.dropna(axis=0, how='any', inplace=True)
         df_raw.dropna(axis=1, how='any', inplace=True)
@@ -207,8 +206,7 @@ class Dataset_Pred(Dataset):
         logger.info(f"{30 * '-'}")
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        del df_raw["idx"]
-        logger.info(f"Train data shape: {df_raw.shape}")
+        logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after dropna: {df_raw.shape}") 
@@ -221,6 +219,7 @@ class Dataset_Pred(Dataset):
             cols.remove(self.target)
             cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]] 
+        logger.info(f"Train data after feature order: \n{df_raw.head()} \ndata shape: {df_raw.shape}")  
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]

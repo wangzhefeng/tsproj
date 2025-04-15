@@ -153,7 +153,8 @@ class Exp_Forecast_TF(Exp_Basic):
         plt.xlabel("Time")
         plt.ylabel("Value")
         # plt.ylim(5, 20)
-        plt.title('实际值 vs 预测值')
+        # plt.title('实际值 vs 预测值')
+        plt.title('Trues vs Preds')
         plt.grid(True)
         plt.savefig(path, bbox_inches='tight')
         plt.show();
@@ -201,7 +202,7 @@ class Exp_Forecast_TF(Exp_Basic):
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
 
-        return outputs, batch_y 
+        return outputs, batch_y
     
     def _fredf_loss(self, batch_index: int, outputs, batch_y, criterion):
         """
@@ -313,27 +314,24 @@ class Exp_Forecast_TF(Exp_Basic):
         """
         模型训练
         """
-        # logger.info(f"{30 * '='}")
-        # logger.info(f"Training...")
-        # logger.info(f"{30 * '='}")
-        # ------------------------------
         # 数据集构建
-        # ------------------------------
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
-        
+
+        # checkpoint 保存路径 
         logger.info(f"{30 * '-'}")
-        logger.info(f"Model start training...")       
+        logger.info(f"Model checkpoint will be saved in path:")
         logger.info(f"{30 * '-'}")
-        # ------------------------------
-        # checkpoint 保存路径
-        # ------------------------------ 
         model_checkpoint_path = self._get_model_path(setting)
-        logger.info(f"Train model will be saved in path: {model_checkpoint_path}")
+        logger.info(model_checkpoint_path)
         # ------------------------------
         # 模型训练
         # ------------------------------
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Model start training...")
+        logger.info(f"{30 * '-'}")
+
         # time: 模型训练开始时间
         train_start_time = time.time()
         logger.info(f"Train start time: {from_unix_time(train_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
@@ -359,6 +357,7 @@ class Exp_Forecast_TF(Exp_Basic):
             # time: epoch 模型训练开始时间
             epoch_start_time = time.time()
             logger.info(f"Epoch: {epoch+1} \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
+
             # 模型训练
             iter_count = 0
             train_loss = []
@@ -378,8 +377,8 @@ class Exp_Forecast_TF(Exp_Basic):
                 if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
                     logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
-                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
                 # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
                 # ------------------------------
@@ -441,22 +440,20 @@ class Exp_Forecast_TF(Exp_Basic):
         # ------------------------------
         # 模型加载
         # ------------------------------
-        logger.info("Loading best model...")
-        self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-        # log
         logger.info(f"{30 * '-'}")
-        logger.info(f"Experiment Finished!")       
+        logger.info(f"Training Finished!")       
         logger.info(f"{30 * '-'}")
 
+        logger.info("Loading best model...")
+        self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
+
+        logger.info("Return training results...")
         return self.model, train_result
 
     def vali(self, vali_loader, criterion):
         """
         模型验证
         """
-        # logger.info(f"{30 * '='}")
-        # logger.info(f"Validating...")
-        # logger.info(f"{30 * '='}")
         # 模型推理模式开启
         self.model.eval()
         # 验证损失收集
@@ -474,8 +471,8 @@ class Exp_Forecast_TF(Exp_Basic):
                 if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
                     logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
-                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 f_dim = -1 if self.args.features == 'MS' else 0
@@ -501,21 +498,26 @@ class Exp_Forecast_TF(Exp_Basic):
         """
         模型测试
         """
-        # logger.info(f"{30 * '='}")
-        # logger.info(f"Testing...")
-        # logger.info(f"{30 * '='}")
         # 数据集构建
         test_data, test_loader = self._get_data(flag='test')
         # 模型加载
-        if load:
-            logger.info("Loading pretrained model...")
-            logger.info("-" *20)
+        if load: 
             model_checkpoint_path = self._get_model_path(setting)
             self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-            logger.info(f"Pretrained model has loaded from {model_checkpoint_path}")
-        # 测试结果保存地址
+            logger.info(f"{30 * '-'}")
+            logger.info("Pretrained model has loaded from:")
+            logger.info(f"{30 * '-'}")
+            logger.info(model_checkpoint_path)
+        # 测试结果保存地址 
         test_results_path = self._get_test_results_path(setting)
-        logger.info(f"Test results will be saved in path: {test_results_path}")
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Test results will be saved in path:")
+        logger.info(f"{30 * '-'}")
+        logger.info(test_results_path)
+        # 模型开始测试
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Model start testing...")
+        logger.info(f"{30 * '-'}")
         # 模型评估模式
         self.model.eval()
         # 测试结果收集
@@ -529,8 +531,8 @@ class Exp_Forecast_TF(Exp_Basic):
                 batch_y = batch_y.float().to(self.device)
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
-                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
                     logger.info(f"Test Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
@@ -585,57 +587,61 @@ class Exp_Forecast_TF(Exp_Basic):
         # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
         # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
 
-        logger.info("-" * 30)
+        logger.info(f"{30 * '-'}")
         logger.info(f"Test result saving...")
-        logger.info("-" * 30)
+        logger.info(f"{30 * '-'}")
         # 测试结果保存
         self._test_results_save(preds, trues, setting, path = test_results_path)
-        logger.info(f"Test results have been saved in: {test_results_path}")
+        logger.info(f"Test metric results have been saved in: {test_results_path}")
         
-        # TODO 测试结果可视化
+        # 测试结果可视化
         preds_flat = np.concatenate(preds_flat, axis = 0)
         trues_flat = np.concatenate(trues_flat, axis = 0) 
         self._test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png"))
         # logger.info(f"Test results: preds_flat: {preds_flat} \npreds_flat.shape: {preds_flat.shape}")
         # logger.info(f"Test results: trues_flat: {trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
-        logger.info(f"Test results visual saved in {test_results_path}")
+        logger.info(f"Test visual results saved in {test_results_path}")
+
         # log
         logger.info(f"{30 * '-'}")
-        logger.info(f"Experiment Finished!")
+        logger.info(f"Testing Finished!")
         logger.info(f"{30 * '-'}")
 
         return
 
-    def forecast(self, setting, load = False):
+    def forecast(self, setting, load: bool=True):
         """
         模型预测
         """
-        # logger.info(f"{30 * '='}")
-        # logger.info(f"Forecasting...")
-        # logger.info(f"{30 * '='}")
         # 构建预测数据集
         pred_data, pred_loader = self._get_data(flag='pred')
         # 模型加载
         if load:
-            logger.info("-" * 30)
-            logger.info("Loading pretrained model...")
-            logger.info("-" * 30)
             model_checkpoint_path = self._get_model_path(setting)
             self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-            logger.info(f"Pretrained model has loaded from {model_checkpoint_path}")
+            logger.info(f"{30 * '-'}")
+            logger.info("Pretrained model has loaded from:")
+            logger.info(f"{30 * '-'}")
+            logger.info(model_checkpoint_path)
         # 模型预测结果保存地址
         pred_results_path = self._get_predict_results_path(setting)
-        logger.info(f"Forecast results will be saved in: {pred_results_path}")
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Forecast results will be saved in:")
+        logger.info(f"{30 * '-'}")
+        logger.info(pred_results_path)
+        # 模型预测
+        logger.info(f"{30 * '-'}")
+        logger.info(f"Model start predicting...")
+        logger.info(f"{30 * '-'}")
         # 模型评估模式
         self.model.eval()
         # 模型预测
         preds = []
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
-                logger.info("-" * 30)
+                logger.info(f"{30 * '-'}")
                 logger.info(f"forecast step: {i}")
-                logger.info("-" * 30)
-                # logger.info("-" *20)
+                logger.info(f"{30 * '-'}")
                 # 数据预处理
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
@@ -691,9 +697,9 @@ class Exp_Forecast_TF(Exp_Basic):
         logger.info(f"preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
         
         # 最终预测值保存
-        logger.info("-" * 30)
+        logger.info(f"{30 * '-'}")
         logger.info(f"Forecasting result saving...")
-        logger.info("-" * 30)
+        logger.info(f"{30 * '-'}")
         np.save(os.path.join(pred_results_path, "prediction.npy"), preds) 
         preds_df.to_csv(
             os.path.join(pred_results_path, "prediction.csv"), 

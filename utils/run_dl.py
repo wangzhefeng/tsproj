@@ -22,7 +22,6 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting_tf import Exp_Forecast_TF
 from exp.exp_forecasting_dl import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
@@ -59,12 +58,12 @@ def args_parse():
     parser.add_argument('--predict_results', type=str, default='./saved_results/predict_results/', help='location of model models') 
     # forecasting task
     parser.add_argument('--seq_len', type=int, required=True, default=72, help='input sequence length')
-    parser.add_argument('--label_len', type=int, default=12, help='start token length')
-    parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
+    parser.add_argument('--label_len', type=int, required=True, default=12, help='start token length')
+    parser.add_argument('--pred_len', type=int, required=True, default=24, help='prediction sequence length')
     parser.add_argument('--train_ratio', type=float, required=True, default=0.7, help='train dataset ratio')
     parser.add_argument('--test_ratio', type=float, required=True, default=0.2, help='test dataset ratio')
     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
-    parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
+    parser.add_argument('--embed', type=str, required=True, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
     parser.add_argument('--scale', type=int, default=1, help = 'data transform')
     parser.add_argument('--inverse', type=int, default=1, help='inverse output data')
     # inputation task
@@ -153,13 +152,6 @@ def args_parse():
     # parser.add_argument('--add_noise', type=int, default=1, help='add noise')
     # parser.add_argument('--noise_amp', type=float, default=1, help='noise ampitude')
     # parser.add_argument('--noise_freq_percentage', type=float, default=0.05, help='noise frequency percentage')
-    # TODO RNNs
-    parser.add_argument("--pred_method", type=str, default="recursive_multi_step", 
-                        help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
-    parser.add_argument("--feature_size", type=int, default=1, help="feature size")
-    parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
-    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
-    parser.add_argument("--output_size", type=int, default=1, help="output size")
     # 命令行参数解析
     args = parser.parse_args()
 
@@ -199,7 +191,7 @@ def run(args):
             logger.info(f">>>>>>>>> start training: iter-{ii}: {training_setting}>>>>>>>>>>")
             logger.info(f"{180 * '='}")
             # 实例化
-            exp = Exp_Forecast_TF(args)
+            exp = Exp_Forecast(args)
             # 模型训练
             model, train_results = exp.train(training_setting)
             # 模型测试
@@ -213,7 +205,7 @@ def run(args):
         logger.info(f">>>>>>>>> start testing: iter-{ii}: {test_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型测试
         exp.test(test_setting, load = True)
 
@@ -225,7 +217,7 @@ def run(args):
         logger.info(f">>>>>>>>> start training: iter-{ii}: {final_training_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型训练
         model, train_results = exp.train(final_training_setting)
         logger.info(f"train_results: {train_results}")
@@ -238,7 +230,7 @@ def run(args):
         logger.info(f">>>>>>>>> start forecasting: {forecasting_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型预测
         exp.forecast(forecasting_setting, load = True)
     
