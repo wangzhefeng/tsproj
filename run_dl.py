@@ -197,7 +197,7 @@ def run(args):
             training_setting = setting + str(ii)
             # 模型训练
             logger.info(f">>>>>>>>> start training: iter-{ii}: {training_setting}>>>>>>>>>>")
-            exp = Exp_Forecast(args)
+            exp = Exp_Forecast_TF(args)
             train_results = exp.train(training_setting)
             # TODO 模型测试
             # logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
@@ -210,7 +210,7 @@ def run(args):
         test_setting = setting + str(ii)
         # 模型测试
         logger.info(f">>>>>>>>> start testing: iter-{ii}: {test_setting}>>>>>>>>>>")
-        exp = Exp_Forecast(args)
+        exp = Exp_Forecast_TF(args)
         exp.test(test_setting, load = True)
     
     # 模型最终训练
@@ -220,7 +220,7 @@ def run(args):
         final_training_setting = setting + str(ii)
         # 模型在所有训练数据上训练
         logger.info(f">>>>>>>>> start training: iter-{ii}: {final_training_setting}>>>>>>>>>>")
-        exp = Exp_Forecast(args)
+        exp = Exp_Forecast_TF(args)
         train_results = exp.train(final_training_setting)
         logger.info(f"train_results: {train_results}")
     
@@ -231,7 +231,7 @@ def run(args):
         forecasting_setting = setting + str(ii)
         # 模型预测
         logger.info(f">>>>>>>>> start forecasting: {forecasting_setting}>>>>>>>>>>")
-        exp = Exp_Forecast(args)
+        exp = Exp_Forecast_TF(args)
         exp.forecast(forecasting_setting, load = True)
         
     # empty cache
