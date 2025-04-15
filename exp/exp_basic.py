@@ -139,7 +139,7 @@ class Exp_Basic:
             logger.info("Use device CPU")
 
         return device
-    
+ 
     def _build_model(self):
         raise NotImplementedError
         return None
