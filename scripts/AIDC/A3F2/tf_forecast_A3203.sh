@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=A3201
+export CUDA_VISIBLE_DEVICES=2
+export LOG_NAME=A3203
 
 model_name=Transformer
 
@@ -7,16 +7,16 @@ model_name=Transformer
 python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
-    --is_training 1 \
-    --is_testing 1 \
-    --is_forecasting 0 \
+    --is_training 0 \
+    --is_testing 0 \
+    --is_forecasting 1 \
     --model_id all_df_72_24 \
     --model $model_name \
     --root_path ./dataset/electricity/A3F2/tf_data \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 201_load \
+    --target 203_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -31,8 +31,8 @@ python -u run_dl.py \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
-    --enc_in 10793 \
-    --dec_in 10793 \
+    --enc_in 10792 \
+    --dec_in 10792 \
     --e_layers 6 \
     --d_layers 6 \
     --factor 3 \
@@ -47,13 +47,13 @@ python -u run_dl.py \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-5 \
+    --learning_rate 1e-4 \
     --patience 7 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 1 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7 \

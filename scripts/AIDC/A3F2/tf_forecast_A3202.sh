@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=2
-export LOG_NAME=A3203
+export CUDA_VISIBLE_DEVICES=1
+export LOG_NAME=A3202
 
 model_name=Transformer
 
@@ -16,7 +16,7 @@ python -u run_dl.py \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 203_load \
+    --target 202_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -31,8 +31,8 @@ python -u run_dl.py \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
-    --enc_in 10793 \
-    --dec_in 10793 \
+    --enc_in 10792 \
+    --dec_in 10792 \
     --e_layers 6 \
     --d_layers 6 \
     --factor 3 \
@@ -47,13 +47,13 @@ python -u run_dl.py \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-5 \
+    --learning_rate 1e-4 \
     --patience 7 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 1 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7 \

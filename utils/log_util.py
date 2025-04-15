@@ -20,7 +20,7 @@ ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 日志路径
 LOG_NAME = os.environ.get("LOG_NAME")
 if sys.platform == "win32":
-    LOG_DIR = f"{ROOT_PATH}\logs\{LOG_NAME}"
+    LOG_DIR = f"{ROOT_PATH}\\logs\\{LOG_NAME}"
     os.makedirs(LOG_DIR, exist_ok=True)
     log_path = os.path.join(LOG_DIR, "service")
 else:

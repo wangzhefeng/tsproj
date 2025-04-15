@@ -21,12 +21,14 @@ if str(ROOT) not in sys.path:
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-from data_provider.data_loader import (
+from data_provider.data_loader_original import (
     Dataset_Custom, Dataset_ETT_hour,
     Dataset_ETT_minute, Dataset_M4,
     PSMSegLoader, MSLSegLoader,
     SMAPSegLoader, SMDSegLoader,
     SWATSegLoader, UEAloader, 
+)
+from data_provider.data_loader import ( 
     Dataset_Train,
     Dataset_Pred,
 )
