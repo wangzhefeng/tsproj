@@ -22,7 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting_dl import Exp_Forecast
+# from exp.exp_forecasting_tf import Exp_Forecast
+from exp.exp_forecast_dl_v2 import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
@@ -88,6 +89,8 @@ def args_parse():
     parser.add_argument('--distil', action='store_false', default=True,
                         help='whether to use distilling in encoder, using this argument means not using distilling')
     parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
+    parser.add_argument('--rev', type=int, default=1, help='whether to apply RevIN')
+    parser.add_argument('--padding', type=int, default=0, help='padding')
     parser.add_argument('--activation', type=str, default='gelu', help='activation')
     parser.add_argument('--channel_independence', type=int, default=1, help='0: channel dependence 1: channel independence for FreTS model')
     parser.add_argument('--decomp_method', type=str, default='moving_avg', help='method of series decompsition, only support moving_avg or dft_decomp')
@@ -167,7 +170,7 @@ def args_parse():
 
 def run(args):
     # setting record of experiments
-    setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_'.format(
+    setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}_{}_'.format(
         args.task_name,
         args.model_id,
         args.model,
@@ -187,6 +190,8 @@ def run(args):
         args.embed,
         args.distil,
         args.des,
+        args.root_path.split("/")[-2],
+        args.target,
         # TODO args.add_fredf,
     )
     
@@ -198,11 +203,11 @@ def run(args):
             logger.info(f">>>>>>>>> start training: iter-{ii}: {training_setting}>>>>>>>>>>")
             logger.info(f"{180 * '='}")
             # 实例化
-            exp = Exp_Forecast_TF(args)
+            exp = Exp_Forecast(args)
             # 模型训练
-            model, train_results = exp.train(training_setting)
+            model = exp.train(training_setting, ii)
             # 模型测试
-            exp.test(training_setting, load = False)
+            # exp.test(training_setting, load = False)
 
     # 模型测试
     if args.is_testing:
@@ -212,7 +217,7 @@ def run(args):
         logger.info(f">>>>>>>>> start testing: iter-{ii}: {test_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型测试
         exp.test(test_setting, load = True)
 
@@ -224,7 +229,7 @@ def run(args):
         logger.info(f">>>>>>>>> start training: iter-{ii}: {final_training_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型训练
         model, train_results = exp.train(final_training_setting)
         logger.info(f"train_results: {train_results}")
@@ -237,7 +242,7 @@ def run(args):
         logger.info(f">>>>>>>>> start forecasting: {forecasting_setting}>>>>>>>>>>")
         logger.info(f"{180 * '='}")
         # 实例化
-        exp = Exp_Forecast_TF(args)
+        exp = Exp_Forecast(args)
         # 模型预测
         exp.forecast(forecasting_setting, load = True)
     

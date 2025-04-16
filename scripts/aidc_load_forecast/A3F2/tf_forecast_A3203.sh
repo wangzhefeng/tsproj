@@ -4,12 +4,12 @@ export LOG_NAME=A3203
 model_name=Transformer
 
 # small model: aidc data
-python -u run_dl.py \
+python -u run_tf.py \
     --task_name long_term_forecast \
     --des 'Exp' \
-    --is_training 0 \
-    --is_testing 0 \
-    --is_forecasting 1 \
+    --is_training 1 \
+    --is_testing 1 \
+    --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
     --root_path ./dataset/electricity/A3F2/tf_data \
@@ -39,16 +39,18 @@ python -u run_dl.py \
     --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
+    --rev 1 \
+    --padding 0 \
     --output_attention 0 \
     --num_workers 0 \
-    --iters 20 \
-    --train_epochs 100 \
+    --iters 10 \
+    --train_epochs 20 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-4 \
-    --patience 7 \
+    --learning_rate 3e-4 \
+    --patience 14 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \

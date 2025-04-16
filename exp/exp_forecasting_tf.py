@@ -51,13 +51,13 @@ plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Exp_Forecast_TF(Exp_Basic):
+class Exp_Forecast(Exp_Basic):
 
     def __init__(self, args):
         logger.info(f"{40 * '-'}")
         logger.info("Initializing Experiment...")
         logger.info(f"{40 * '-'}")
-        super(Exp_Forecast_TF, self).__init__(args)
+        super(Exp_Forecast, self).__init__(args)
 
     def _build_model(self):
         """
@@ -375,7 +375,10 @@ class Exp_Forecast_TF(Exp_Basic):
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
                 # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
                 # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
-                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+                if i == 0:
+                    break
+                
+                if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
                     logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
                 # ------------------------------
@@ -465,8 +468,13 @@ class Exp_Forecast_TF(Exp_Basic):
                 batch_y = batch_y.float()
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
+                # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+                # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+                # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
+                # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
+                
                 if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
-                    logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
+                    logger.info(f"Valid Stop::Data batch_y.shape[1] not equal to (self.args.label_len + self.args.pred_len).")
                     break
                 # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
                 # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
