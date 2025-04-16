@@ -47,7 +47,7 @@ class Exp_Basic:
             # ------------------------------
             # Time Series Library models
             # ------------------------------
-            'TimesNet': TimesNet,
+            # 'TimesNet': TimesNet,
             'Autoformer': Autoformer,
             'Transformer': Transformer,
             # 'Nonstationary_Transformer': Nonstationary_Transformer,
@@ -57,7 +57,7 @@ class Exp_Basic:
             # 'LightTS': LightTS,
             # 'Reformer': Reformer,
             # 'ETSformer': ETSformer,
-            'PatchTST': PatchTST,
+            # 'PatchTST': PatchTST,
             # 'Pyraformer': Pyraformer,
             # 'MICN': MICN,
             # 'Crossformer': Crossformer,
@@ -82,7 +82,7 @@ class Exp_Basic:
             # "MLP": MLP,
             # "RNN": RNN,
             # "GRU": GRU,
-            "LSTM": LSTM,
+            # "LSTM": LSTM,
             # "BiLSTM": BiLSTM,
             # "Attention": Attention,
             # "CNN_Attention": CNN_Attention,

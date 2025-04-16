@@ -16,7 +16,7 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id ETTm1_96_96 \
     --model $model_name \
-    --root_path ./dataset/long_term_forecast/ETT-small \
+    --root_path ./dataset/ETT-small \
     --data_path ETTm1.csv \
     --data ETTm1 \
     --features MS \

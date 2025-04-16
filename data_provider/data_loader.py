@@ -60,9 +60,9 @@ class Dataset_Train(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         logger.info(f"Load and Preprocessing {self.flag} data...")
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
@@ -201,9 +201,9 @@ class Dataset_Pred(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         logger.info(f"Load and Preprocessing data...")
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")

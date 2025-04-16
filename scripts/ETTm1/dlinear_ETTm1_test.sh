@@ -12,7 +12,7 @@ python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 0 \
-    --is_testing 0 \
+    --is_testing 1 \
     --is_forecasting 1 \
     --model_id ETTm1_96_96 \
     --model $model_name \
