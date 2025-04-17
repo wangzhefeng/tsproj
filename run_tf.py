@@ -22,8 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting_tf import Exp_Forecast
-# from exp.exp_forecast_dl_v2 import Exp_Forecast
+from exp.exp_forecasting import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
@@ -249,7 +248,7 @@ def run(args):
     logger.info(f"{180 * '='}")
     logger.info(f">>>>>>>>>>>> Empty cuda cache and memory pecices...")
     logger.info(f"{180 * '='}")
-    torch_gc(gpu_type=args.gpu_type, cuda_device=exp.device)
+    torch_gc(gpu_type=args.gpu_type, device=exp.device)
 
 
 

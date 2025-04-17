@@ -20,8 +20,9 @@ if str(ROOT) not in sys.path:
 
 from torch.utils.data import DataLoader
 
-from data_provider.data_loader import ( 
+from data_provider.data_loader import (
     Dataset_Train,
+    Dataset_Test,
     Dataset_Pred,
 )
 from utils.log_util import logger
@@ -37,7 +38,7 @@ def data_provider(args, flag):
     # 是否对时间戳进行编码
     timeenc = 0 if args.embed != 'timeF' else 1
     # 区别在 test/pred 和 train/valid 任务下是否进行 shuffle 数据
-    shuffle_flag = False if flag in ['test', 'pred'] else True
+    shuffle_flag = False #if flag in ['test', 'pred'] else True
     # 是否丢弃最后一个 batch
     drop_last = False
     # 数据集参数
@@ -46,11 +47,12 @@ def data_provider(args, flag):
         Data = Dataset_Train
     elif flag == 'test':
         batch_size = args.batch_size
-        Data = Dataset_Train
+        Data = Dataset_Test
     elif flag == 'pred':
         batch_size = 1
         Data = Dataset_Pred
     # 构建 Dataset 和 DataLoader
+    # Dataset
     data_set = Data(
         args = args,
         root_path = args.root_path,
@@ -67,6 +69,7 @@ def data_provider(args, flag):
         cols = None,
     )
     # logger.info(f"{flag.capitalize()} dataset length: {len(data_set)}")
+    # DataLoader
     data_loader = DataLoader(
         data_set,
         batch_size = batch_size,

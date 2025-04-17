@@ -100,16 +100,16 @@ class Dataset_Train(Dataset):
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
-        # TODO 训练/测试/验证数据集分割: 选取当前flag下的数据
+        # 训练/测试/验证数据集分割: 选取当前 flag 下的数据
         # TODO 数据分割比例
-        all_train = int(len(df_raw))                          # 1.0
+        all_train = int(len(df_raw))                   # 1.0
         num_train = int(len(df_raw) * self.args.train_ratio)  # 0.7
         num_test = int(len(df_raw) * self.args.test_ratio)    # 0.0
-        num_vali = len(df_raw) - num_train - num_test         # 0.3
+        num_vali = len(df_raw) - num_train - num_test  # 0.3
         logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        # 数据分割索引
+        # TODO 数据分割索引
         border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        # TODO border2s = [num_train, num_train + num_vali,     len(df_raw)]
+        # border2s = [num_train, num_train + num_vali,     len(df_raw)]
         border2s = [all_train, num_train + num_vali,     len(df_raw)]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
@@ -159,11 +159,15 @@ class Dataset_Train(Dataset):
     def __getitem__(self, index):
         # TODO data_x 索引
         if self.flag == 'test':
+            # TODO v1
+            # s_begin = index
+            # TODO v2
             s_begin = index * self.pred_len
         else:
-            # TODO train
+            # TODO v1
+            # s_begin = index
+            # TODO v2
             s_begin = index * self.pred_len
-            # TODO s_begin = index
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
@@ -260,13 +264,13 @@ class Dataset_Test(Dataset):
             df_data = df_raw[[self.target]]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         # 训练/测试/验证数据集分割: 选取当前flag下的数据
-        # 数据分割比例
+        # TODO 数据分割比例
         all_train = int(len(df_raw))                   # 1.0
         num_train = int(len(df_raw) * 1.0)             # 1.0
         num_test = int(len(df_raw) * 0.0)              # 0.0
         num_vali = len(df_raw) - num_train - num_test  # 0.0
         logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        # 数据分割索引
+        # TODO 数据分割索引
         border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         # border2s = [num_train, num_train + num_vali,     len(df_raw)]
         border2s = [all_train, num_train + num_vali,     len(df_raw)]
@@ -318,15 +322,15 @@ class Dataset_Test(Dataset):
     def __getitem__(self, index):
         # TODO data_x 索引
         if self.flag == 'test':
-            # TODO test v2
-            s_begin = index * self.pred_len
-            # TODO test v1
+            # TODO v1
             # s_begin = index
+            # TODO v2
+            s_begin = index * self.pred_len
         else:
-            # TODO train v2
-            s_begin = index * self.pred_len
-            # TODO train v1
+            # TODO v1
             # s_begin = index
+            # TODO v2
+            s_begin = index * self.pred_len 
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len

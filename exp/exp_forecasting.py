@@ -29,10 +29,8 @@ import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
-from data_provider.data_factory_v2 import data_provider
-# from data_provider.data_factory import data_provider
-from utils.model_tools_v2 import adjust_learning_rate, EarlyStopping
-# from utils.model_tools import adjust_learning_rate, EarlyStopping
+from data_provider.data_factory import data_provider
+from utils.model_tools import adjust_learning_rate, EarlyStopping
 # metrics
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics_dl import metric, DTW
@@ -714,7 +712,7 @@ class Exp_Forecast(Exp_Basic):
         # ------------------------------
         # checkpoint 保存路径
         # ------------------------------
-        best_model_path = self._get_model_path(setting)
+        model_checkpoint_path = self._get_model_path(setting)
         # ------------------------------
         # 测试结果保存地址
         # ------------------------------
@@ -728,7 +726,7 @@ class Exp_Forecast(Exp_Basic):
         train_steps = len(train_loader)
         logger.info(f"train_steps: {train_steps}")
         # 模型优化器
-        model_optim = self._select_optimizer()
+        optimizer = self._select_optimizer()
         # 模型损失函数
         criterion = self._select_criterion()
         # 早停类实例
@@ -750,7 +748,7 @@ class Exp_Forecast(Exp_Basic):
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
-                model_optim.zero_grad()
+                optimizer.zero_grad()
                 # 数据预处理
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
@@ -816,7 +814,7 @@ class Exp_Forecast(Exp_Basic):
                 # 后向传播、参数优化更新
                 # ------------------------------
                 loss.backward()
-                model_optim.step()
+                optimizer.step()
             # 日志打印: 训练 epoch、每个 epoch 训练的用时
             logger.info(f"Epoch: {epoch + 1}, Cost time: {time.time() - epoch_time}")
             # 日志打印：训练 epoch、每个 epoch 训练后的 train_loss、vali_loss、test_loss
@@ -827,12 +825,19 @@ class Exp_Forecast(Exp_Basic):
             val_losses.append(vali_loss)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")#, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存
-            early_stopping(vali_loss, self.model, best_model_path)
+            early_stopping(
+                vali_loss, 
+                epoch=epoch, 
+                model=self.model, 
+                optimizer=optimizer, 
+                scheduler=None, 
+                model_path=model_checkpoint_path,
+            )
             if early_stopping.early_stop:
-                logger.info(f"Epoch: {epoch + 1}, Early stopping...")
+                logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
                 break
             # 学习率调整
-            adjust_learning_rate(model_optim, epoch + 1, self.args)
+            adjust_learning_rate(optimizer, epoch + 1, self.args)
         """
         # TODO ------------------------------
         # TODO ------------------------------
@@ -864,7 +869,7 @@ class Exp_Forecast(Exp_Basic):
         # 模型加载
         # ------------------------------
         logger.info("Loading best model...")
-        self.model.load_state_dict(torch.load(best_model_path))
+        self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
         
         return self.model
 
@@ -977,7 +982,7 @@ class Exp_Forecast(Exp_Basic):
         if load:
             logger.info("Loading best model...")
             best_model_path = self._get_model_path(setting)
-            self.model.load_state_dict(torch.load(best_model_path))
+            self.model.load_state_dict(torch.load(best_model_path)["model"])
         # ------------------------------
         # 测试结果保存地址
         # ------------------------------
