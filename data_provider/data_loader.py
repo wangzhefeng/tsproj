@@ -1,10 +1,27 @@
+# -*- coding: utf-8 -*-
+
+# ***************************************************
+# * File        : data_loader.py
+# * Author      : Zhefeng Wang
+# * Email       : zfwang7@gmail.com
+# * Date        : 2025-04-17
+# * Version     : 1.0.041713
+# * Description : description
+# * Link        : link
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
+# * TODO        : 1.
+# ***************************************************
+
+__all__ = []
+
 # python libraries
 import os
 import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 import warnings
+warnings.filterwarnings('ignore')
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -14,7 +31,8 @@ from utils.augmentation import run_augmentation_single
 from utils.timefeatures import time_features
 from utils.log_util import logger
 
-warnings.filterwarnings('ignore')
+# global variable
+LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Dataset_Train(Dataset):
@@ -65,7 +83,7 @@ class Dataset_Train(Dataset):
         logger.info(f"{40 * '-'}")
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
+        logger.info(f"Train data shape: {df_raw.shape}")
         # 缺失值处理
         # df_raw.dropna(axis=0, how='any', inplace=True)
         df_raw.dropna(axis=1, how='any', inplace=True)
@@ -75,6 +93,7 @@ class Dataset_Train(Dataset):
         cols.remove(self.target)
         cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
+        logger.info(f"Train data shape after feature order: {df_raw.shape}")
         # 根据预测任务进行特征筛选
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
@@ -82,18 +101,18 @@ class Dataset_Train(Dataset):
             df_data = df_raw[[self.target]]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         # TODO 训练/测试/验证数据集分割: 选取当前flag下的数据
-        # 数据分割比例
-        all_train = int(len(df_raw))
-        num_train = int(len(df_raw) * self.args.train_ratio)
-        num_test = int(len(df_raw) * self.args.test_ratio)
-        num_vali = len(df_raw) - num_train - num_test
+        # TODO 数据分割比例
+        all_train = int(len(df_raw))                          # 1.0
+        num_train = int(len(df_raw) * self.args.train_ratio)  # 0.7
+        num_test = int(len(df_raw) * self.args.test_ratio)    # 0.0
+        num_vali = len(df_raw) - num_train - num_test         # 0.3
         logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
         # 数据分割索引
         border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali,     len(df_raw)]
+        # TODO border2s = [num_train, num_train + num_vali,     len(df_raw)]
+        border2s = [all_train, num_train + num_vali,     len(df_raw)]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
-
         # 数据标准化
         self.scaler = StandardScaler()
         if self.scale:
@@ -101,28 +120,32 @@ class Dataset_Train(Dataset):
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
         else:
-            data = df_data.values 
-        # logger.info(f"Train data after standardization: \n{data} \ndata shape: {data.shape}") 
- 
+            data = df_data.values
+        logger.info(f"Train data shape after standardization: {data.shape}") 
         # 时间特征处理
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp['date'])
         if self.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
-            df_stamp['minute'] = df_stamp.minute.map(lambda x: x // 15)
+            df_stamp['month'] = df_stamp['date'].apply(lambda row: row.month, 1)
+            df_stamp['day'] = df_stamp['date'].apply(lambda row: row.day, 1)
+            df_stamp['weekday'] = df_stamp['date'].apply(lambda row: row.weekday(), 1)
+            df_stamp['hour'] = df_stamp['date'].apply(lambda row: row.hour, 1)
+            df_stamp['minute'] = df_stamp['date'].apply(lambda row: row.minute, 1)
+            if self.freq == "15min":
+                df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
             data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
-        # logger.info(f"Forecast input data_stamp: \n{data_stamp} \ndata_stamp shape: {data_stamp.shape}")
-
+        logger.info(f"Forecast input timestamp features shape: {data_stamp.shape}")
         # 数据切分
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
+        # TODO
+        # if self.inverse:
+        #     self.data_y = df_data.values[border1:border2]
+        # else:
+        #     self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
         # 数据增强
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
@@ -139,7 +162,8 @@ class Dataset_Train(Dataset):
             s_begin = index * self.pred_len
         else:
             # TODO train
-            s_begin = index
+            s_begin = index * self.pred_len
+            # TODO s_begin = index
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
@@ -150,6 +174,177 @@ class Dataset_Train(Dataset):
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
+        # TODO
+        # if self.inverse:
+        #     seq_y = np.concatenate(
+        #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
+        #         axis = 0
+        #     )
+        # else:
+        #     seq_y = self.data_y[r_begin:r_end]
+        seq_x_mark = self.data_stamp[s_begin:s_end]
+        seq_y_mark = self.data_stamp[r_begin:r_end]
+
+        return seq_x, seq_y, seq_x_mark, seq_y_mark
+
+    def __len__(self):
+        return len(self.data_x) - self.seq_len - self.pred_len + 1
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
+
+
+class Dataset_Test(Dataset):
+    
+    def __init__(self, 
+                 args,
+                 root_path, 
+                 data_path,
+                 flag='train', 
+                 size=None,  # size [seq_len, label_len, pred_len]
+                 features='MS', 
+                 target='OT',
+                 freq='15min',
+                 timeenc=0,
+                 seasonal_patterns=None,
+                 scale=True,
+                 inverse=True,
+                 cols=None):
+        self.args = args
+        # data file path
+        self.root_path = root_path
+        self.data_path = data_path
+        # data type
+        self.flag = flag
+        assert flag in ['test']
+        type_map = {'test': 0}
+        self.set_type = type_map[flag]
+        # data size
+        self.seq_len = 24 * 4 * 4 if size is None else size[0]
+        self.label_len = 24 * 4 if size is None else size[1]
+        self.pred_len = 24 * 4 if size is None else size[2]
+        # data freq, feature columns, and target
+        self.features = features
+        self.target = target
+        self.freq = freq
+        self.timeenc = timeenc
+        self.seasonal_patterns = seasonal_patterns
+        # data preprocess
+        self.scale = scale
+        self.inverse = inverse
+        self.cols = cols
+        # data read
+        self.__read_data__()
+
+    def __read_data__(self):
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Load and Preprocessing {self.flag} data...")
+        logger.info(f"{40 * '-'}")
+        # 数据文件(CSV)
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        logger.info(f"Train data shape: {df_raw.shape}")
+        # 缺失值处理
+        # df_raw.dropna(axis=0, how='any', inplace=True)
+        df_raw.dropna(axis=1, how='any', inplace=True)
+        logger.info(f"Train data shape after drop na: {df_raw.shape}")
+        # 数据特征排序
+        cols = list(df_raw.columns)
+        cols.remove(self.target)
+        cols.remove('date')
+        df_raw = df_raw[['date'] + cols + [self.target]]
+        logger.info(f"Train data shape after feature order: {df_raw.shape}")
+        # 根据预测任务进行特征筛选
+        if self.features == 'M' or self.features == 'MS':
+            df_data = df_raw[df_raw.columns[1:]]
+        elif self.features == 'S':
+            df_data = df_raw[[self.target]]
+        logger.info(f"Train data shape after feature selection: {df_data.shape}")
+        # 训练/测试/验证数据集分割: 选取当前flag下的数据
+        # 数据分割比例
+        all_train = int(len(df_raw))                   # 1.0
+        num_train = int(len(df_raw) * 1.0)             # 1.0
+        num_test = int(len(df_raw) * 0.0)              # 0.0
+        num_vali = len(df_raw) - num_train - num_test  # 0.0
+        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
+        # 数据分割索引
+        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        # border2s = [num_train, num_train + num_vali,     len(df_raw)]
+        border2s = [all_train, num_train + num_vali,     len(df_raw)]
+        border1, border2 = border1s[self.set_type], border2s[self.set_type]
+        logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
+        # 数据标准化
+        self.scaler = StandardScaler()
+        if self.scale:
+            train_data = df_data[border1s[0]:border2s[0]]
+            self.scaler.fit(train_data.values)
+            data = self.scaler.transform(df_data.values)
+        else:
+            data = df_data.values
+        logger.info(f"Train data shape after standardization: {data.shape}") 
+        # 时间特征处理
+        df_stamp = df_raw[['date']][border1:border2]
+        df_stamp['date'] = pd.to_datetime(df_stamp['date'])
+        if self.timeenc == 0:
+            df_stamp['month'] = df_stamp['date'].apply(lambda row: row.month, 1)
+            df_stamp['day'] = df_stamp['date'].apply(lambda row: row.day, 1)
+            df_stamp['weekday'] = df_stamp['date'].apply(lambda row: row.weekday(), 1)
+            df_stamp['hour'] = df_stamp['date'].apply(lambda row: row.hour, 1)
+            df_stamp['minute'] = df_stamp['date'].apply(lambda row: row.minute, 1)
+            if self.freq == "15min":
+                df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
+            data_stamp = df_stamp.drop(['date'], axis=1).values
+        elif self.timeenc == 1:
+            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
+            data_stamp = data_stamp.transpose(1, 0)
+        logger.info(f"Forecast input timestamp features shape: {data_stamp.shape}")
+        # 数据切分
+        self.data_x = data[border1:border2]
+        self.data_y = data[border1:border2]
+        # TODO
+        # if self.inverse:
+        #     self.data_y = df_data.values[border1:border2]
+        # else:
+        #     self.data_y = data[border1:border2]
+        self.data_stamp = data_stamp
+        # 数据增强
+        if self.set_type == 0 and self.args.augmentation_ratio > 0:
+            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
+                self.data_x, self.data_y, self.args
+            )
+        # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
+        # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
+        # logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
+
+    def __getitem__(self, index):
+        # TODO data_x 索引
+        if self.flag == 'test':
+            # TODO test v2
+            s_begin = index * self.pred_len
+            # TODO test v1
+            # s_begin = index
+        else:
+            # TODO train v2
+            s_begin = index * self.pred_len
+            # TODO train v1
+            # s_begin = index
+        s_end = s_begin + self.seq_len
+        # data_y 索引
+        r_begin = s_end - self.label_len
+        r_end = r_begin + self.label_len + self.pred_len
+        # logger.info(f"debug::index: {index}")
+        # logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
+        # logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
+        # 数据索引分割
+        seq_x = self.data_x[s_begin:s_end]
+        seq_y = self.data_y[r_begin:r_end]
+        # TODO
+        # if self.inverse:
+        #     seq_y = np.concatenate(
+        #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
+        #         axis = 0
+        #     )
+        # else:
+        #     seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
@@ -218,7 +413,7 @@ class Dataset_Pred(Dataset):
             cols = list(df_raw.columns)
             cols.remove(self.target)
             cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]] 
+        df_raw = df_raw[['date'] + cols + [self.target]]
         logger.info(f"Train data after feature order: \n{df_raw.head()} \ndata shape: {df_raw.shape}")  
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':

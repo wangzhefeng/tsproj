@@ -8,7 +8,7 @@ python -u run_tf.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
-    --is_testing 0 \
+    --is_testing 1 \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
@@ -43,13 +43,13 @@ python -u run_tf.py \
     --padding 0 \
     --output_attention 0 \
     --num_workers 0 \
-    --iters 10 \
-    --train_epochs 20 \
+    --iters 1 \
+    --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 3e-4 \
+    --learning_rate 1e-5 \
     --patience 14 \
     --lradj type1 \
     --scale 1 \

@@ -59,22 +59,24 @@ def plot_results_multiple(preds, trues, preds_len: int, title: str = "results_mu
     plt.savefig(f'images/{title}_results_multiple.png')
 
 
-def test_result_visual(trues, preds=None, path='./pic/test.pdf'):
+def test_result_visual(preds, trues, path='./pic/test.pdf'):
     """
     Results visualization
     """
     # 设置绘图风格
     # plt.style.use('ggplot')
     # 画布
-    fig = plt.figure(figsize = (25, 8))
+    fig = plt.figure(figsize = (25, 5))
     # 创建折线图
-    plt.plot(trues, label='Trues', linewidth=1)  # 实际值
-    plt.plot(preds, label='Preds', linewidth=1, linestyle="--")  # 预测值
+    plt.plot(trues, lw=1, label='Trues')
+    plt.plot(preds, lw=1, ls="--", label='Preds')
     # 增强视觉效果
     plt.legend()
-    plt.xlabel("日期时间")
+    plt.xlabel("Time")
     plt.ylabel("Value")
-    plt.title('实际值 vs 预测值')
+    # plt.ylim(5, 20)
+    # plt.title('实际值 vs 预测值')
+    plt.title('Trues vs Preds')
     plt.grid(True)
     plt.savefig(path, bbox_inches='tight')
     plt.show();

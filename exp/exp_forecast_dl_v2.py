@@ -24,16 +24,16 @@ import time
 import random
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 
 from data_provider.data_factory_v2 import data_provider
-from models import Transformer
+from models import Transformer_v2
 from utils.model_tools_v2 import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
 from utils.metrics_dl import metric, DTW
-from utils.visual import test_result_visual
+from utils.plot_results import test_result_visual
+from utils.plot_losses import plot_losses
 
 from utils.log_util import logger
 
@@ -77,7 +77,7 @@ class Exp_Forecast:
             logger.info('Use CPU')
             
         # 构建 Transformer 模型
-        model = Transformer.Model(self.args).float().to(device)
+        model = Transformer_v2.Model(self.args).float().to(device)
         
         # 多 GPU 训练
         if self.args.use_multi_gpu:
@@ -89,102 +89,24 @@ class Exp_Forecast:
 
         return model, device
 
-    def _get_data(self, flag, pre_data=None):
-        """
-        数据集构建
-        """
-        data_set, data_loader = data_provider(self.args, flag, pre_data)
-        
-        return data_set, data_loader
-
-    def _select_criterion(self, loss_name = "MSE"):
-        """
-        评价指标
-        """
-        if loss_name == "MSE":
-            return nn.MSELoss()
-        elif loss_name == "MAPE":
-            return mape_loss()
-        elif loss_name == "MASE":
-            return mase_loss()
-        elif loss_name == "SMAPE":
-            return smape_loss()
-
-    def _select_optimizer(self):
-        """
-        优化器
-        """
-        model_optim = torch.optim.Adam(
-            self.model.parameters(), 
-            lr = self.args.learning_rate
-        )
-        
-        return model_optim
-
-    def _get_model_path(self, setting):
-        """
-        模型保存路径
-        """
-        # 模型保存路径
-        model_path = os.path.join(self.args.checkpoints, setting)
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        # 最优模型保存路径
-        best_model_path = f"{model_path}/checkpoint.pth"
-        
-        return best_model_path
-
-    def _get_test_results_path(self, setting):
-        """
-        结果保存路径
-        """
-        results_path = os.path.join(self.args.test_results, setting + "/")
-        if not os.path.exists(results_path):
-            os.makedirs(results_path)
-        
-        return results_path
-
-    def _get_predict_results_path(self, setting):
-        """
-        结果保存路径
-        """
-        results_path = os.path.join(self.args.predict_results, setting + "/")
-        if not os.path.exists(results_path):
-            os.makedirs(results_path)
-        
-        return results_path
-
-    def _test_results_save(self, preds, trues, setting, test_results_path):
-        # 计算测试结果评价指标
-        mse, rmse, mae, mape, accuracy, mspe = metric(preds, trues)
-        dtw = DTW(preds, trues) if self.args.use_dtw else -999
-        logger.info(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, accuracy:{accuracy}, mspe:{mspe}")
-        # result1 保存
-        f = open(os.path.join(test_results_path, "result_forecast.txt"), 'a')
-        f.write(setting + "  \n")
-        f.write(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, accuracy:{accuracy}, mspe:{mspe}")
-        f.write('\n')
-        f.write('\n')
-        f.close()
-        # result2 保存
-        np.save(test_results_path + 'metrics.npy', np.array([mae, mse, rmse, mape, accuracy, mspe, dtw]))
-        np.save(test_results_path + 'preds.npy', preds)
-        np.save(test_results_path + 'trues.npy', trues)
-
-    def train(self, setting, ii):
+    def train_v2(self, setting, ii):
         """
         模型训练
         """
         # ------------------------------
         # 数据集构建
         # ------------------------------
-        train_data, train_loader = self._get_data(flag='train', pre_data=None)
-        vali_data, vali_loader = self._get_data(flag='val', pre_data=None)
-        # test_data, test_loader = self._get_data(flag='test', pre_data=None)
+        train_data, train_loader = self._get_data(flag='train')
+        vali_data, vali_loader = self._get_data(flag='val')
+        # test_data, test_loader = self._get_data(flag='test')
         # ------------------------------
         # checkpoint 保存路径
         # ------------------------------
         best_model_path = self._get_model_path(setting)
+        # ------------------------------
+        # 测试结果保存地址
+        # ------------------------------
+        test_results_path = self._get_test_results_path(setting)
         # ------------------------------
         # 模型训练
         # ------------------------------
@@ -201,6 +123,7 @@ class Exp_Forecast:
         early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
         # 训练、验证结果收集
         # train_result = {}
+        train_losses, val_losses = [], []
         # 分 epoch 训练
         for epoch in range(self.args.train_epochs):
             # time: epoch 模型训练开始时间
@@ -286,8 +209,10 @@ class Exp_Forecast:
             logger.info(f"Epoch: {epoch + 1}, Cost time: {time.time() - epoch_time}")
             # 日志打印：训练 epoch、每个 epoch 训练后的 train_loss、vali_loss、test_loss
             train_loss = np.average(train_loss)
-            vali_loss, preds_flat_vali, trues_flat_vali = self.vali(vali_data, vali_loader, criterion, setting, ii, epoch)
-            # test_loss = self.vali(test_loader, criterion)
+            vali_loss, preds_flat_vali, trues_flat_vali = self.vali_v2(vali_data, vali_loader, criterion, setting, ii, epoch)
+            # test_loss, preds_flat_test, trues_flat_test = self.vali_v2(test_data, test_loader, criterion, setting, ii, epoch)
+            train_losses.append(train_loss)
+            val_losses.append(vali_loss)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")#, Test Loss: {test_loss:.7f}")
             # 早停机制、模型保存
             early_stopping(vali_loss, self.model, best_model_path)
@@ -311,10 +236,18 @@ class Exp_Forecast:
             preds_flat = np.concatenate(preds, axis = 0)
             trues_flat = np.concatenate(trues, axis = 0)
             predict_results_path = self._get_predict_results_path(setting)
-            test_result_visual(trues_flat, preds_flat, path = os.path.join(predict_results_path, f"load_prediction-train-{ii}-{epoch_idx}.png"))
+            test_result_visual(preds_flat, trues_flat, path = os.path.join(predict_results_path, f"load_prediction-train-{ii}-{epoch_idx}.png"))
         # TODO ------------------------------
         # TODO ------------------------------
         """
+        # plot losses
+        plot_losses(
+            train_epochs=self.args.train_epochs, 
+            train_losses=train_losses, 
+            val_losses=val_losses, 
+            label="loss",
+            results_path=test_results_path
+        )
         # ------------------------------
         # 模型加载
         # ------------------------------
@@ -323,7 +256,7 @@ class Exp_Forecast:
         
         return self.model
 
-    def vali(self, vali_data, vali_loader, criterion, setting, ii, epoch):
+    def vali_v2(self, vali_data, vali_loader, criterion, setting, ii, epoch):
         """
         模型验证
         """
@@ -407,7 +340,7 @@ class Exp_Forecast:
         logger.info(f"preds_flat.shape: {len(preds_flat)}")
         logger.info(f"trues_flat.shape: {len(trues_flat)}")
         predict_results_path = self._get_predict_results_path(setting)
-        test_result_visual(trues_flat, preds_flat, path = os.path.join(predict_results_path, f"load_prediction-vali-{ii}-{epoch}.png"))
+        test_result_visual(preds_flat, trues_flat, path = os.path.join(predict_results_path, f"load_prediction-vali-{ii}-{epoch}.png"))
         # TODO ------------------------------
         # TODO ------------------------------
         """
@@ -418,14 +351,14 @@ class Exp_Forecast:
         
         return total_loss, preds_flat, trues_flat
 
-    def test(self, setting, load = True):
+    def test_v2(self, setting, load = True):
         """
         模型测试
         """
         # ------------------------------
         # 数据集构建
         # ------------------------------
-        test_data, test_loader = self._get_data(flag='test', pre_data=None)
+        test_data, test_loader = self._get_data(flag='test')
         # ------------------------------
         # 模型加载
         # ------------------------------
@@ -498,7 +431,7 @@ class Exp_Forecast:
                         inputs = test_data.inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)).reshape(inputs.shape)
                     gt = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     pd = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
-                    test_result_visual(gt, pd, path = os.path.join(test_results_path, str(i) + '.pdf'))
+                    test_result_visual(pd, gt, path = os.path.join(test_results_path, str(i) + '.pdf'))
                 # 预测结果收集
                 preds.append(pred)
                 trues.append(true)
@@ -518,7 +451,7 @@ class Exp_Forecast:
         trues_flat = np.concatenate(trues, axis = 0)
         logger.info(f"preds_flat.shape: {len(preds_flat)}")
         logger.info(f"trues_flat.shape: {len(trues_flat)}")
-        test_result_visual(trues_flat, preds_flat, path = os.path.join(predict_results_path, "load_prediction.png"))
+        test_result_visual(preds_flat, trues_flat, path = os.path.join(predict_results_path, "load_prediction.png"))
         # ------------------------------
         # 结果保存
         # ------------------------------

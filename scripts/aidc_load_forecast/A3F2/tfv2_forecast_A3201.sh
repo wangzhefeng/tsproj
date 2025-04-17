@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=2
-export LOG_NAME=A3203
+export CUDA_VISIBLE_DEVICES=0
+export LOG_NAME=A3201
 
-model_name=Transformer
+model_name=Transformer_v2
 
 # small model: aidc data
 python -u run_tf.py \
@@ -16,7 +16,7 @@ python -u run_tf.py \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 203_load \
+    --target 201_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -36,7 +36,7 @@ python -u run_tf.py \
     --e_layers 12 \
     --d_layers 12 \
     --factor 3 \
-    --n_heads 4 \
+    --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
     --rev 1 \
@@ -49,7 +49,7 @@ python -u run_tf.py \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-4 \
+    --learning_rate 1e-5 \
     --patience 14 \
     --lradj type1 \
     --scale 1 \

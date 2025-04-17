@@ -28,6 +28,7 @@ from models import (
     Autoformer, 
     PatchTST,
     TimesNet, 
+    Transformer_v2,
     Transformer,
     LSTM,
 )
@@ -49,6 +50,7 @@ class Exp_Basic:
             # ------------------------------
             # 'TimesNet': TimesNet,
             'Autoformer': Autoformer,
+            'Transformer_v2': Transformer_v2,
             'Transformer': Transformer,
             # 'Nonstationary_Transformer': Nonstationary_Transformer,
             'DLinear': DLinear,

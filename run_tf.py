@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-# from exp.exp_forecasting_tf import Exp_Forecast
-from exp.exp_forecast_dl_v2 import Exp_Forecast
+from exp.exp_forecasting_tf import Exp_Forecast
+# from exp.exp_forecast_dl_v2 import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
@@ -100,7 +100,6 @@ def args_parse():
     parser.add_argument('--down_sampling_method', type=str, default=None, help='down sampling method, only support avg, max, conv')
     parser.add_argument('--seg_len', type=int, default=96, help='the length of segmen-wise iteration of SegRNN') 
     parser.add_argument('--embed_type', type=int, default=0, help='0: value embedding + temporal embedding + positional embedding 1: value embedding + positional embedding')
-    # TODO parser.add_argument('--rev', type=int, default=1, help='whether to apply RevIN')
     parser.add_argument('--output_attention', type=int, default=0, help='whether to output attention in ecoder')
     # optimization
     parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
@@ -205,7 +204,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型训练
-            model = exp.train(training_setting, ii)
+            model = exp.train_v2(training_setting, ii)
             # 模型测试
             # exp.test(training_setting, load = False)
 
@@ -219,7 +218,7 @@ def run(args):
         # 实例化
         exp = Exp_Forecast(args)
         # 模型测试
-        exp.test(test_setting, load = True)
+        exp.test_v2(test_setting, load = True)
 
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
