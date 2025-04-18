@@ -57,17 +57,6 @@ def get_lgb_train_test_data(train_path, test_path, weight_paths = []):
         return X_train, y_train, X_test, y_test, lgb_train, lgb_eval
 
 
-# TODO
-class TimeseriesData:
-    pass
-
-
-# TODO
-class TimeseriesDataLoader:
-    pass
-
-
-
 
 # 测试代码 main 函数
 def main():

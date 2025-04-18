@@ -26,7 +26,7 @@ python -u run_tf.py \
     --label_len 12 \
     --pred_len 24 \
     --train_ratio 0.7 \
-    --test_ratio 0.2 \
+    --test_ratio 0.0 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
@@ -36,7 +36,7 @@ python -u run_tf.py \
     --e_layers 12 \
     --d_layers 12 \
     --factor 3 \
-    --n_heads 4 \
+    --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
     --rev 1 \
@@ -49,7 +49,7 @@ python -u run_tf.py \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-4 \
+    --learning_rate 1e-5 \
     --patience 14 \
     --lradj type1 \
     --scale 1 \

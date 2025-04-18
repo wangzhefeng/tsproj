@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=0
 export LOG_NAME=A3204
 
-model_name=Transformer
+model_name=Transformer_v2
 
 # small model: aidc data
 python -u run_tf.py \

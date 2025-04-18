@@ -26,7 +26,7 @@ python -u run_tf.py \
     --label_len 12 \
     --pred_len 24 \
     --train_ratio 0.7 \
-    --test_ratio 0.2 \
+    --test_ratio 0.0 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \

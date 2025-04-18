@@ -26,15 +26,15 @@ python -u run_tf.py \
     --label_len 12 \
     --pred_len 24 \
     --train_ratio 0.7 \
-    --test_ratio 0.2 \
+    --test_ratio 0.0 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
     --enc_in 10792 \
     --dec_in 10792 \
-    --e_layers 6 \
-    --d_layers 6 \
+    --e_layers 12 \
+    --d_layers 12 \
     --factor 3 \
     --n_heads 1 \
     --c_out 1 \

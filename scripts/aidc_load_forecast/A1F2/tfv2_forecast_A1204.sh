@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=3
-export LOG_NAME=A3204
+export CUDA_VISIBLE_DEVICES=0
+export LOG_NAME=A1204
 
-model_name=Transformer
+model_name=Transformer_v2
 
 # small model: aidc data
 python -u run_tf.py \
@@ -12,7 +12,7 @@ python -u run_tf.py \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
-    --root_path ./dataset/electricity/A3F2/tf_data \
+    --root_path ./dataset/electricity/A1F2/tf_data \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
@@ -31,8 +31,8 @@ python -u run_tf.py \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
-    --enc_in 10792 \
-    --dec_in 10792 \
+    --enc_in 21841 \
+    --dec_in 21841 \
     --e_layers 12 \
     --d_layers 12 \
     --factor 3 \

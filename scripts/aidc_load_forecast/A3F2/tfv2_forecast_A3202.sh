@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=3
-export LOG_NAME=A3204
+export CUDA_VISIBLE_DEVICES=0
+export LOG_NAME=A3202
 
-model_name=Transformer
+model_name=Transformer_v2
 
 # small model: aidc data
 python -u run_tf.py \
@@ -16,7 +16,7 @@ python -u run_tf.py \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 204_load \
+    --target 202_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
