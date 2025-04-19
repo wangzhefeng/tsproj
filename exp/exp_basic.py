@@ -24,12 +24,13 @@ if ROOT not in sys.path:
 import torch
 
 from models import (
-    DLinear, 
-    Autoformer, 
-    PatchTST,
-    TimesNet, 
     Transformer_v2,
     Transformer,
+    iTransformer,
+    Autoformer, 
+    DLinear, 
+    PatchTST,
+    TimesNet, 
     LSTM,
 )
 from utils.log_util import logger
@@ -48,7 +49,7 @@ class Exp_Basic:
             # ------------------------------
             # Time Series Library models
             # ------------------------------
-            # 'TimesNet': TimesNet,
+            'TimesNet': TimesNet,
             'Autoformer': Autoformer,
             'Transformer_v2': Transformer_v2,
             'Transformer': Transformer,
@@ -59,12 +60,12 @@ class Exp_Basic:
             # 'LightTS': LightTS,
             # 'Reformer': Reformer,
             # 'ETSformer': ETSformer,
-            # 'PatchTST': PatchTST,
+            'PatchTST': PatchTST,
             # 'Pyraformer': Pyraformer,
             # 'MICN': MICN,
             # 'Crossformer': Crossformer,
             # 'FiLM': FiLM,
-            # 'iTransformer': iTransformer,
+            'iTransformer': iTransformer,
             # 'Koopa': Koopa,
             # 'TiDE': TiDE,
             # 'FreTS': FreTS,
@@ -84,7 +85,7 @@ class Exp_Basic:
             # "MLP": MLP,
             # "RNN": RNN,
             # "GRU": GRU,
-            # "LSTM": LSTM,
+            "LSTM": LSTM,
             # "BiLSTM": BiLSTM,
             # "Attention": Attention,
             # "CNN_Attention": CNN_Attention,
@@ -120,9 +121,9 @@ class Exp_Basic:
         self.args.device_ids = [int(id_) for id_ in self.args.devices.split(",")]
         # gpu device ids string
         if self.args.use_gpu and not self.args.use_multi_gpu:
-            self.gpu = self.args.device_ids[0]               # '0'
+            self.gpu = self.args.device_ids[0]  # '0'
         elif self.args.use_gpu and self.args.use_multi_gpu:
-            self.gpu = self.args.devices                     # '0,1,2,3,4,5,6,7'
+            self.gpu = self.args.devices  # '0,1,2,3,4,5,6,7'
         else:
             self.gpu = "0"
         
