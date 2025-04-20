@@ -44,7 +44,7 @@ python -u run_tf.py \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 30 \
+    --train_epochs 2 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
