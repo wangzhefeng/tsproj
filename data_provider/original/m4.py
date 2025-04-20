@@ -15,15 +15,21 @@
 """
 M4 Dataset
 """
+import logging
+import os
+from collections import OrderedDict
 from dataclasses import dataclass
+from glob import glob
+
+import numpy as np
+import pandas as pd
+import patoolib
+from tqdm import tqdm
 import logging
 import os
 import pathlib
 import sys
 from urllib import request
-
-import numpy as np
-import pandas as pd
 
 
 def url_file_name(url: str) -> str:
@@ -83,16 +89,13 @@ class M4Dataset:
         train_cache_file = os.path.join(dataset_file, 'training.npz')
         test_cache_file = os.path.join(dataset_file, 'test.npz')
         m4_info = pd.read_csv(info_file)
-        return M4Dataset(
-            ids=m4_info.M4id.values,
-            groups=m4_info.SP.values,
-            frequencies=m4_info.Frequency.values,
-            horizons=m4_info.Horizon.values,
-            values=np.load(
-                train_cache_file if training else test_cache_file,
-                allow_pickle=True
-            )
-        )
+        return M4Dataset(ids=m4_info.M4id.values,
+                         groups=m4_info.SP.values,
+                         frequencies=m4_info.Frequency.values,
+                         horizons=m4_info.Horizon.values,
+                         values=np.load(
+                             train_cache_file if training else test_cache_file,
+                             allow_pickle=True))
 
 
 @dataclass()
@@ -126,7 +129,7 @@ class M4Meta:
     }  # from interpretable.gin
 
 
-def load_m4_info(INFO_FILE_PATH) -> pd.DataFrame:
+def load_m4_info() -> pd.DataFrame:
     """
     Load M4Info file.
 

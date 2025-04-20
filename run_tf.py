@@ -79,7 +79,7 @@ def args_parse():
     parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
     parser.add_argument('--c_out', type=int, default=7, help='output size')
     parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
-    parser.add_argument('--n_heads', type=int, default=1, help='num of heads')
+    parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
     parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
     parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
     parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
@@ -87,7 +87,7 @@ def args_parse():
     parser.add_argument('--factor', type=int, default=1, help='attn factor')
     parser.add_argument('--distil', action='store_false', default=True,
                         help='whether to use distilling in encoder, using this argument means not using distilling')
-    parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
+    parser.add_argument('--dropout', type=float, default=0.1, help='dropout')
     parser.add_argument('--rev', type=int, default=1, help='whether to apply RevIN')
     parser.add_argument('--padding', type=int, default=0, help='padding')
     parser.add_argument('--activation', type=str, default='gelu', help='activation')
@@ -101,10 +101,10 @@ def args_parse():
     parser.add_argument('--embed_type', type=int, default=0, help='0: value embedding + temporal embedding + positional embedding 1: value embedding + positional embedding')
     parser.add_argument('--output_attention', type=int, default=0, help='whether to output attention in ecoder')
     # optimization
-    parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
-    parser.add_argument('--iters', type=int, default=10, help='train iters')
+    parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
+    parser.add_argument('--iters', type=int, default=1, help='train iters')
     parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
-    parser.add_argument('--batch_size', type=int, default=1, help='batch size of train input data')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--patience', type = int, default=3, help = 'early stopping patience')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='optimizer learning rate')
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
@@ -168,7 +168,7 @@ def args_parse():
 
 def run(args):
     # setting record of experiments
-    setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}_{}_'.format(
+    setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}_{}__'.format(
         args.task_name,
         args.model_id,
         args.model,

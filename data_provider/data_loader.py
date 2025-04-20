@@ -49,7 +49,7 @@ class Dataset_Train(Dataset):
                  timeenc=0,
                  seasonal_patterns=None,
                  scale=True,
-                 inverse=True,
+                 inverse=False,
                  cols=None):
         self.args = args
         # data file path
@@ -84,7 +84,7 @@ class Dataset_Train(Dataset):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data shape: {df_raw.shape}")
-        # 缺失值处理
+        # TODO 缺失值处理
         # df_raw.dropna(axis=0, how='any', inplace=True)
         df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after drop na: {df_raw.shape}")
@@ -141,12 +141,12 @@ class Dataset_Train(Dataset):
         # 数据切分
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
-        # TODO
+        self.data_stamp = data_stamp
+        # TODO 数据逆转换
         # if self.inverse:
         #     self.data_y = df_data.values[border1:border2]
         # else:
         #     self.data_y = data[border1:border2]
-        self.data_stamp = data_stamp
         # 数据增强
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
@@ -159,12 +159,12 @@ class Dataset_Train(Dataset):
     def __getitem__(self, index):
         # TODO data_x 索引
         if self.flag == 'test':
-            # TODO v1
+            # TODO v1 and original
             # s_begin = index
             # TODO v2
             s_begin = index * self.pred_len
         else:
-            # TODO v1
+            # TODO v1 and original
             # s_begin = index
             # TODO v2
             s_begin = index * self.pred_len
@@ -212,7 +212,7 @@ class Dataset_Test(Dataset):
                  timeenc=0,
                  seasonal_patterns=None,
                  scale=True,
-                 inverse=True,
+                 inverse=False,
                  cols=None):
         self.args = args
         # data file path
@@ -322,12 +322,12 @@ class Dataset_Test(Dataset):
     def __getitem__(self, index):
         # TODO data_x 索引
         if self.flag == 'test':
-            # TODO v1
+            # TODO v1 and original
             # s_begin = index
             # TODO v2
             s_begin = index * self.pred_len
         else:
-            # TODO v1
+            # TODO v1 and original
             # s_begin = index
             # TODO v2
             s_begin = index * self.pred_len 
@@ -375,7 +375,7 @@ class Dataset_Pred(Dataset):
                  freq='15min',
                  seasonal_patterns=None,
                  scale=True, 
-                 inverse=True,
+                 inverse=False,
                  cols=None):
         self.args = args
         # data file path
@@ -406,9 +406,11 @@ class Dataset_Pred(Dataset):
         # 数据文件(CSV)
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
+        
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after dropna: {df_raw.shape}") 
+        
         # 数据特征排序
         if self.cols:
             cols = self.cols.copy()
@@ -419,12 +421,14 @@ class Dataset_Pred(Dataset):
             cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
         logger.info(f"Train data after feature order: \n{df_raw.head()} \ndata shape: {df_raw.shape}")  
+        
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
         logger.info(f"Train data after feature selection: \n{df_data.head()} \ndata shape: {df_data.shape}")  
+        
         # 数据标准化
         self.scaler = StandardScaler()
         if self.scale:
@@ -459,14 +463,13 @@ class Dataset_Pred(Dataset):
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
-        # logger.info(f"Forecast input data_stamp: \n{data_stamp} \ndata_stamp shape: {data_stamp.shape}")
+        
         # 数据切分
         self.data_x = data[border1:border2]
         if self.inverse:
             self.data_y = df_data.values[border1:border2]
         else:
             self.data_y = data[border1:border2]
-        # self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
         # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
         # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
@@ -490,7 +493,6 @@ class Dataset_Pred(Dataset):
             seq_y = self.data_x[r_begin:(r_begin+self.label_len)]
         else:
             seq_y = self.data_y[r_begin:(r_begin+self.label_len)]
-        # seq_y = self.data_y[r_begin:(r_begin+self.label_len)]
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]

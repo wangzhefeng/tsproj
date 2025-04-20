@@ -105,10 +105,7 @@ class Exp_Forecast(Exp_Basic):
         """
         优化器
         """
-        optimizer = torch.optim.Adam(
-            self.model.parameters(), 
-            lr = self.args.learning_rate
-        )
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = self.args.learning_rate)
         
         return optimizer
     
@@ -183,41 +180,36 @@ class Exp_Forecast(Exp_Basic):
         batch_y = batch_y.float().to(self.device)  # batch_y = batch_y.float()  # TODO vali and forecast
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-        # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+        logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+        logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
         # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
         # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
-        
         # TODO v1 lastest batch
-        # if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
-        #     logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
-        #     break
-        # TODO v2
-        if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
+        if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
+            logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
             # break
             return None, None
-        
+        # TODO v2 lastest batch
+        # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
+        #     # break
+        #     return None, None
         # decoder input
         dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-        
         # encoder-decoder
         def _run_model():
             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
             if self.args.output_attention:
                 outputs = outputs[0]
             return outputs
-
         if self.args.use_amp:
             with torch.amp.autocast("cuda"):
                 outputs = _run_model()
         else:
             outputs = _run_model()
-        
         # output
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
-
         # detach device
         # outputs = outputs.detach().cpu()
         # batch_y = batch_y.detach().cpu()
@@ -341,8 +333,10 @@ class Exp_Forecast(Exp_Basic):
                 outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
             # inverse transform
             shape = batch_y.shape  # [batch, pred_len, 7]
-            outputs = data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
-            batch_y = data.inverse_transform(batch_y.reshape(shape[0] * shape[1], -1)).reshape(shape) 
+            # outputs = data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+            # batch_y = data.inverse_transform(batch_y.reshape(shape[0] * shape[1], -1)).reshape(shape) 
+            outputs = data.inverse_transform(outputs.squeeze(0)).reshape(shape)
+            batch_y = data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
         logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
         logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
         
@@ -354,18 +348,19 @@ class Exp_Forecast(Exp_Basic):
         """
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
+        vali_data, vali_loader = self._get_data(flag='val')
         # test_data, test_loader = self._get_data(flag='test')
-        # checkpoint 保存路径 
-        model_checkpoint_path = self._get_model_path(setting)
+        # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
         logger.info(f"Model checkpoint will be saved in path:")
         logger.info(f"{40 * '-'}")
+        model_checkpoint_path = self._get_model_path(setting) 
         logger.info(model_checkpoint_path)
         # TODO 测试结果保存地址
-        test_results_path = self._get_test_results_path(setting)
         logger.info(f"{40 * '-'}")
         logger.info(f"Test results will be saved in path:")
         logger.info(f"{40 * '-'}")
+        test_results_path = self._get_test_results_path(setting) 
         logger.info(test_results_path)
         # 模型训练
         logger.info(f"{40 * '-'}")
@@ -406,17 +401,21 @@ class Exp_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
+                
                 # 模型优化器梯度归零
                 optimizer.zero_grad()
+                
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 if outputs is None and batch_y is None:
                     break
+                
                 # TODO 输入输出逆转换
                 # outputs, batch_y = self._inverse_data(train_data, outputs, batch_y)
+                
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, :, f_dim:].to(self.device)
+                outputs = outputs[:, :, f_dim:]#.to(self.device)
                 batch_y = batch_y[:, :, f_dim:].to(self.device)
                 
                 # 计算训练损失
@@ -447,7 +446,7 @@ class Exp_Forecast(Exp_Basic):
                 if (i + 1) % 100 == 0:
                     speed = (time.time() - train_start_time) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    logger.info(f'Epoch: {epoch + 1}, \tBatch: {i + 1} | loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/batch; left time: {left_time:.4f}s')
+                    logger.info(f'Epoch: {epoch + 1}, \tBatch: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/batch; left time: {left_time:.4f}s')
                     iter_count = 0
                     train_start_time = time.time()
                 # 后向传播、参数优化更新
@@ -462,7 +461,7 @@ class Exp_Forecast(Exp_Basic):
             # 模型验证
             train_loss = np.average(train_loss)
             vali_loss, vali_preds, vali_trues, \
-            vali_preds_flat, vali_trues_flat = self.vali(criterion, setting)
+            vali_preds_flat, vali_trues_flat = self.vali(vali_data, vali_loader, criterion, setting)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -503,17 +502,15 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model, train_results
 
-    def vali(self, criterion, setting):
+    def vali(self, vali_data, vali_loader, criterion, setting):
         """
         模型验证
         """
-        # 数据集构建
-        vali_data, vali_loader = self._get_data(flag='val')
         # 验证结果保存地址
-        test_results_path = self._get_test_results_path(setting)
         logger.info(f"{40 * '-'}")
         logger.info(f"Vali results will be saved in path:")
         logger.info(f"{40 * '-'}")
+        test_results_path = self._get_test_results_path(setting) 
         logger.info(test_results_path)
         # 模型开始验证
         logger.info(f"{40 * '-'}")
@@ -532,23 +529,28 @@ class Exp_Forecast(Exp_Basic):
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
                 if outputs is None and batch_y is None:
                     break
+                
                 # TODO detach device
                 outputs = outputs.detach().cpu()
                 batch_y = batch_y.detach().cpu()
+                
                 # TODO 输入输出逆转换
                 # outputs, batch_y = self._inverse_data(vali_data, outputs, batch_y)
+                
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
+                
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
+                
                 # 验证结果收集
-                pred = outputs
-                true = batch_y
-                preds.append(pred)
-                trues.append(true)
+                # pred = outputs
+                # true = batch_y
+                # preds.append(pred)
+                # trues.append(true)
                 # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
                 # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO v1
@@ -556,35 +558,36 @@ class Exp_Forecast(Exp_Basic):
                 #     preds_flat.append(pred[batch_idx, :, -1].tolist())
                 #     trues_flat.append(true[batch_idx, :, -1].tolist())
                 # TODO v2
-                preds_flat.append(pred[0, :, -1].tolist())
-                trues_flat.append(true[0, :, -1].tolist())
+                # preds_flat.append(pred[0, :, -1].tolist())
+                # trues_flat.append(true[0, :, -1].tolist())
                 # logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
                 # logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat shape: {trues_flat.shape}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
+        
         # 计算模型输出
         self.model.train()
 
         # 预测/实际标签处理
-        preds = np.concatenate(preds, axis = 0)
-        trues = np.concatenate(trues, axis = 0)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
+        # preds = np.concatenate(preds, axis = 0)
+        # trues = np.concatenate(trues, axis = 0)
+        # preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        # trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        # logger.info(f"Vali results: preds: \n{preds} \npreds.shape: {preds.shape}")
+        # logger.info(f"Vali results: trues: \n{trues} \ntrues.shape: {trues.shape}")
 
         # 验证结果可视化
-        logger.info(f"{40 * '-'}")
-        logger.info(f"Test visual results have been saved in path:")
-        logger.info(f"{40 * '-'}")
+        # logger.info(f"{40 * '-'}")
+        # logger.info(f"Vali visual results have been saved in path:")
+        # logger.info(f"{40 * '-'}")
         # TODO v1
         # preds_flat = np.concatenate(preds_flat, axis = 0)
         # trues_flat = np.concatenate(trues_flat, axis = 0)
         # TODO v2
-        preds_flat = np.concatenate(preds, axis = 0)
-        trues_flat = np.concatenate(trues, axis = 0)
-        test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "vali_prediction.png")) 
-        logger.info(test_results_path)
+        # preds_flat = np.concatenate(preds, axis = 0)
+        # trues_flat = np.concatenate(trues, axis = 0)
+        # test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "vali_prediction.png")) 
+        # logger.info(test_results_path)
         # logger.info(f"Vali results: preds_flat: {preds_flat} \npreds_flat.shape: {preds_flat.shape}")
         # logger.info(f"Vali results: trues_flat: {trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
         
@@ -603,17 +606,17 @@ class Exp_Forecast(Exp_Basic):
         test_data, test_loader = self._get_data(flag='test')
         # 模型加载
         if load:
-            model_checkpoint_path = self._get_model_path(setting)
-            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
             logger.info(f"{40 * '-'}")
             logger.info("Pretrained model has loaded from:")
             logger.info(f"{40 * '-'}")
+            model_checkpoint_path = self._get_model_path(setting)
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"]) 
             logger.info(model_checkpoint_path)
         # 测试结果保存地址
-        test_results_path = self._get_test_results_path(setting)
         logger.info(f"{40 * '-'}")
         logger.info(f"Test results will be saved in path:")
         logger.info(f"{40 * '-'}")
+        test_results_path = self._get_test_results_path(setting) 
         logger.info(test_results_path)
         # 模型开始测试
         logger.info(f"{40 * '-'}")
@@ -661,13 +664,16 @@ class Exp_Forecast(Exp_Basic):
                     inputs = batch_x.detach().cpu().numpy()
                     if test_data.scale and self.args.inverse:
                         shape = inputs.shape
-                        inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+                        # TODO inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+                        inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf'))
         # 预测/实际标签处理
-        preds = np.concatenate(preds, axis = 0)
-        trues = np.concatenate(trues, axis = 0)
+        # preds = np.concatenate(preds, axis = 0)
+        # trues = np.concatenate(trues, axis = 0)
+        preds = np.array(preds)
+        trues = np.array(trues)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
@@ -710,17 +716,17 @@ class Exp_Forecast(Exp_Basic):
         pred_data, pred_loader = self._get_data(flag='pred')
         # 模型加载
         if load:
-            model_checkpoint_path = self._get_model_path(setting)
-            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
             logger.info(f"{40 * '-'}")
             logger.info("Pretrained model has loaded from:")
             logger.info(f"{40 * '-'}")
+            model_checkpoint_path = self._get_model_path(setting)
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"]) 
             logger.info(model_checkpoint_path)
         # 模型预测结果保存地址
-        pred_results_path = self._get_predict_results_path(setting)
         logger.info(f"{40 * '-'}")
         logger.info(f"Forecast results will be saved in path:")
         logger.info(f"{40 * '-'}")
+        pred_results_path = self._get_predict_results_path(setting) 
         logger.info(pred_results_path)
         # 模型开始预测
         logger.info(f"{40 * '-'}")
@@ -741,14 +747,15 @@ class Exp_Forecast(Exp_Basic):
                 outputs = outputs.detach().cpu()
                 batch_y = batch_y.detach().cpu()
                 # TODO 输入输出逆转换
-                # outputs = outputs.numpy()
-                # batch_y = batch_y.numpy()
+                outputs = outputs.numpy()
+                batch_y = batch_y.numpy()
                 if pred_data.scale and self.args.inverse:
                     if outputs.shape[-1] != batch_y.shape[-1]:
                         outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
                     # inverse transform
                     shape = outputs.shape  # [batch, pred_len, 7]
-                    outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape) 
+                    # TODO outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape) 
+                    outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                 logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
                 logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
                 # 预测值提取
@@ -758,9 +765,11 @@ class Exp_Forecast(Exp_Basic):
                 pred = outputs
                 preds.append(pred)
                 logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
+                
                 # TODO v1 and v2
                 preds_flat.append(pred[0, :, -1].tolist())
                 logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
+                
                 # 预测数据可视化
                 inputs = batch_x.detach().cpu().numpy()
                 if pred_data.scale and self.args.inverse:
