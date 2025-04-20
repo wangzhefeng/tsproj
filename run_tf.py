@@ -203,7 +203,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型训练
-            model = exp.train_v2(training_setting, ii)
+            model, train_results = exp.train(training_setting)
             # 模型测试
             # exp.test(training_setting, load = False)
 
@@ -217,7 +217,7 @@ def run(args):
         # 实例化
         exp = Exp_Forecast(args)
         # 模型测试
-        exp.test_v2(test_setting, load = True)
+        exp.test(test_setting, load = True)
 
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:

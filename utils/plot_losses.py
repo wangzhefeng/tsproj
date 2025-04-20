@@ -54,14 +54,14 @@ def plot_values_classifier(train_epochs, examples_seen, train_values, val_values
     plt.show()
 
 
-def plot_losses(train_epochs, train_losses, val_losses, label: str = "loss", results_path: str = None):
+def plot_losses(train_epochs, train_losses, vali_losses, label: str = "loss", results_path: str = None):
     # epochs seen
     epochs_seen = torch.linspace(0, train_epochs, len(train_losses))
     
     # plot training and validation loss against epochs
     fig, ax1 = plt.subplots(figsize = (5, 3))
     ax1.plot(epochs_seen, train_losses, label = f"Training {label}")
-    ax1.plot(epochs_seen, val_losses, linestyle = "-.", label = f"Validation {label}")
+    ax1.plot(epochs_seen, vali_losses, linestyle = "-.", label = f"Validation {label}")
     ax1.set_xlabel("Epochs")
     ax1.set_ylabel(label.capitalize())
     ax1.legend(loc = "upper right")

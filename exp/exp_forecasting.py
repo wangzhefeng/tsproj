@@ -180,24 +180,27 @@ class Exp_Forecast(Exp_Basic):
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark):
         # 数据预处理
         batch_x = batch_x.float().to(self.device)
-        batch_y = batch_y.float().to(self.device)
-        # batch_y = batch_y.float()  # TODO vali and forecast
+        batch_y = batch_y.float().to(self.device)  # batch_y = batch_y.float()  # TODO vali and forecast
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
         # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
         # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
         # logger.info(f"debug::batch_x: \n{batch_x}, \nbatch_y: \n{batch_y}")
         # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}, \nbatch_y_mark: \n{batch_y_mark}")
-        # TODO lastest batch
+        
+        # TODO v1 lastest batch
         # if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
         #     logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
         #     break
         # TODO v2
-        # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
-        #     break
+        if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
+            # break
+            return None, None
+        
         # decoder input
         dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+        
         # encoder-decoder
         def _run_model():
             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
@@ -210,13 +213,14 @@ class Exp_Forecast(Exp_Basic):
                 outputs = _run_model()
         else:
             outputs = _run_model()
+        
         # output
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
 
         # detach device
-        outputs = outputs.detach().cpu()
-        batch_y = batch_y.detach().cpu()
+        # outputs = outputs.detach().cpu()
+        # batch_y = batch_y.detach().cpu()
 
         return outputs, batch_y
     
@@ -406,12 +410,15 @@ class Exp_Forecast(Exp_Basic):
                 optimizer.zero_grad()
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                if outputs is None and batch_y is None:
+                    break
                 # TODO 输入输出逆转换
                 # outputs, batch_y = self._inverse_data(train_data, outputs, batch_y)
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:].to(self.device)
                 batch_y = batch_y[:, :, f_dim:].to(self.device)
+                
                 # 计算训练损失
                 loss = criterion(outputs, batch_y)
                 train_loss.append(loss.item())
@@ -423,10 +430,10 @@ class Exp_Forecast(Exp_Basic):
                 # 训练损失收集
                 pred = outputs.detach().cpu().numpy()
                 true = batch_y.detach().cpu().numpy()
-                train_results[f"epoch-{epoch+1}"]["preds"].append(pred)
-                train_results[f"epoch-{epoch+1}"]["trues"].append(true)
-                logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
+                # train_results[f"epoch-{epoch+1}"]["preds"].append(pred)
+                # train_results[f"epoch-{epoch+1}"]["trues"].append(true)
+                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
+                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO v1
                 # for batch_idx in range(self.args.batch_size):
                 #     train_results[f"epoch-{epoch+1}"]["preds_flat"].append(pred[batch_idx, :, -1].tolist())
@@ -434,8 +441,8 @@ class Exp_Forecast(Exp_Basic):
                 # TODO v2
                 train_results[f"epoch-{epoch+1}"]["preds_flat"].append(pred[0, :, -1].tolist())
                 train_results[f"epoch-{epoch+1}"]["trues_flat"].append(true[0, :, -1].tolist())
-                logger.info(f"debug::preds_flat: \n{pred[0, :, -1].tolist()}")
-                logger.info(f"debug::trues_flat: \n{true[0, :, -1].tolist()}")
+                # logger.info(f"debug::preds_flat: \n{pred[0, :, -1].tolist()}")
+                # logger.info(f"debug::trues_flat: \n{true[0, :, -1].tolist()}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 100 == 0:
                     speed = (time.time() - train_start_time) / iter_count
@@ -522,9 +529,14 @@ class Exp_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
                 logger.info(f"vali step: {i}")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark) 
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                if outputs is None and batch_y is None:
+                    break
+                # TODO detach device
+                outputs = outputs.detach().cpu()
+                batch_y = batch_y.detach().cpu()
                 # TODO 输入输出逆转换
-                outputs, batch_y = self._inverse_data(vali_data, outputs, batch_y)
+                # outputs, batch_y = self._inverse_data(vali_data, outputs, batch_y)
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
@@ -537,8 +549,8 @@ class Exp_Forecast(Exp_Basic):
                 true = batch_y
                 preds.append(pred)
                 trues.append(true)
-                logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
+                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
+                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO v1
                 # for batch_idx in range(self.args.batch_size):
                 #     preds_flat.append(pred[batch_idx, :, -1].tolist())
@@ -546,8 +558,8 @@ class Exp_Forecast(Exp_Basic):
                 # TODO v2
                 preds_flat.append(pred[0, :, -1].tolist())
                 trues_flat.append(true[0, :, -1].tolist())
-                logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
-                logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat shape: {trues_flat.shape}")
+                # logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
+                # logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat shape: {trues_flat.shape}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出
@@ -558,8 +570,8 @@ class Exp_Forecast(Exp_Basic):
         trues = np.concatenate(trues, axis = 0)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
+        logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
+        logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
 
         # 验证结果可视化
         logger.info(f"{40 * '-'}")
@@ -617,6 +629,11 @@ class Exp_Forecast(Exp_Basic):
                 logger.info(f"test step: {i}")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                if outputs is None and batch_y is None:
+                    break
+                # TODO detach device
+                outputs = outputs.detach().cpu()
+                batch_y = batch_y.detach().cpu()
                 # TODO 输入输出逆转换
                 outputs, batch_y = self._inverse_data(test_data, outputs, batch_y)
                 # 预测值/真实值提取
@@ -628,8 +645,8 @@ class Exp_Forecast(Exp_Basic):
                 true = batch_y
                 preds.append(pred)
                 trues.append(true)
-                logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
+                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
+                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO v1
                 # for batch_idx in range(self.args.batch_size):
                 #     preds_flat.append(pred[batch_idx, :, -1].tolist())
@@ -637,8 +654,8 @@ class Exp_Forecast(Exp_Basic):
                 # TODO v2
                 preds_flat.append(pred[0, :, -1].tolist())
                 trues_flat.append(true[0, :, -1].tolist())
-                logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
-                logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat shape: {trues_flat.shape}")
+                # logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
+                # logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat shape: {trues_flat.shape}")
                 # 预测数据可视化
                 if i % 20 == 0:
                     inputs = batch_x.detach().cpu().numpy()
@@ -718,6 +735,11 @@ class Exp_Forecast(Exp_Basic):
                 logger.info(f"forecast step: {i}")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark)
+                if outputs is None and batch_y is None:
+                    break
+                # TODO detach device
+                outputs = outputs.detach().cpu()
+                batch_y = batch_y.detach().cpu()
                 # TODO 输入输出逆转换
                 # outputs = outputs.numpy()
                 # batch_y = batch_y.numpy()

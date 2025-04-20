@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=0
 export LOG_NAME=A3203
 
 model_name=Transformer
@@ -55,7 +55,7 @@ python -u run_tf.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7 \
