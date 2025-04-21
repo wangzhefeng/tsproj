@@ -64,8 +64,8 @@ def args_parse():
     parser.add_argument('--test_ratio', type=float, required=True, default=0.2, help='test dataset ratio')
     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
     parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
-    parser.add_argument('--scale', type=int, default=1, help = 'data transform')
-    parser.add_argument('--inverse', type=int, default=1, help='inverse output data')
+    parser.add_argument('--scale', type=int, default=0, help = 'data transform')
+    parser.add_argument('--inverse', type=int, default=0, help='inverse output data')
     # inputation task
     parser.add_argument('--mask_rate', type=float, default=0.25, help='mask ratio')
     # anomaly detection task
@@ -206,7 +206,10 @@ def run(args):
             # 模型训练
             model, train_results = exp.train(training_setting)
             # 模型测试
-            # exp.test(flag="test_all", setting=training_setting, load=False)
+            if args.is_testing:
+                logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
+                logger.info(f"{180 * '='}")
+                exp.test(flag="test", setting=training_setting, load=False)
 
     # 模型测试
     if args.is_testing:
@@ -218,7 +221,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型测试
-            exp.test(flag="test_all", setting=test_setting, load=True)
+            exp.test(flag="test", setting=test_setting, load=True)
 
     # TODO 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:

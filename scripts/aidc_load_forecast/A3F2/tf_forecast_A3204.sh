@@ -1,15 +1,16 @@
 export CUDA_VISIBLE_DEVICES=0
 export LOG_NAME=A3204
 
-model_name=Transformer
+# model_name=Transformer
+model_name=Autoformer
 
 # small model: aidc data
 python -u run_tf.py \
     --task_name long_term_forecast \
     --des 'Exp' \
-    --is_training 1 \
-    --is_testing 1 \
-    --is_forecasting 0 \
+    --is_training 0 \
+    --is_testing 0 \
+    --is_forecasting 1 \
     --model_id all_df_72_24 \
     --model $model_name \
     --root_path ./dataset/electricity/A3F2/tf_data \
@@ -25,8 +26,8 @@ python -u run_tf.py \
     --seq_len 72 \
     --label_len 12 \
     --pred_len 24 \
-    --train_ratio 0.7 \
-    --test_ratio 0.0 \
+    --train_ratio 0.6 \
+    --test_ratio 0.3 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
@@ -44,7 +45,7 @@ python -u run_tf.py \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 2 \
+    --train_epochs 1 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
@@ -55,7 +56,7 @@ python -u run_tf.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 1 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
-    --devices 0,1,2,3,4,5,6,7 \
+    --devices 0,1,2,3,4,5,6,7

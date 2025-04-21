@@ -57,8 +57,8 @@ class Dataset_Train(Dataset):
         self.data_path = data_path
         # data type
         self.flag = flag
-        assert flag in ['train', 'test', 'val', 'test_all']
-        type_map = {'train': 0, 'val': 1, 'test': 2, 'test_all': 3}
+        assert flag in ['train', 'test', 'val']
+        type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
         # data size
         self.seq_len = 24 * 4 * 4 if size is None else size[0]
@@ -106,8 +106,8 @@ class Dataset_Train(Dataset):
         num_test = int(len(df_raw) * self.args.test_ratio)    # 0.2
         num_vali = len(df_raw) - num_train - num_test         # 0.1
         # 数据分割索引
-        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len, 0]
-        border2s = [num_train, num_train + num_vali,     len(df_raw),                           all_train]
+        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        border2s = [num_train, num_train + num_vali,     len(df_raw)]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
         # 数据标准化
         self.scaler = StandardScaler()
@@ -130,8 +130,7 @@ class Dataset_Train(Dataset):
             df_stamp['weekday'] = df_stamp['date'].apply(lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp['date'].apply(lambda row: row.hour, 1)
             df_stamp['minute'] = df_stamp['date'].apply(lambda row: row.minute, 1)
-            if self.freq == "15min":
-                df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
+            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
             data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
@@ -141,7 +140,7 @@ class Dataset_Train(Dataset):
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
-        # TODO 数据逆转换
+        # 数据逆转换
         # if self.inverse:
         #     self.data_y = df_data.values[border1:border2]
         # else:
@@ -157,32 +156,27 @@ class Dataset_Train(Dataset):
 
     def __getitem__(self, index):
         # data_x 索引
-        if self.flag in ["test", "test_all"]:
-            s_begin = index * self.pred_len
-        else:
+        if self.flag in ["train", "val"]:
             s_begin = index
-            # s_begin = index * self.pred_len
+        elif self.flag == "test":
+            s_begin = index * self.pred_len
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-        logger.info(f"debug::index: {index}")
-        logger.info(f"debug::s_begin:s_end {s_begin}:{s_end}")
-        logger.info(f"debug::r_begin:r_end {r_begin}:{r_end}")
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
-        # TODO
-        # if self.inverse:
-        #     seq_y = np.concatenate(
-        #         [self.data_x[r_begin:r_begin + self.label_len], self.data_y[r_begin + self.label_len:r_end]], 
-        #         axis = 0
-        #     )
-        # else:
-        #     seq_y = self.data_y[r_begin:r_end]
+        # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
-
+        # log
+        # logger.info(f"debug::index: {index}")
+        # logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
+        # logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
+        # logger.info(f"debug::seq_y index:      r_begin:r_end {r_begin}:{r_end}")
+        # logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
+        
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
@@ -312,12 +306,7 @@ class Dataset_Pred(Dataset):
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
-        logger.info(f"debug::index: {index}")
-        logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
-        logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
-        logger.info(f"debug::seq_y index:      r_begin:(r_begin+label_len) {r_begin}:{r_begin+self.label_len}")
-        logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
+        r_end = r_begin + self.label_len + self.pred_len 
         # 数据索引分割
         seq_x = self.data_x[s_begin:s_end]
         if self.inverse:
@@ -327,6 +316,12 @@ class Dataset_Pred(Dataset):
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
+        # log
+        logger.info(f"debug::index: {index}")
+        logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
+        logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
+        logger.info(f"debug::seq_y index:      r_begin:(r_begin+label_len) {r_begin}:{r_begin+self.label_len}")
+        logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 

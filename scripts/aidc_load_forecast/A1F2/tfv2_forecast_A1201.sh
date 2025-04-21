@@ -58,4 +58,4 @@ python -u run_tf.py \
     --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
-    --devices 0,1,2,3,4,5,6,7 \
+    --devices 0,1,2,3,4,5,6,7

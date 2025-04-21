@@ -37,14 +37,14 @@ def data_provider(args, flag):
     # 是否对时间戳进行编码
     timeenc = 0 if args.embed != "timeF" else 1
     # 区别在 test/pred 和 train/valid 任务下是否进行 shuffle 数据
-    shuffle_flag = False# if flag in ["test", "test_all" "pred"] else True
+    shuffle_flag = False# if flag in ["test", "pred"] else True
     # 是否丢弃最后一个 batch
-    drop_last = False #if flag in ["pred"] else True
+    drop_last = False# if flag in ["pred"] else True
     # 数据集参数
     if flag in ["train", "val"]:
         batch_size = args.batch_size
         Data = Dataset_Train
-    elif flag in ["test", "test_all"]:
+    elif flag in "test":
         batch_size = 1
         Data = Dataset_Train
     elif flag == "pred":
