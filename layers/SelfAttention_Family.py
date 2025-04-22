@@ -9,6 +9,42 @@ from reformer_pytorch import LSHSelfAttention
 from utils.masking import TriangularCausalMask, ProbMask
 
 
+class FlowAttention(nn.Module):
+    # Code implementation from https://github.com/thuml/Flowformer
+
+    def __init__(self, attention_dropout=0.1):
+        super(FlowAttention, self).__init__()
+        self.dropout = nn.Dropout(attention_dropout)
+
+    def kernel_method(self, x):
+        return torch.sigmoid(x)
+
+    def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+        queries = queries.transpose(1, 2)
+        keys = keys.transpose(1, 2)
+        values = values.transpose(1, 2)
+        # kernel
+        queries = self.kernel_method(queries)
+        keys = self.kernel_method(keys)
+        # incoming and outgoing
+        normalizer_row = 1.0 / (torch.einsum("nhld,nhd->nhl", queries + 1e-6, keys.sum(dim=2) + 1e-6))
+        normalizer_col = 1.0 / (torch.einsum("nhsd,nhd->nhs", keys + 1e-6, queries.sum(dim=2) + 1e-6))
+        # reweighting
+        normalizer_row_refine = (
+            torch.einsum("nhld,nhd->nhl", queries + 1e-6, (keys * normalizer_col[:, :, :, None]).sum(dim=2) + 1e-6))
+        normalizer_col_refine = (
+            torch.einsum("nhsd,nhd->nhs", keys + 1e-6, (queries * normalizer_row[:, :, :, None]).sum(dim=2) + 1e-6))
+        # competition and allocation
+        normalizer_row_refine = torch.sigmoid(
+            normalizer_row_refine * (float(queries.shape[2]) / float(keys.shape[2])))
+        normalizer_col_refine = torch.softmax(normalizer_col_refine, dim=-1) * keys.shape[2]  # B h L vis
+        # multiply
+        kv = keys.transpose(-2, -1) @ (values * normalizer_col_refine[:, :, :, None])
+        x = (((queries @ kv) * normalizer_row[:, :, :, None]) * normalizer_row_refine[:, :, :, None]).transpose(1,
+                                                                                                                2).contiguous()
+        return x, None
+
+
 class DSAttention(nn.Module):
     '''
     De-stationary Attention
@@ -50,11 +86,100 @@ class DSAttention(nn.Module):
             return V.contiguous(), None
 
 
+# Code implementation from https://github.com/shreyansh26/FlashAttention-PyTorch
+class FlashAttention(nn.Module):
+    def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
+        super(FlashAttention, self).__init__()
+        self.scale = scale
+        self.mask_flag = mask_flag
+        self.output_attention = output_attention
+        self.dropout = nn.Dropout(attention_dropout)
+
+    def flash_attention_forward(self, Q, K, V, mask=None):
+        BLOCK_SIZE = 32
+        NEG_INF = -1e10  # -infinity
+        EPSILON = 1e-10
+        # mask = torch.randint(0, 2, (128, 8)).to(device='cuda')
+        O = torch.zeros_like(Q, requires_grad=True)
+        l = torch.zeros(Q.shape[:-1])[..., None]
+        m = torch.ones(Q.shape[:-1])[..., None] * NEG_INF
+
+        O = O.to(device='cuda')
+        l = l.to(device='cuda')
+        m = m.to(device='cuda')
+
+        Q_BLOCK_SIZE = min(BLOCK_SIZE, Q.shape[-1])
+        KV_BLOCK_SIZE = BLOCK_SIZE
+
+        Q_BLOCKS = torch.split(Q, Q_BLOCK_SIZE, dim=2)
+        K_BLOCKS = torch.split(K, KV_BLOCK_SIZE, dim=2)
+        V_BLOCKS = torch.split(V, KV_BLOCK_SIZE, dim=2)
+        if mask is not None:
+            mask_BLOCKS = list(torch.split(mask, KV_BLOCK_SIZE, dim=1))
+
+        Tr = len(Q_BLOCKS)
+        Tc = len(K_BLOCKS)
+
+        O_BLOCKS = list(torch.split(O, Q_BLOCK_SIZE, dim=2))
+        l_BLOCKS = list(torch.split(l, Q_BLOCK_SIZE, dim=2))
+        m_BLOCKS = list(torch.split(m, Q_BLOCK_SIZE, dim=2))
+
+        for j in range(Tc):
+            Kj = K_BLOCKS[j]
+            Vj = V_BLOCKS[j]
+            if mask is not None:
+                maskj = mask_BLOCKS[j]
+
+            for i in range(Tr):
+                Qi = Q_BLOCKS[i]
+                Oi = O_BLOCKS[i]
+                li = l_BLOCKS[i]
+                mi = m_BLOCKS[i]
+
+                scale = 1 / np.sqrt(Q.shape[-1])
+                Qi_scaled = Qi * scale
+
+                S_ij = torch.einsum('... i d, ... j d -> ... i j', Qi_scaled, Kj)
+                if mask is not None:
+                    # Masking
+                    maskj_temp = rearrange(maskj, 'b j -> b 1 1 j')
+                    S_ij = torch.where(maskj_temp > 0, S_ij, NEG_INF)
+
+                m_block_ij, _ = torch.max(S_ij, dim=-1, keepdims=True)
+                P_ij = torch.exp(S_ij - m_block_ij)
+                if mask is not None:
+                    # Masking
+                    P_ij = torch.where(maskj_temp > 0, P_ij, 0.)
+
+                l_block_ij = torch.sum(P_ij, dim=-1, keepdims=True) + EPSILON
+
+                P_ij_Vj = torch.einsum('... i j, ... j d -> ... i d', P_ij, Vj)
+
+                mi_new = torch.maximum(m_block_ij, mi)
+                li_new = torch.exp(mi - mi_new) * li + torch.exp(m_block_ij - mi_new) * l_block_ij
+
+                O_BLOCKS[i] = (li / li_new) * torch.exp(mi - mi_new) * Oi + (
+                        torch.exp(m_block_ij - mi_new) / li_new) * P_ij_Vj
+                l_BLOCKS[i] = li_new
+                m_BLOCKS[i] = mi_new
+
+        O = torch.cat(O_BLOCKS, dim=2)
+        l = torch.cat(l_BLOCKS, dim=2)
+        m = torch.cat(m_BLOCKS, dim=2)
+        return O, l, m
+
+    def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+        res = \
+        self.flash_attention_forward(queries.permute(0, 2, 1, 3), keys.permute(0, 2, 1, 3), values.permute(0, 2, 1, 3),
+                                     attn_mask)[0]
+        return res.permute(0, 2, 1, 3).contiguous(), None
+
+
 class FullAttention(nn.Module):
-    
-    def __init__(self, mask_flag = True, factor = 5, scale = None, attention_dropout = 0.1, output_attention = False):
+
+    def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(FullAttention, self).__init__()
-        
+
         self.scale = scale
         self.mask_flag = mask_flag
         self.output_attention = output_attention
@@ -64,24 +189,27 @@ class FullAttention(nn.Module):
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
         scale = self.scale or 1. / sqrt(E)
-        # 
+
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
-        # 
+
         if self.mask_flag:
             if attn_mask is None:
                 attn_mask = TriangularCausalMask(B, L, device=queries.device)
+
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
         V = torch.einsum("bhls,bshd->blhd", A, values)
 
         if self.output_attention:
-            return V.contiguous(), A
+            return (V.contiguous(), A)
         else:
-            return V.contiguous(), None
+            return (V.contiguous(), None)
 
 
 class ProbAttention(nn.Module):
+    # Code implementation from https://github.com/zhouhaoyi/Informer2020
+
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
         super(ProbAttention, self).__init__()
         self.factor = factor
@@ -146,9 +274,9 @@ class ProbAttention(nn.Module):
                      L_V).type_as(attn).to(attn.device)
             attns[torch.arange(B)[:, None, None], torch.arange(H)[
                                                   None, :, None], index, :] = attn
-            return context_in, attns
+            return (context_in, attns)
         else:
-            return context_in, None
+            return (context_in, None)
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
         B, L_Q, H, D = queries.shape
@@ -184,7 +312,7 @@ class ProbAttention(nn.Module):
 
 class AttentionLayer(nn.Module):
 
-    def __init__(self, attention, d_model, n_heads, d_keys = None, d_values = None):
+    def __init__(self, attention, d_model, n_heads, d_keys=None, d_values=None):
         super(AttentionLayer, self).__init__()
         
         d_keys = d_keys or (d_model // n_heads)
@@ -211,8 +339,8 @@ class AttentionLayer(nn.Module):
             keys,
             values,
             attn_mask,
-            tau = tau,
-            delta = delta
+            tau=tau,
+            delta=delta
         )
         out = out.view(B, L, -1)
 

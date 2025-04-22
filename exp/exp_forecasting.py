@@ -167,12 +167,14 @@ class Exp_Forecast(Exp_Basic):
         """
         预测结果保存
         """
-        np.save(os.path.join(path, "prediction.npy"), preds) 
-        preds_df.to_csv(
-            os.path.join(path, "prediction.csv"), 
-            encoding="utf_8_sig", 
-            index=False
-        )
+        if preds is not None:
+            np.save(os.path.join(path, "prediction.npy"), preds) 
+        if preds_df is not None:
+            preds_df.to_csv(
+                os.path.join(path, "prediction.csv"), 
+                encoding="utf_8_sig", 
+                index=False
+            )
     
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
         # 数据预处理
@@ -181,29 +183,33 @@ class Exp_Forecast(Exp_Basic):
         # batch_y = batch_y.float()  # TODO vali and forecast
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-        # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+        logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+        logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
         # logger.info(f"debug::batch_x: \n{batch_x}")
         # logger.info(f"debug::batch_y: \n{batch_y}")
         # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}")
         # logger.info(f"debug::batch_y_mark: \n{batch_y_mark}")
-        
-        """
-        # TODO v1 lastest batch
-        if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
-            logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
-            # break
-            return None, None
-        # TODO v2 lastest batch
-        if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
-            logger.info(f"Train Stop::Data batch_x.shape[1] not equal to (batch_y.shape[1] + label_len + pred_len).")
-            # break
-            return None, None
-        """
+        if flag not in ["forecast"]:
+            # TODO v1 lastest batch
+            if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
+                logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
+                # break
+                return None, None
+            # TODO v2 lastest batch
+            # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
+            #     logger.info(f"Train Stop::Data batch_x.shape[1] not equal to (batch_y.shape[1] + label_len + pred_len).")
+            #     # break
+            #     return None, None
 
-        # decoder input
-        dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+        # TODO decoder input
+        if self.args.pred_len > batch_y.shape[1]:
+            dec_inp = torch.zeros((batch_y.shape[0], self.args.pred_len, batch_y.shape[2])).float()
+        else:
+            dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+        # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+        logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
+        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
+        logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
         # encoder-decoder
         def _run_model():
             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
@@ -347,7 +353,7 @@ class Exp_Forecast(Exp_Basic):
             if outputs.shape[-1] != batch_y.shape[-1]:
                 outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
             # inverse transform
-            shape = batch_y.shape  # [batch, pred_len, 7]
+            shape = outputs.shape  # [batch, pred_len, 7]
             outputs = data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
             batch_y = data.inverse_transform(batch_y.reshape(shape[0] * shape[1], -1)).reshape(shape)
             # or
@@ -579,16 +585,18 @@ class Exp_Forecast(Exp_Basic):
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "test")
                 if outputs is None and batch_y is None:
-                    break
+                    break 
                 # 输入输出逆转换
-                outputs, batch_y = self._inverse_data(test_data, outputs, batch_y)
+                outputs, batch_y = self._inverse_data(test_data, outputs, batch_y) 
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
-                pred = outputs[:, :, f_dim:]
-                true = batch_y[:, :, f_dim:]
+                outputs = outputs[:, :, f_dim:]
+                batch_y = batch_y[:, :, f_dim:]
                 # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
                 # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # 验证结果收集
+                pred = outputs
+                true = batch_y
                 preds.append(pred)
                 trues.append(true)
                 # TODO test batch_size > 1
@@ -610,8 +618,10 @@ class Exp_Forecast(Exp_Basic):
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
-        preds = np.array(preds)  # or preds = np.concatenate(preds, axis = 0)
-        trues = np.array(trues)  # or trues = np.concatenate(trues, axis = 0)
+        # preds = np.array(preds)  # or 
+        preds = np.concatenate(preds, axis = 0)
+        # trues = np.array(trues)  # or 
+        trues = np.concatenate(trues, axis = 0)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
@@ -633,8 +643,12 @@ class Exp_Forecast(Exp_Basic):
         trues_flat = np.concatenate(trues, axis = 0)
         test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
-        # logger.info(f"debug::preds_flat: \n{preds_flat}")
-        # logger.info(f"debug::trues_flat: \n{trues_flat}")
+        # results_df = pd.DataFrame({
+        #     "timestamp": pd.date_range("2024-12-01 00:00:00", periods=self.args.pred_len, freq=self.args.freq),
+        #     "true_value": np.array(trues_flat).squeeze()[-self.args.pred_len:],
+        #     "predict_value": np.array(preds_flat).squeeze()[-self.args.pred_len:],
+        # })
+        # self._pred_results_save(preds = None, preds_df = results_df, path=test_results_path)
         # log
         logger.info(f"{40 * '-'}")
         logger.info(f"Testing Finished!")
@@ -660,7 +674,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         logger.info(f"Forecast results will be saved in path:")
         logger.info(f"{40 * '-'}")
-        pred_results_path = self._get_predict_results_path(setting) 
+        pred_results_path = self._get_predict_results_path(setting)
         logger.info(pred_results_path)
         # 模型开始预测
         logger.info(f"{40 * '-'}")

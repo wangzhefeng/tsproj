@@ -236,7 +236,7 @@ def run(args):
         model, train_results = exp.train(final_training_setting)
         logger.info(f"train_results: {train_results}")
 
-    # TODO 模型预测
+    # 模型预测
     if args.is_forecasting: 
         ii = 0  # "final"
         # setting record of experiments

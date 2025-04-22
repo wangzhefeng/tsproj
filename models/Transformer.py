@@ -12,12 +12,6 @@
 # ***************************************************
 
 # python libraries
-import os
-import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -47,7 +41,7 @@ class Model(nn.Module):
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
         
-        # Embedding
+        # Encoder Embedding
         self.enc_embedding = DataEmbedding(
             c_in=configs.enc_in, 
             d_model=configs.d_model, 
@@ -64,7 +58,7 @@ class Model(nn.Module):
                             mask_flag=False, 
                             factor=configs.factor, 
                             attention_dropout=configs.dropout, 
-                            output_attention=False
+                            output_attention=configs.output_attention
                         ), 
                         d_model=configs.d_model, 
                         n_heads=configs.n_heads,
@@ -89,18 +83,28 @@ class Model(nn.Module):
             self.decoder = Decoder(
                 layers = [
                     DecoderLayer(
-                        AttentionLayer(
-                            FullAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False),
-                            configs.d_model, 
-                            configs.n_heads
+                        self_attention = AttentionLayer(
+                            attention=FullAttention(
+                                mask_flag=True, 
+                                factor=configs.factor, 
+                                attention_dropout=configs.dropout, 
+                                output_attention=False
+                            ),
+                            d_model=configs.d_model, 
+                            n_heads=configs.n_heads,
                         ),
-                        AttentionLayer(
-                            FullAttention(False, configs.factor, attention_dropout=configs.dropout, output_attention=False),
-                            configs.d_model, 
-                            configs.n_heads
+                        cross_attention = AttentionLayer(
+                            attention=FullAttention(
+                                mask_flag=False, 
+                                factor=configs.factor, 
+                                attention_dropout=configs.dropout, 
+                                output_attention=False
+                            ),
+                            d_model=configs.d_model, 
+                            n_heads=configs.n_heads
                         ),
-                        configs.d_model,
-                        configs.d_ff,
+                        d_model=configs.d_model,
+                        d_ff = configs.d_ff,
                         dropout = configs.dropout,
                         activation = configs.activation,
                     )

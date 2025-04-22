@@ -18,6 +18,7 @@ class Projector(nn.Module):
 
     def __init__(self, enc_in, seq_len, hidden_dims, hidden_layers, output_dim, kernel_size = 3):
         super(Projector, self).__init__()
+        
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         # conv1d
         self.series_conv = nn.Conv1d(
