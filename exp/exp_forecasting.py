@@ -12,8 +12,6 @@
 # * TODO        : 1.
 # ***************************************************
 
-__all__ = []
-
 # python libraries
 import os
 import sys
@@ -67,19 +65,19 @@ class Exp_Forecast(Exp_Basic):
     def _build_model(self):
         """
         模型构建
-        """ 
-        # 构建 Transformer 模型
+        """
+        # 时间序列模型初始化
         logger.info(f"Initializing model {self.args.model}...")
         model = self.model_dict[self.args.model].Model(self.args)
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.devices)
+            model = nn.DataParallel(model, device_ids = self.args.devices)
         # 打印模型参数量
         total = sum([param.nelement() for param in model.parameters()])
         logger.info(f'Number of model parameters: {(total / 1e6):.2f}M')
-
+        
         return model
-
+    
     def _get_data(self, flag: str):
         """
         数据集构建
@@ -87,7 +85,7 @@ class Exp_Forecast(Exp_Basic):
         data_set, data_loader = data_provider(self.args, flag)
         
         return data_set, data_loader
-
+    
     def _select_criterion(self):
         """
         评价指标

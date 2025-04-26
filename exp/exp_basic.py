@@ -31,6 +31,9 @@ from models import (
     DLinear, 
     PatchTST,
     TimesNet, 
+    MLP,
+    RNN,
+    GRU,
     LSTM,
 )
 from utils.log_util import logger
@@ -82,9 +85,9 @@ class Exp_Basic:
             # ------------------------------
             # Basic Neural Network model
             # ------------------------------
-            # "MLP": MLP,
-            # "RNN": RNN,
-            # "GRU": GRU,
+            "MLP": MLP,
+            "RNN": RNN,
+            "GRU": GRU,
             "LSTM": LSTM,
             # "BiLSTM": BiLSTM,
             # "Attention": Attention,

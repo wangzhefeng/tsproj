@@ -42,7 +42,7 @@ def data_provider(args, flag):
     # 数据集参数
     if flag in ["train", "val"]:
         batch_size = args.batch_size
-        Data = Dataset_Train          # 数据集类
+        Data = Dataset_Train
     elif flag == 'test':
         batch_size = 1
         Data = Dataset_Train
@@ -52,17 +52,19 @@ def data_provider(args, flag):
     # 构建 Dataset 和 DataLoader
     data_creator = Data(
         args = args,
-        # root_path = args.root_path,
-        # data_path = args.data_path,
+        root_path = args.root_path,
+        data_path = args.data_path,
         flag = flag,
         # size = [args.seq_len, args.label_len, args.pred_len],
-        # features = args.features,
-        # target = args.target,
+        seq_len=args.seq_len,
+        feature_size=args.feature_size,
+        features = args.features,
+        target = args.target,
         # timeenc = timeenc,
         # freq = args.freq,
         # seasonal_patterns=args.seasonal_patterns,
-        # scale = args.scale,
-        # inverse = args.inverse,
+        scale = args.scale,
+        inverse = args.inverse,
         # cols = None,
     )
     data_x, data_y = data_creator.run()
@@ -87,7 +89,30 @@ def data_provider(args, flag):
 
 # 测试代码 main 函数
 def main():
-    pass
+    from utils.args_tools import DotDict
+
+    # args
+    args = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "S",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 1,
+        "feature_size": 1,
+        "output_size": 1,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "recursive_multi_step",
+        "num_workers": 0,
+    }
+    args = DotDict(args)
+
+    # data
+    data_set, data_loader = data_provider(args, flag = "test")
 
 if __name__ == "__main__":
     main()

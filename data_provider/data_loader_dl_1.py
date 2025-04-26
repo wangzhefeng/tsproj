@@ -37,13 +37,15 @@ class Dataset_Train:
                  data_path,
                  flag="train",
                  # size=None,  # size [seq_len, label_len, pred_len]
-                 # features="MS",
-                 # target="WIND",
+                 seq_len=1,
+                 feature_size=1,
+                 features="MS",
+                 target="WIND",
                  # freq="d",
                  # timeenc=0,
                  # seasonal_patterns=None,
-                 # scale=True,
-                 # inverse=True,
+                 scale=True,
+                 inverse=True,
                  # cols=None
                 ):
         self.args = args
@@ -55,19 +57,23 @@ class Dataset_Train:
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
+        # data size
+        self.seq_len = seq_len
+        self.feature_size = feature_size
+        # data freq, feature columns, and target
+        self.features = features
+        self.target = target
+        # data preprocess
+        self.scale = scale
+        self.inverse = inverse
         """
-        self.seq_len = 24 * 4 * 4 if size is None else size[0]
         self.label_len = 24 * 4 if size is None else size[1]
         self.pred_len = 24 * 4 if size is None else size[2]
         
-        self.features = features
-        self.target = target
         self.freq = freq
         self.seasonal_patterns = seasonal_patterns
         self.timeenc = timeenc
-        
-        self.scale = scale
-        self.inverse = inverse
+
         self.cols = cols
         
         # 读取数据
@@ -79,29 +85,29 @@ class Dataset_Train:
         data read
         """
         logger.info(f"{30 * '-'}")
-        logger.info(f"Load and Preprocessing {self.args.flag} data...")
+        logger.info(f"Load and Preprocessing {self.flag} data...")
         logger.info(f"{30 * '-'}")
         # 读取数据文件
-        df_raw = pd.read_csv(os.path.join(self.args.root_path, self.args.data_path))
-        logger.info(f"Train data shape: {df_raw.shape}")
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
         # 缺失值处理
-        # df_raw.dropna(axis=0, how='any', inplace=True)
-        df_raw.dropna(axis=1, how='any', inplace=True)
+        df_raw.dropna(axis=0, how='any', inplace=True)
+        # df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after drop na: {df_raw.shape}")
         # 数据特征重命名
         df_raw.columns = [col.lower() for col in df_raw.columns]
-        self.args.target = self.args.target.lower()
+        self.target = self.target.lower()
         # 数据特征排序
         cols_names = list(df_raw.columns)
-        cols_names.remove(self.args.target)
+        cols_names.remove(self.target)
         cols_names.remove('date')
-        df_raw = df_raw[['date'] + cols_names + [self.args.target]]
+        df_raw = df_raw[['date'] + cols_names + [self.target]]
         logger.info(f"Train data shape after feature order: {df_raw.shape}")
         # 根据预测任务进行特征筛选
-        if self.args.features == 'M' or self.args.features == 'MS':
+        if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
-        elif self.args.features == 'S':
-            df_data = df_raw[[self.args.target]]
+        elif self.features == 'S':
+            df_data = df_raw[[self.target]]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         """
         # 数据分割比例
@@ -165,10 +171,11 @@ class Dataset_Train:
         """
         data scaler
         """
-        if self.args.scale:
-            self.scaler = StandardScaler()
-            self.scaler.fit_transform(df.values)
-            data = self.scaler.transform(df.values)
+        self.scaler = StandardScaler()
+        self.scaler_target = StandardScaler()
+        if self.scale: 
+            data = self.scaler.fit_transform(df.values)
+            self.scaler_target.fit_transform(np.array(df[self.target]).reshape(-1, 1))
         else:
             data = np.array(df)
         
@@ -205,7 +212,10 @@ class Dataset_Train:
     """
 
     def inverse_transform(self, data):
-        return self.scaler.inverse_transform(data) 
+        return self.scaler.inverse_transform(data)
+    
+    def inverse_target(self, target):
+        return self.scaler_target.inverse_transform(target.detach().numpy().reshape(-1, 1))
     
     def RecursiveMultiStep(self, data):
         """
@@ -218,9 +228,9 @@ class Dataset_Train:
         data_X = []  # 保存 X
         data_Y = []  # 保存 Y
         # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(data) - self.args.seq_len):  # [0, len(data)-seq_len - 1]
-            data_X.append(data[index:(index + self.args.seq_len)])
-            data_Y.append(data[index + self.args.seq_len][-1])
+        for index in range(len(data) - self.seq_len):  # [0, len(data)-seq_len-1]
+            data_X.append(data[index:(index + self.seq_len)])
+            data_Y.append(data[index + self.seq_len][-1])
         data_X = np.array(data_X)
         data_Y = np.array(data_Y)
         logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
@@ -228,21 +238,22 @@ class Dataset_Train:
         # 训练/测试/验证数据集分割: 选取当前flag下的数据
         # 数据分割比例
         data_len = data_X.shape[0]
-        num_train = int(data_len * self.args.train_ratio)  # 0.7
-        num_test = int(data_len * self.args.test_ratio)    # 0.2
+        num_train = int(np.round(data_len * self.args.train_ratio))  # 0.7
+        num_test = int(np.round(data_len * self.args.test_ratio))    # 0.2
         num_vali = data_len - num_train - num_test         # 0.1
         logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
         # 划分训练集、测试集
         border1s = [0,         num_train,            num_train + num_vali]
         border2s = [num_train, num_train + num_vali, data_len]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
-        data_x = data_X[border1:border2, :].reshape(-1, self.args.seq_len, self.args.feature_size)  # (batch_size, seq_len, feature_size)
+        data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
         data_y = data_Y[border1:border2].reshape(-1, 1)  # (batch_size, num_target) 
         logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
         logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
         
         return data_x, data_y
     
+    # TODO
     def DirectMultiStepOutput(self, data):
         """
         直接多步预测
@@ -269,6 +280,7 @@ class Dataset_Train:
         
         return [train_data, train_loader, test_data, test_loader]
 
+    # TODO
     def DirectRecursiveMix(self, data):
         """
         直接递归混合预测(多模型滚动预测)
