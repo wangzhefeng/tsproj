@@ -3,7 +3,6 @@ export LOG_NAME=A1201
 
 model_name=Transformer
 
-# small model: aidc data
 python -u run_tf.py \
     --task_name long_term_forecast \
     --des 'Exp' \

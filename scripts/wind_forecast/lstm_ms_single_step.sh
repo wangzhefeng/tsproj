@@ -1,16 +1,16 @@
 export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=ETTm1
+export LOG_NAME=wind_lstm_ms_single_step
 
 model_name=LSTM
 
 
-python -u run_dl.py \
+python -u run_tf.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
     --is_testing 0 \
     --is_forecasting 0 \
-    --model_id wind_lstm_ms \
+    --model_id wind_lstm_ms_single_step \
     --model $model_name \
     --root_path ./dataset \
     --data_path wind_dataset.csv \
@@ -22,7 +22,8 @@ python -u run_dl.py \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
     --freq d \
-    --seq_len 2 \
+    --embed timeF \
+    --seq_len 20 \
     --feature_size 8 \
     --hidden_size 256 \
     --output_size 1 \

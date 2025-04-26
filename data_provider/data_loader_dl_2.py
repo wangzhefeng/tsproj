@@ -31,7 +31,7 @@ from utils.log_util import logger
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Data_Loader_todo:
+class Data_Loader:
 
     def __init__(self, filename: str, train_ratio: float, cols: List):
         """
@@ -58,6 +58,9 @@ class Data_Loader_todo:
         return df
 
     def _split_data(self, df):
+        """
+        数据分割
+        """
         i_split = int(len(df) * self.train_ratio)
         self.data_train = df.get(self.cols).values[:i_split]
         self.data_test  = df.get(self.cols).values[i_split:]
@@ -205,7 +208,7 @@ def main():
     configs = Config()
 
     # 读取数据
-    data = Data_Loader_todo(
+    data = Data_Loader(
         filename = os.path.join('data', configs['data']['filename']),
         train_ratio = configs['data']['train_test_split'],
         cols = configs['data']['columns'],

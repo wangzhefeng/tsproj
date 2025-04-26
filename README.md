@@ -7,7 +7,7 @@
     - [步骤 2：定义命令行解析](#步骤-2定义命令行解析)
     - [步骤 3：确定调参工具](#步骤-3确定调参工具)
     - [步骤 4：减少随机性](#步骤-4减少随机性)
-- [时间序列预测基准测试](#时间序列预测基准测试)
+- [框架](#框架)
 </p></details><p></p>
 
 
@@ -124,7 +124,15 @@ np.random.seed(SEED)
 tf.random.set_seed(SEED)
 ```
 
-# 时间序列预测基准测试
+# 框架
 
-* [TFB：2024最新时间序列预测Benchmark](https://mp.weixin.qq.com/s/IPY2QwJ68YIrclMi2JtkMA)
-* [TFB GitHub](https://github.com/decisionintelligence/TFB)
+* UniTS
+    - [时间序列统一大模型](https://mp.weixin.qq.com/s/a4TCsYub-OPaqRPSbs6qXw)
+    - [mims-harvard/UniTS](https://github.com/mims-harvard/UniTS)
+* 时间序列预测基准测试
+    - [TFB：2024最新时间序列预测Benchmark](https://mp.weixin.qq.com/s/IPY2QwJ68YIrclMi2JtkMA)
+    - [TFB GitHub](https://github.com/decisionintelligence/TFB)
+* [GIFT-Eval: A Benchmark For General Time Series Forecasting Model Evaluation](https://arxiv.org/abs/2410.10393)
+* Chronos
+    * [时间序列+预训练大模型](https://mp.weixin.qq.com/s?__biz=Mzk0NDE5Nzg1Ng==&mid=2247510967&idx=1&sn=4bffea1d34a5d8770c6939cbf301057c&chksm=c2ef08d9218fc514d4537d2109cb5370b87294b115e8d5df2fc696072b173486908e5b7b90db&scene=132&exptype=timeline_recommend_article_extendread_samebiz&show_related_article=1&subscene=0&scene=132#wechat_redirect)
+    * [chronos-forecasting](https://github.com/amazon-science/chronos-forecasting)
