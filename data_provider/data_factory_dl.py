@@ -105,12 +105,12 @@ def main():
         "embed": "timeF",
         "scale": False,
         "inverse": False,
-        "seq_len": 2,
+        "seq_len": 1,
         "feature_size": 1,
         "output_size": 1,
         "train_ratio": 0.8,
         "test_ratio": 0.2,
-        "batch_size": 1,
+        "batch_size": 2,
         "pred_method": "recursive_multi_step",
         "num_workers": 0,
     }
@@ -122,7 +122,7 @@ def main():
         "embed": "timeF",
         "scale": False,
         "inverse": False,
-        "seq_len": 2,
+        "seq_len": 1,
         "feature_size": 8,
         "output_size": 1,
         "train_ratio": 0.8,
@@ -131,6 +131,7 @@ def main():
         "pred_method": "recursive_multi_step",
         "num_workers": 0,
     }
+    """
     # ------------------------------
     # direct_multi_step
     # ------------------------------
@@ -205,11 +206,11 @@ def main():
         "pred_method": "direct_recursive_multi_step_mix",
         "num_workers": 0,
     }
-    
-    args = DotDict(args_ms)
+    """
+    args = DotDict(args_s)
 
     # data
-    data_set, data_loader = data_provider(args, flag = "test")
+    data_set, data_loader = data_provider(args, flag = "train")
 
 if __name__ == "__main__":
     main()

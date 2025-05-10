@@ -22,7 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting import Exp_Forecast
+from exp.exp_forecasting_dl import Exp_Forecast
+# from exp.exp_forecasting import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
@@ -211,7 +212,8 @@ def run(args):
                 logger.info(f"{180 * '='}")
                 exp.test(flag="test", setting=training_setting, load=False)
 
-    # 模型测试
+    # TODO 模型测试
+    """
     if args.is_testing:
         for ii in range(args.iters):
             # setting record of experiments
@@ -222,8 +224,9 @@ def run(args):
             exp = Exp_Forecast(args)
             # 模型测试
             exp.test(flag="test", setting=test_setting, load=True)
+    """
 
-    # TODO 模型最终训练
+    # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
         ii = "final"
         # setting record of experiments
@@ -238,7 +241,7 @@ def run(args):
 
     # 模型预测
     if args.is_forecasting: 
-        ii = 0  # "final"
+        ii = "final"
         # setting record of experiments
         forecasting_setting = setting + str(ii)
         logger.info(f">>>>>>>>> start forecasting: {forecasting_setting}>>>>>>>>>>")

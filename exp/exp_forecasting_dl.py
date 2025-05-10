@@ -198,6 +198,7 @@ class Exp_Forecast(Exp_Basic):
         if data.scale and self.args.inverse:
             outputs = data.inverse_target(outputs)
             batch_y = data.inverse_target(batch_y)
+        # TODO
         # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
         # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
         
@@ -296,8 +297,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues, \
-            vali_preds_flat, vali_trues_flat = self.vali(vali_data, vali_loader, criterion, test_results_path)
+            vali_loss = self.vali(vali_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -338,7 +338,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
     
-    def vali(self, vali_data, vali_loader, criterion, path):
+    def vali(self, vali_loader, criterion):
         """
         模型验证
         """
@@ -351,8 +351,6 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Vali steps: {vali_steps}")
         # 模型验证结果
         vali_loss = []
-        preds, trues = [], []
-        preds_flat, trues_flat = [], []
         # 模型评估模式
         self.model.eval()
         with torch.no_grad():
@@ -360,14 +358,6 @@ class Exp_Forecast(Exp_Basic):
                 x_vali, y_vali = data_batch
                 # 前向传播
                 outputs = self.model(x_vali)
-                # TODO 输入输出逆转换
-                # outputs, y_vali = self._inverse_data(vali_data, outputs, y_vali)
-                # TODO 预测值/真实值提取
-                # f_dim = -1 if self.args.features == 'MS' else 0
-                # outputs = outputs[:, :, f_dim:]
-                # y_vali = y_vali[:, :, f_dim:]
-                # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
-                # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
                 # 计算/保存验证损失
                 loss = criterion(outputs, y_vali.reshape(-1, 1))
                 vali_loss.append(loss.item())
@@ -381,7 +371,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Validating Finished!")
         logger.info(f"{40 * '-'}")
         
-        return vali_loss, preds, trues, preds_flat, trues_flat
+        return vali_loss
 
     def test(self, flag, setting, load: bool=False):
         """

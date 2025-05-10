@@ -25,15 +25,14 @@ python -u run_tf.py \
     --embed timeF \
     --seq_len 20 \
     --feature_size 8 \
-    --hidden_size 256 \
     --output_size 1 \
+    --hidden_size 256 \
     --num_layers 2 \
     --train_ratio 0.8 \
     --test_ratio 0.2 \
     --iters 1 \
     --train_epochs 10 \
     --learning_rate 3e-4 \
-    --num_workers 0 \
     --batch_size 32 \
     --loss MSE \
     --activation gelu \
@@ -42,6 +41,7 @@ python -u run_tf.py \
     --lradj type1 \
     --scale 0 \
     --inverse 0 \
+    --num_workers 0 \
     --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \

@@ -266,8 +266,6 @@ class Dataset_Train:
                 data_Y.append(data_y)
             else:
                 data_X = data_X[:-1]
-        logger.info(f"debug::data_X: \n{data_X} \ndata_X.shape: {len(data_X)} \ndata_X type: {type(data_X)}")
-        logger.info(f"debug::data_Y: \n{data_Y} \ndata_Y.shape: {len(data_Y)} \ndata_Y type: {type(data_Y)}")
         data_X = np.array(data_X)
         data_Y = np.array(data_Y)
         logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
@@ -302,7 +300,7 @@ class Dataset_Train:
         data_Y = []  # 保存 Y
         # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
         for index in range(len(data) - self.seq_len - 1):
-            data_x = data[index:(index + self.seq_len)][:, -1]
+            data_x = data[index:(index + self.seq_len)]#[:, -1]  # TODO
             data_X.append(data_x)
             data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
             if len(data_y) == self.output_size:
@@ -320,10 +318,11 @@ class Dataset_Train:
         num_test = int(np.round(data_len * self.test_ratio))    # 0.2
         num_vali = data_len - num_train - num_test         # 0.1
         logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-         # 划分训练集、测试集
+        # 划分训练集、测试集
         border1s = [0,         num_train,            num_train + num_vali]
         border2s = [num_train, num_train + num_vali, data_len]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
+        logger.info(f"debug::data_X[border1:border2, :]: \n{data_X[border1:border2, :]}")
         data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
         data_y = data_Y[border1:border2].reshape(-1, self.output_size)  # (batch_size, num_target) 
         logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
@@ -334,7 +333,7 @@ class Dataset_Train:
     def run(self):
         # 读取数据
         data = self._read_data()
-        data = data.head(21)
+        # data = data.head(21)
         logger.info(f"data: \n{data} \ndata shape: {data.shape}")
         
         # 数据预处理
