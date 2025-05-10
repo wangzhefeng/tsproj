@@ -66,18 +66,18 @@ class Exp_Forecast(Exp_Basic):
         """
         模型构建
         """
-        # 时间序列模型初始化
+        # 构建 Transformer 模型
         logger.info(f"Initializing model {self.args.model}...")
         model = self.model_dict[self.args.model].Model(self.args)
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
-            model = nn.DataParallel(model, device_ids = self.args.devices)
+            model = nn.DataParallel(model, device_ids=self.args.devices)
         # 打印模型参数量
         total = sum([param.nelement() for param in model.parameters()])
         logger.info(f'Number of model parameters: {(total / 1e6):.2f}M')
-        
+
         return model
-    
+
     def _get_data(self, flag: str):
         """
         数据集构建
@@ -85,7 +85,7 @@ class Exp_Forecast(Exp_Basic):
         data_set, data_loader = data_provider(self.args, flag)
         
         return data_set, data_loader
-    
+
     def _select_criterion(self):
         """
         评价指标
@@ -181,8 +181,8 @@ class Exp_Forecast(Exp_Basic):
         # batch_y = batch_y.float()  # TODO vali and forecast
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-        logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
+        # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
+        # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
         # logger.info(f"debug::batch_x: \n{batch_x}")
         # logger.info(f"debug::batch_y: \n{batch_y}")
         # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}")
@@ -205,9 +205,9 @@ class Exp_Forecast(Exp_Basic):
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-        logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
+        # logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
-        logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
+        # logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
         # encoder-decoder
         def _run_model():
             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
@@ -438,7 +438,7 @@ class Exp_Forecast(Exp_Basic):
                 # 计算训练损失
                 loss = criterion(outputs, batch_y)
                 train_loss.append(loss.item())
-                logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
+                # logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 10 == 0:
                     speed = (time.time() - train_start_time) / iter_count
@@ -533,7 +533,7 @@ class Exp_Forecast(Exp_Basic):
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
-                logger.info(f"debug::vali step: {i}, vali loss: {loss.item()}")
+                # logger.info(f"debug::vali step: {i}, vali loss: {loss.item()}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出

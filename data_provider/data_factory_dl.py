@@ -36,7 +36,8 @@ def data_provider(args, flag):
     """
     # 是否对时间戳进行编码
     timeenc = 0 if args.embed != 'timeF' else 1
-    shuffle_flag = False# if flag in ["test", "pred"] else True
+    # 区别在 test/pred 和 train/valid 任务下是否进行 shuffle 数据
+    shuffle_flag = False if flag in ["test", "pred"] else True
     # 是否丢弃最后一个 batch
     drop_last = False# if flag in ["pred"] else True
     # 数据集参数
@@ -58,14 +59,17 @@ def data_provider(args, flag):
         # size = [args.seq_len, args.label_len, args.pred_len],
         seq_len=args.seq_len,
         feature_size=args.feature_size,
-        features = args.features,
+        output_size=args.output_size,
         target = args.target,
-        # timeenc = timeenc,
+        features = args.features,
+        train_ratio=args.train_ratio,
+        test_ratio=args.test_ratio,
+        pred_method=args.pred_method,
         # freq = args.freq,
+        # timeenc = timeenc,
         # seasonal_patterns=args.seasonal_patterns,
         scale = args.scale,
         inverse = args.inverse,
-        # cols = None,
     )
     data_x, data_y = data_creator.run()
     # data set
@@ -90,9 +94,10 @@ def data_provider(args, flag):
 # 测试代码 main 函数
 def main():
     from utils.args_tools import DotDict
-
-    # args
-    args = {
+    # ------------------------------
+    # recursive_multi_step
+    # ------------------------------
+    args_s = {
         "root_path": "./dataset",
         "data_path": "wind_dataset.csv",
         "features": "S",
@@ -100,7 +105,7 @@ def main():
         "embed": "timeF",
         "scale": False,
         "inverse": False,
-        "seq_len": 1,
+        "seq_len": 2,
         "feature_size": 1,
         "output_size": 1,
         "train_ratio": 0.8,
@@ -109,7 +114,99 @@ def main():
         "pred_method": "recursive_multi_step",
         "num_workers": 0,
     }
-    args = DotDict(args)
+    args_ms = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "MS",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 2,
+        "feature_size": 8,
+        "output_size": 1,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "recursive_multi_step",
+        "num_workers": 0,
+    }
+    # ------------------------------
+    # direct_multi_step
+    # ------------------------------
+    args_s = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "S",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 2,
+        "feature_size": 1,
+        "output_size": 3,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "direct_multi_step",
+        "num_workers": 0,
+    }
+    args_ms = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "MS",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 2,
+        "feature_size": 8,
+        "output_size": 4,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "direct_multi_step",
+        "num_workers": 0,
+    }
+    # ------------------------------
+    # 
+    # ------------------------------
+    args_s = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "S",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 2,
+        "feature_size": 1,
+        "output_size": 4,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "direct_recursive_multi_step_mix",
+        "num_workers": 0,
+    }
+    args_ms = {
+        "root_path": "./dataset",
+        "data_path": "wind_dataset.csv",
+        "features": "MS",
+        "target": "WIND",
+        "embed": "timeF",
+        "scale": False,
+        "inverse": False,
+        "seq_len": 1,
+        "feature_size": 8,
+        "output_size": 1,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "batch_size": 1,
+        "pred_method": "direct_recursive_multi_step_mix",
+        "num_workers": 0,
+    }
+    
+    args = DotDict(args_ms)
 
     # data
     data_set, data_loader = data_provider(args, flag = "test")
