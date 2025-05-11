@@ -72,6 +72,19 @@ class Exp_Forecast(Exp_Basic):
         
         return model
     
+    def _build_multi_model(self):
+        """
+        多个模型构建
+        """
+        # 模型列表
+        models = []
+        for i in range(self.args.output):
+            model = self._build_model()
+            # 模型收集
+            models.append(model)
+        
+        return models
+    
     def _get_data(self, flag: str):
         """
         数据集构建
@@ -97,9 +110,23 @@ class Exp_Forecast(Exp_Basic):
         """
         优化器
         """
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr = self.args.learning_rate)
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(), 
+            lr = self.args.learning_rate
+        )
         
         return optimizer
+    
+    def _select_multip_optimizer(self):
+        """
+        优化器
+        """
+        optimizers = [
+            self._select_optimizer()
+            for i in range(self.args.output)
+        ]
+        
+        return optimizers
     
     def _get_model_path(self, setting):
         """
@@ -168,12 +195,11 @@ class Exp_Forecast(Exp_Basic):
                 index=False
             )
 
-    # TODO
     def save_model(self, weights: bool = False):
         """
         模型保存
         """
-        logger.info(f'[Model] Training Completed. Model saved as {self.args.checkpoints}')
+        logger.info(f'Model saved in {self.args.checkpoints}')
         if weights:
             # model weights
             torch.save(self.model.state_dict(), self.args.checkpoints)
@@ -181,9 +207,8 @@ class Exp_Forecast(Exp_Basic):
             # whole model
             torch.save(self.model, self.args.checkpoints)
 
-    # TODO
     def load_model(self, weights: str = False):
-        logger.info(f'[Model] Loading model from file {self.args.checkpoints}')
+        logger.info(f'Model Loading model from {self.args.checkpoints}')
         if weights:
             self.model = self.model_dict[self.args.model].Model(self.args)
             self.model.load_state_dict(torch.load(self.args.checkpoints))
@@ -198,9 +223,8 @@ class Exp_Forecast(Exp_Basic):
         if data.scale and self.args.inverse:
             outputs = data.inverse_target(outputs)
             batch_y = data.inverse_target(batch_y)
-        # TODO
-        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+        logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+        logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
         
         return outputs, batch_y
 
@@ -211,7 +235,6 @@ class Exp_Forecast(Exp_Basic):
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
-        test_data, test_loader = self._get_data(flag='test')
         # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
         logger.info(f"Model checkpoint will be saved in path:")
@@ -276,7 +299,10 @@ class Exp_Forecast(Exp_Basic):
                 # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
                 # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
                 # 计算训练损失
-                loss = criterion(outputs, y_train.reshape(-1, 1))
+                if self.args.output_size == 1:
+                    loss = criterion(outputs, y_train.reshape(-1, 1))
+                else:
+                    loss = criterion(outputs, y_train)
                 train_loss.append(loss.item())
                 logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
@@ -337,7 +363,151 @@ class Exp_Forecast(Exp_Basic):
         # return model and train results
         logger.info("Return training results...")
         return self.model
-    
+
+    def train_multi_model(self, setting):
+        """
+        模型训练
+        """
+        # 数据集构建
+        train_data, train_loader = self._get_data(flag='train')
+        vali_data, vali_loader = self._get_data(flag='val')
+        # checkpoint 保存路径
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Model checkpoint will be saved in path:")
+        logger.info(f"{40 * '-'}")
+        model_checkpoint_path = self._get_model_path(setting)
+        logger.info(model_checkpoint_path)
+        # 测试结果保存地址
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Train results will be saved in path:")
+        logger.info(f"{40 * '-'}")
+        test_results_path = self._get_test_results_path(setting) 
+        logger.info(test_results_path)
+        # 模型训练
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Model start training...")
+        logger.info(f"{40 * '-'}")
+        # time: 模型训练开始时间
+        train_start_time = time.time()
+        logger.info(f"Train start time: {from_unix_time(train_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
+        # 训练窗口数
+        train_steps = len(train_loader)
+        logger.info(f"Train steps: {train_steps}") 
+        # 模型优化器
+        optimizers = self._select_multip_optimizer()
+        logger.info(f"Train optimizers has builded...")
+        # 模型损失函数
+        criterion = self._select_criterion()
+        logger.info(f"Train criterion has builded...")
+        # 早停类实例
+        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
+        logger.info(f"Train early stopping instance has builded, patience: {self.args.patience}")
+        # 自动混合精度训练
+        if self.args.use_amp:
+            scaler = torch.amp.GradScaler()
+        # 训练、验证结果收集
+        train_losses, vali_losses = [], []
+        # 分 epoch 训练
+        for epoch in range(self.args.train_epochs):
+            # time: epoch 训练开始时间
+            epoch_start_time = time.time()
+            logger.info(f"Epoch: {epoch+1} \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
+            models = self._build_multi_model()
+            for model_idx, model in enumerate(models):
+                # epoch 训练结果收集
+                iter_count = 0
+                train_loss = []
+                # 优化器
+                optimizer = optimizers[model_idx]
+                # 模型训练模式
+                self.model.train()
+                for i, data_batch in enumerate(train_loader):
+                    # 当前 epoch 的迭代次数记录
+                    iter_count += 1
+                    # 取出数据
+                    x_train, y_train = data_batch
+                    # 模型优化器梯度归零
+                    optimizer.zero_grad()
+                    # 前向传播
+                    outputs = self.model(x_train)
+                    # TODO 输入输出逆转换
+                    # outputs, y_train = self._inverse_data(train_data, outputs, y_train)
+                    # TODO 预测值/真实值提取
+                    # f_dim = -1 if self.args.features == 'MS' else 0
+                    # outputs = outputs[:, :, f_dim:].to(self.device)
+                    # y_train = y_train[:, :, f_dim:].to(self.device)
+                    # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
+                    # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
+                    # 计算训练损失
+                    if self.args.output_size == 1:
+                        loss = criterion(outputs, y_train[:, model_idx].reshape(-1, 1))
+                    else:
+                        loss = criterion(outputs, y_train[:, model_idx])
+                    train_loss.append(loss.item())
+                    logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
+                    # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
+                    if (i + 1) % 10 == 0:
+                        speed = (time.time() - train_start_time) / iter_count
+                        left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
+                        logger.info(f'Epoch: {epoch + 1}, \tBatch: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/batch; left time: {left_time:.4f}s')
+                        iter_count = 0
+                        train_start_time = time.time()
+                    # 后向传播、参数优化更新
+                    if self.args.use_amp:
+                        scaler.scale(loss).backward()
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        loss.backward()
+                        optimizer.step()
+                logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
+                # 模型验证
+                train_loss = np.average(train_loss)
+                vali_loss = self.vali_multi_model(vali_loader, criterion, model_idx)
+                logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
+                # 训练/验证损失收集
+                train_losses.append(train_loss)
+                vali_losses.append(vali_loss)
+                # 早停机制、模型保存
+                early_stopping(
+                    vali_loss, 
+                    epoch=epoch, 
+                    model=self.model, 
+                    optimizer=optimizer, 
+                    scheduler=None, 
+                    model_path=model_checkpoint_path,
+                )
+                if early_stopping.early_stop:
+                    logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
+                    break
+                # 学习率调整
+                adjust_learning_rate(optimizer, epoch + 1, self.args)
+        '''
+        # -----------------------------
+        # 模型加载
+        # ------------------------------
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Training Finished!")
+        logger.info(f"{40 * '-'}")
+        # plot losses
+        logger.info("Plot and save train/vali losses...")
+        plot_losses(
+            train_epochs=self.args.train_epochs,
+            train_losses=train_losses, 
+            vali_losses=vali_losses, 
+            label="loss",
+            results_path=test_results_path
+        )
+        # load model
+        logger.info("Loading best model...")
+        self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
+        # return model and train results
+        logger.info("Return training results...")
+        return self.model
+        '''
+        
+        return None
+
     def vali(self, vali_loader, criterion):
         """
         模型验证
@@ -359,7 +529,48 @@ class Exp_Forecast(Exp_Basic):
                 # 前向传播
                 outputs = self.model(x_vali)
                 # 计算/保存验证损失
-                loss = criterion(outputs, y_vali.reshape(-1, 1))
+                if self.args.output_size == 1:
+                    loss = criterion(outputs, y_vali.reshape(-1, 1))
+                else:
+                    loss = criterion(outputs, y_vali)
+                vali_loss.append(loss.item())
+                logger.info(f"debug::vali step: {i}, vali loss: {loss}")
+        # 计算验证集上所有 batch 的平均验证损失
+        vali_loss = np.average(vali_loss)
+        # 计算模型输出
+        self.model.train()
+        # log
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Validating Finished!")
+        logger.info(f"{40 * '-'}")
+        
+        return vali_loss
+
+    def vali_multi_model(self, vali_loader, criterion, model_idx):
+        """
+        模型验证
+        """
+        # 模型开始验证
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Model start validating...")
+        logger.info(f"{40 * '-'}")
+        # 验证窗口数
+        vali_steps = len(vali_loader)
+        logger.info(f"Vali steps: {vali_steps}")
+        # 模型验证结果
+        vali_loss = []
+        # 模型评估模式
+        self.model.eval()
+        with torch.no_grad():
+            for i, data_batch in enumerate(vali_loader):
+                x_vali, y_vali = data_batch
+                # 前向传播
+                outputs = self.model(x_vali)
+                # 计算/保存验证损失
+                if self.args.output_size == 1:
+                    loss = criterion(outputs, y_vali[:, model_idx].reshape(-1, 1))
+                else:
+                    loss = criterion(outputs, y_vali[:, model_idx])
                 vali_loss.append(loss.item())
                 logger.info(f"debug::vali step: {i}, vali loss: {loss}")
         # 计算验证集上所有 batch 的平均验证损失
@@ -412,7 +623,7 @@ class Exp_Forecast(Exp_Basic):
                 # 前向传播
                 outputs = self.model(x_test)
                 # TODO 输入输出逆转换
-                outputs, y_test = self._inverse_data(test_data, outputs, y_test)
+                # outputs, y_test = self._inverse_data(test_data, outputs, y_test)
                 # TODO 预测值/真实值提取
                 # f_dim = -1 if self.args.features == 'MS' else 0
                 # outputs = outputs[:, :, f_dim:]
@@ -475,20 +686,17 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
-    # TODO ------------------------------
-    # TODO forecast
-    # TODO ------------------------------
-    def predict_single_step(self, data):
+    def forecast_single_step(self, data):
         """
         单步预测
         """
-        logger.info('[Model] Predicting Point-by-Point...')
+        logger.info('Model Predicting Point-by-Point...')
         pred = self.model.predict(data)
         pred = np.reshape(pred, (pred.size,))
         
         return pred
 
-    def predict_directly_multi_output(self, plot_size):
+    def forecast_direct_multi_output(self, plot_size):
         # data load
         data_loader, _, _ = self._get_data()
         # train result
@@ -508,7 +716,10 @@ class Exp_Forecast(Exp_Basic):
 
         return (y_train_pred, y_train_true), (y_test_pred, y_test_true)
 
-    def predict_recursive_multi_step(self, data, window_size: int, horizon: int):
+    def forecast_direct_multi_step(self, data):
+        pass
+
+    def forecast_recursive_multi_step(self, data, window_size: int, horizon: int):
         """
         时序多步预测
             - 每次预测使用 window_size 个历史数据进行预测，预测未来 prediction_len 个预测值
@@ -522,7 +733,7 @@ class Exp_Forecast(Exp_Basic):
         Returns:
             _type_: 预测序列
         """
-        logger.info('[Model] Predicting Sequences Multiple...')
+        logger.info('ModelPredicting Sequences Multiple...')
         preds_seq = []  # (20, 50, 1)
         for i in range(int(len(data) / horizon)):  # 951 / 50 = 19
             curr_frame = data[i * horizon]  # (49, 1)
@@ -536,16 +747,13 @@ class Exp_Forecast(Exp_Basic):
         
         return preds_seq
     
-    def predict_direct_multi_step(self, data):
-        pass
-    
-    def predict_recursive_hybird(self, data):
+    def forecast_recursive_hybird(self, data):
         pass
 
-    def predict_seq2seq_multi_step(self, data):
+    def forecast_seq2seq_multi_step(self, data):
         pass
     
-    def predict_sequence_full(self, data, window_size: int):
+    def forecast_sequence_full(self, data, window_size: int):
         """
         单步预测
 
@@ -556,7 +764,7 @@ class Exp_Forecast(Exp_Basic):
         Returns:
             _type_: 预测序列
         """
-        logger.info('[Model] Predicting Sequences Full...')
+        logger.info('ModelPredicting Sequences Full...')
         curr_frame = data[0]
         preds_seq = []
         for i in range(len(data)):

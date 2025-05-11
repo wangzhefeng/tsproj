@@ -4,7 +4,7 @@ export LOG_NAME=wind_lstm_ms_directly_multi_step
 model_name=LSTM
 
 
-python -u run_tf.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
@@ -17,7 +17,7 @@ python -u run_tf.py \
     --data wind_dataset \
     --features MS \
     --target WIND \
-    --pred_method recursive_multi_step \
+    --pred_method direct_multi_step \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -25,24 +25,25 @@ python -u run_tf.py \
     --embed timeF \
     --seq_len 20 \
     --feature_size 8 \
-    --hidden_size 256 \
     --output_size 2 \
+    --output 2 \
+    --hidden_size 256 \
     --num_layers 2 \
-    --train_ratio 0.8 \
+    --train_ratio 0.7 \
     --test_ratio 0.2 \
     --iters 1 \
-    --train_epochs 10 \
+    --train_epochs 30 \
     --learning_rate 3e-4 \
-    --num_workers 0 \
     --batch_size 32 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
     --patience 7 \
     --lradj type1 \
-    --scale 0 \
-    --inverse 0 \
-    --use_gpu 1 \
+    --scale 1 \
+    --inverse 1 \
+    --num_workers 0 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

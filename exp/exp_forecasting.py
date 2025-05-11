@@ -497,7 +497,7 @@ class Exp_Forecast(Exp_Basic):
         self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
         # return model and train results
         logger.info("Return training results...")
-        return self.model, train_results
+        return self.model
 
     def vali(self, vali_data, vali_loader, criterion, path):
         """

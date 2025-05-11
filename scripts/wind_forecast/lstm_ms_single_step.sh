@@ -4,7 +4,7 @@ export LOG_NAME=wind_lstm_ms_single_step
 model_name=LSTM
 
 
-python -u run_tf.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
@@ -26,12 +26,13 @@ python -u run_tf.py \
     --seq_len 20 \
     --feature_size 8 \
     --output_size 1 \
+    --output 1 \
     --hidden_size 256 \
     --num_layers 2 \
-    --train_ratio 0.8 \
+    --train_ratio 0.7 \
     --test_ratio 0.2 \
     --iters 1 \
-    --train_epochs 10 \
+    --train_epochs 30 \
     --learning_rate 3e-4 \
     --batch_size 32 \
     --loss MSE \
@@ -39,10 +40,10 @@ python -u run_tf.py \
     --use_dtw 0 \
     --patience 7 \
     --lradj type1 \
-    --scale 0 \
-    --inverse 0 \
+    --scale 1 \
+    --inverse 1 \
     --num_workers 0 \
-    --use_gpu 1 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

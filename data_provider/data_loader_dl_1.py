@@ -72,14 +72,18 @@ class Dataset_Train:
         # data preprocess
         self.scale = scale
         self.inverse = inverse
+        # data read
+        # 读取数据
+        self.data_x, self.data_y = self.__read_data__()
+        # data = data.head(21)
 
-    def _read_data(self):
+    def __read_data__(self):
         """
         data read
         """
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         logger.info(f"Load and Preprocessing {self.flag} data...")
-        logger.info(f"{30 * '-'}")
+        logger.info(f"{40 * '-'}")
         # 读取数据文件
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
         logger.info(f"Train data: \n{df_raw.head(10)} \nTrain data shape: {df_raw.shape}")
@@ -102,30 +106,19 @@ class Dataset_Train:
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
-        """
-        # 数据分割比例
-        all_train = int(len(df_raw))                          # 1.0
-        num_train = int(len(df_raw) * self.train_ratio)  # 0.7
-        num_test = int(len(df_raw) * self.test_ratio)    # 0.2
-        num_vali = len(df_raw) - num_train - num_test         # 0.1
-        # 数据分割索引
-        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali,     len(df_raw)]
-        border1, border2 = border1s[self.set_type], border2s[self.set_type]
         # 数据标准化
-        self.scaler = StandardScaler()
-        if self.scale:
-            train_data = df_data[border1s[0]:border2s[0]]
-            self.scaler.fit(train_data.values)
-            data = self.scaler.transform(df_data.values)
-        else:
-            data = df_data.values
-        logger.info(f"Train data shape after standardization: {data.shape}")
-        # 训练/测试/验证数据集分割: 选取当前 flag 下的数据        
-        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}") 
+        df_data = self._transform_data(df_data)
+        logger.info(f"Train data shape after standardization: {df_data.shape}")
+        # 选择预测方法
+        if self.pred_method == "recursive_multi_step":  # 递归多步预测
+            data_X, data_Y = self.RecursiveMultiStep(df_data)
+        elif self.pred_method == "direct_multi_output":  # 直接多步预测
+            data_X, data_Y = self.DirectMultiOutput(df_data)
+        elif self.pred_method == "direct_recursive_multi_step_mix":  # 直接递归多步混合
+            data_X, data_Y = self.DirectRecursiveMultiStepMix(df_data)
+        '''
         # 时间特征处理
-        df_stamp = df_raw[['date']][border1:border2]
+        df_stamp = df_data[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp['date'])
         if self.timeenc == 0:
             df_stamp['month'] = df_stamp['date'].apply(lambda row: row.month, 1)
@@ -138,28 +131,28 @@ class Dataset_Train:
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
-        logger.info(f"Forecast input timestamp features shape: {data_stamp.shape}")
-        # 数据切分
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
-        # 数据逆转换
-        # if self.inverse:
-        #     self.data_y = df_data.values[border1:border2]
-        # else:
-        #     self.data_y = data[border1:border2]
-        # 数据增强
-        if self.set_type == 0 and self.augmentation_ratio > 0:
-            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
-                self.data_x, self.data_y, self.args
-            )
-        # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
-        # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
-        # logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
-        """
-
-        return df_data
-
+        logger.info(f"Forecast input timestamp features shape: {data_stamp.shape}")
+        logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
+        '''
+        # 数据分割比例
+        data_len = data_X.shape[0]
+        num_train = int(np.round(data_len * self.train_ratio))  # 0.7
+        num_test = int(np.round(data_len * self.test_ratio))  # 0.2
+        num_vali = data_len - num_train - num_test  # 0.1
+        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
+        # 数据集分割
+        border1s = [0,         num_train,            num_train + num_vali]
+        border2s = [num_train, num_train + num_vali, data_len]
+        border1, border2 = border1s[self.set_type], border2s[self.set_type]
+        data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
+        data_y = data_Y[border1:border2].reshape(-1, self.output_size)  # (batch_size, num_target)
+        logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
+        logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
+        logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
+        
+        return data_x, data_y
+        
     def _transform_data(self, df):
         """
         data scaler
@@ -167,13 +160,107 @@ class Dataset_Train:
         self.scaler = StandardScaler()
         self.scaler_target = StandardScaler()
         if self.scale: 
+            # train_data = df_data[border1s[0]:border2s[0]]
+            # self.scaler.fit(train_data.values)
             data = self.scaler.fit_transform(df.values)
             self.scaler_target.fit_transform(np.array(df[self.target]).reshape(-1, 1))
         else:
-            data = np.array(df)
+            data = df.values
         
         return data
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
     
+    def inverse_target(self, target):
+        return self.scaler_target.inverse_transform(target.detach().numpy().reshape(-1, 1))
+    
+    def RecursiveMultiStep(self, data):
+        """
+        递归多步预测(单步滚动预测)
+        单步预测
+        """
+        # 将 data 转换为 np.array
+        data = np.array(data)
+        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
+        data_X, data_Y = [], []
+        for index in range(len(data) - self.seq_len):  # [0, len(data)-seq_len-1]
+            data_X.append(data[index:(index + self.seq_len)])
+            data_Y.append(data[index + self.seq_len][-1])
+        data_X, data_Y = np.array(data_X), np.array(data_Y)
+        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
+        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
+        
+        return data_X, data_Y
+    
+    def DirectMultiOutput(self, data):
+        """
+        直接多输出
+        """
+        # 将 data 转换为 np.array
+        data = np.array(data)
+        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
+        data_X, data_Y = [], []
+        for index in range(len(data) - self.seq_len - 1):
+            data_x = data[index:(index + self.seq_len)]
+            data_X.append(data_x)
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
+                data_Y.append(data_y)
+            else:
+                data_X = data_X[:-1]
+        data_X, data_Y = np.array(data_X), np.array(data_Y)
+        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
+        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
+        
+        return data_X, data_Y
+    
+    def DirectMultiStep(self, data):
+        """
+        直接多输出
+        """
+        # 将 data 转换为 np.array
+        data = np.array(data)
+        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
+        data_X, data_Y = [], []
+        for index in range(len(data) - self.seq_len - 1):
+            data_x = data[index:(index + self.seq_len)]
+            data_X.append(data_x)
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
+                data_Y.append(data_y)
+            else:
+                data_X = data_X[:-1]
+        data_X, data_Y = np.array(data_X), np.array(data_Y)
+        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
+        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
+        
+        return data_X, data_Y
+
+    def DirectRecursiveMultiStepMix(self, data):
+        """
+        直接递归混合预测(多模型滚动预测)
+        
+        例如：123456789 => 12345-67、23456-78、34567-89...
+        """
+        # 将 data 转换为 np.array
+        data = np.array(data)
+        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
+        data_X, data_Y = [], []
+        for index in range(len(data) - self.seq_len - 1):
+            data_x = data[index:(index + self.seq_len)]#[:, -1]  # TODO
+            data_X.append(data_x)
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
+                data_Y.append(data_y)
+            else:
+                data_X = data_X[:-1]
+        data_X, data_Y = np.array(data_X), np.array(data_Y)
+        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
+        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
+        
+        return data_X, data_Y
+
     """
     def __getitem__(self, index):
         # data_x 索引
@@ -203,152 +290,6 @@ class Dataset_Train:
     def __len__(self):
         return len(self.data_x) - self.seq_len - self.pred_len + 1
     """
-
-    def inverse_transform(self, data):
-        return self.scaler.inverse_transform(data)
-    
-    def inverse_target(self, target):
-        return self.scaler_target.inverse_transform(target.detach().numpy().reshape(-1, 1))
-    
-    def RecursiveMultiStep(self, data):
-        """
-        递归多步预测(单步滚动预测)
-        
-        例如：多变量：123456789 => 12345-67、23456-78、34567-89...
-        例如：单变量：123456789 => 123-4、234-5、345-6...
-        """
-        # 将 data 转换为 np.array
-        data = np.array(data)
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        data_X = []  # 保存 X
-        data_Y = []  # 保存 Y
-        for index in range(len(data) - self.seq_len):  # [0, len(data)-seq_len-1]
-            data_X.append(data[index:(index + self.seq_len)])
-            data_Y.append(data[index + self.seq_len][-1])
-        data_X = np.array(data_X)
-        data_Y = np.array(data_Y)
-        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
-        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
-        # 训练/测试/验证数据集分割: 选取当前flag下的数据
-        # 数据分割比例
-        data_len = data_X.shape[0]
-        num_train = int(np.round(data_len * self.train_ratio))  # 0.7
-        num_test = int(np.round(data_len * self.test_ratio))    # 0.2
-        num_vali = data_len - num_train - num_test         # 0.1
-        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        # 划分训练集、测试集
-        border1s = [0,         num_train,            num_train + num_vali]
-        border2s = [num_train, num_train + num_vali, data_len]
-        border1, border2 = border1s[self.set_type], border2s[self.set_type]
-        data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
-        data_y = data_Y[border1:border2].reshape(-1, 1)  # (batch_size, num_target)
-        logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
-        logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
-        
-        return data_x, data_y
-    
-    def DirectMultiStep(self, data):
-        """
-        直接多步预测
-        
-        例如：123456789 => 12345-67、23456-78、34567-89...
-        """
-        # 将 data 转换为 np.array
-        data = np.array(data)
-        data_X = []  # 保存 X
-        data_Y = []  # 保存 Y
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(data) - self.seq_len - 1):
-            data_x = data[index:(index + self.seq_len)]
-            data_X.append(data_x)
-            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
-            if len(data_y) == self.output_size:
-                data_Y.append(data_y)
-            else:
-                data_X = data_X[:-1]
-        data_X = np.array(data_X)
-        data_Y = np.array(data_Y)
-        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
-        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
-        # 训练/测试/验证数据集分割: 选取当前flag下的数据
-        # 数据分割比例
-        data_len = data_X.shape[0]
-        num_train = int(np.round(data_len * self.train_ratio))  # 0.7
-        num_test = int(np.round(data_len * self.test_ratio))    # 0.2
-        num_vali = data_len - num_train - num_test         # 0.1
-        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        # 划分训练集、测试集
-        border1s = [0,         num_train,            num_train + num_vali]
-        border2s = [num_train, num_train + num_vali, data_len]
-        border1, border2 = border1s[self.set_type], border2s[self.set_type]
-        data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
-        data_y = data_Y[border1:border2].reshape(-1, self.output_size)  # (batch_size, num_target) 
-        logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
-        logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
-        
-        return data_x, data_y
-
-    def DirectRecursiveMultiStepMix(self, data):
-        """
-        直接递归混合预测(多模型滚动预测)
-        
-        例如：123456789 => 12345-67、23456-78、34567-89...
-        """
-        # 将 data 转换为 np.array
-        data = np.array(data)
-        data_X = []  # 保存 X
-        data_Y = []  # 保存 Y
-        # 将整个窗口的数据保存到 X 中，将未来一个时刻的数据保存到 Y 中
-        for index in range(len(data) - self.seq_len - 1):
-            data_x = data[index:(index + self.seq_len)]#[:, -1]  # TODO
-            data_X.append(data_x)
-            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
-            if len(data_y) == self.output_size:
-                data_Y.append(data_y)
-            else:
-                data_X = data_X[:-1]
-        data_X = np.array(data_X)
-        data_Y = np.array(data_Y)
-        logger.info(f"data_X: \n{data_X} \ndata_X shape: {data_X.shape}")
-        logger.info(f"data_Y: \n{data_Y} \ndata_Y shape: {data_Y.shape}")
-        # 训练/测试/验证数据集分割: 选取当前flag下的数据
-        # 数据分割比例
-        data_len = data_X.shape[0]
-        num_train = int(np.round(data_len * self.train_ratio))  # 0.7
-        num_test = int(np.round(data_len * self.test_ratio))    # 0.2
-        num_vali = data_len - num_train - num_test         # 0.1
-        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
-        # 划分训练集、测试集
-        border1s = [0,         num_train,            num_train + num_vali]
-        border2s = [num_train, num_train + num_vali, data_len]
-        border1, border2 = border1s[self.set_type], border2s[self.set_type]
-        logger.info(f"debug::data_X[border1:border2, :]: \n{data_X[border1:border2, :]}")
-        data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
-        data_y = data_Y[border1:border2].reshape(-1, self.output_size)  # (batch_size, num_target) 
-        logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
-        logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
-        
-        return data_x, data_y
-
-    def run(self):
-        # 读取数据
-        data = self._read_data()
-        # data = data.head(21)
-        logger.info(f"data: \n{data} \ndata shape: {data.shape}")
-        
-        # 数据预处理
-        data = self._transform_data(data)
-        logger.info(f"data after transform: \n{data} \ndata shape after transform: {data.shape}")
-        
-        # 选择预测方法
-        if self.pred_method == "recursive_multi_step":  # 递归多步预测
-            data_x, data_y = self.RecursiveMultiStep(data)
-        elif self.pred_method == "direct_multi_step":  # 直接多步预测
-            data_x, data_y = self.DirectMultiStep(data)
-        elif self.pred_method == "direct_recursive_multi_step_mix":  # 直接递归多步混合
-            data_x, data_y = self.DirectRecursiveMultiStepMix(data)
-
-        return data_x, data_y
 
 
 class Dataset_Pred():

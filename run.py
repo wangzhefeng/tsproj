@@ -161,6 +161,7 @@ def args_parse():
     parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
     parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
     parser.add_argument("--output_size", type=int, default=1, help="output size")
+    parser.add_argument("--output", type=int, default=1, help="output")
     # 命令行参数解析
     args = parser.parse_args()
 
@@ -205,7 +206,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型训练
-            model, train_results = exp.train(training_setting)
+            model = exp.train(training_setting)
             # 模型测试
             if args.is_testing:
                 logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")

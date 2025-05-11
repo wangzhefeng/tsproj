@@ -19,12 +19,14 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 import torch
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset
+from torch.utils.data import DataLoader
 
 from data_provider.data_loader_dl_1 import (
     Dataset_Train, 
     Dataset_Pred
 )
+from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -71,13 +73,11 @@ def data_provider(args, flag):
         scale = args.scale,
         inverse = args.inverse,
     )
-    data_x, data_y = data_creator.run()
-    # data set
     data_set = TensorDataset(
-        torch.from_numpy(data_x).to(torch.float32),
-        torch.from_numpy(data_y).to(torch.float32)
+        torch.from_numpy(data_creator.data_x).to(torch.float32),
+        torch.from_numpy(data_creator.data_y).to(torch.float32)
     )
-    # data loader
+    # logger.info(f"debug::data_set: \n{data_set} \nlen(data_set): {data_set.__dict__}")
     data_loader = DataLoader(
         data_set, 
         batch_size = batch_size, 
@@ -131,7 +131,6 @@ def main():
         "pred_method": "recursive_multi_step",
         "num_workers": 0,
     }
-    """
     # ------------------------------
     # direct_multi_step
     # ------------------------------
@@ -145,11 +144,11 @@ def main():
         "inverse": False,
         "seq_len": 2,
         "feature_size": 1,
-        "output_size": 3,
+        "output_size": 2,
         "train_ratio": 0.8,
         "test_ratio": 0.2,
         "batch_size": 1,
-        "pred_method": "direct_multi_step",
+        "pred_method": "direct_multi_output",
         "num_workers": 0,
     }
     args_ms = {
@@ -162,15 +161,16 @@ def main():
         "inverse": False,
         "seq_len": 2,
         "feature_size": 8,
-        "output_size": 4,
+        "output_size": 2,
         "train_ratio": 0.8,
         "test_ratio": 0.2,
         "batch_size": 1,
-        "pred_method": "direct_multi_step",
+        "pred_method": "direct_multi_output",
         "num_workers": 0,
     }
+    """
     # ------------------------------
-    # 
+    # direct_recursive_multi_step_mix
     # ------------------------------
     args_s = {
         "root_path": "./dataset",
