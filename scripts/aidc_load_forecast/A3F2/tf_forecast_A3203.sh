@@ -3,8 +3,7 @@ export LOG_NAME=A3203
 
 model_name=Transformer
 
-# small model: aidc data
-python -u run_tf.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
@@ -25,8 +24,8 @@ python -u run_tf.py \
     --seq_len 72 \
     --label_len 12 \
     --pred_len 24 \
-    --train_ratio 0.7 \
-    --test_ratio 0.0 \
+    --train_ratio 0.6 \
+    --test_ratio 0.3 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
@@ -44,18 +43,18 @@ python -u run_tf.py \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 2 \
+    --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
     --learning_rate 1e-5 \
-    --patience 14 \
+    --patience 7 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

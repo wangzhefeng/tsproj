@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=A1201
+export LOG_NAME=A1203
 
-model_name=Transformer
+model_name=iTransformer
 
 python -u run.py \
     --task_name long_term_forecast \
@@ -15,7 +15,7 @@ python -u run.py \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 201_load \
+    --target 203_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -32,8 +32,8 @@ python -u run.py \
     --d_ff 2048 \
     --enc_in 21841 \
     --dec_in 21841 \
-    --e_layers 12 \
-    --d_layers 12 \
+    --e_layers 2 \
+    --d_layers 1 \
     --factor 3 \
     --n_heads 1 \
     --c_out 1 \
@@ -43,7 +43,7 @@ python -u run.py \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 1 \
+    --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
@@ -54,7 +54,7 @@ python -u run.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

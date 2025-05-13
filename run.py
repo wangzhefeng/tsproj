@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 import argparse
 
-from exp.exp_forecasting_dl import Exp_Forecast
-# from exp.exp_forecasting import Exp_Forecast
+# from exp.exp_forecasting_dl import Exp_Forecast
+from exp.exp_forecasting import Exp_Forecast
 from utils.print_args import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed

@@ -1,10 +1,9 @@
-export CUDA_VISIBLE_DEVICES=5
+export CUDA_VISIBLE_DEVICES=0
 export LOG_NAME=A3302
 
 model_name=Transformer
 
-# small model: aidc data
-python -u run_dl.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
@@ -25,16 +24,16 @@ python -u run_dl.py \
     --seq_len 72 \
     --label_len 12 \
     --pred_len 24 \
-    --train_ratio 0.7 \
-    --test_ratio 0.2 \
+    --train_ratio 0.6 \
+    --test_ratio 0.3 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
-    --enc_in 6946 \
-    --dec_in 6946 \
-    --e_layers 6 \
-    --d_layers 6 \
+    --enc_in 7217 \
+    --dec_in 7217 \
+    --e_layers 12 \
+    --d_layers 12 \
     --factor 3 \
     --n_heads 1 \
     --c_out 1 \
@@ -42,7 +41,7 @@ python -u run_dl.py \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 1 \
+    --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
@@ -53,7 +52,7 @@ python -u run_dl.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7 \

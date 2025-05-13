@@ -8,7 +8,7 @@ model_name=Autoformer
 # --d_ff 2048
 
 # 训练最终用于预测的模型
-python -u run_dl.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 0 \
@@ -30,7 +30,7 @@ python -u run_dl.py \
     --label_len 48 \
     --pred_len 96 \
     --train_ratio 0.8 \
-    --test_ratio 0.0 \
+    --test_ratio 0.3 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 512 \

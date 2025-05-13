@@ -35,6 +35,12 @@ from utils.model_tools import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
 # metrics
 from utils.metrics_dl import metric, DTW
+from utils.polynomial import (
+    leg_torch,
+    chebyshev_torch, 
+    hermite_torch,
+    laguerre_torch,
+)
 from utils.plot_results import test_result_visual
 from utils.plot_losses import plot_losses
 # log
@@ -224,6 +230,116 @@ class Exp_Forecast(Exp_Basic):
         # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
 
         return outputs, batch_y
+    
+    def _fredf_loss(self, batch_index: int, outputs, batch_y, criterion):
+        """
+        FreDF: Learning to Forecast in the Frequency Domain LOSS
+        https://github.com/Master-PLC/FreDF?tab=readme-ov-file#fredf-learning-to-forecast-in-the-frequency-domain
+
+        Args:
+            batch_index (_type_): _description_
+            outputs (_type_): _description_
+            batch_y (_type_): _description_
+            criterion (_type_): _description_
+
+        Raises:
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+        """
+        # ------------------------------
+        # mask
+        # ------------------------------
+        if self.args.add_noise and self.args.noise_amp > 0:
+            seq_len = self.args.pred_len
+            cutoff_freq_percentage = self.args.noise_freq_percentage
+            cutoff_freq = int((seq_len // 2 + 1) * cutoff_freq_percentage)
+            if self.args.auxi_mode == "rfft":
+                low_pass_mask = torch.ones(seq_len // 2 + 1)
+                low_pass_mask[-cutoff_freq:] = 0.
+            else:
+                raise NotImplementedError
+            self.mask = low_pass_mask.reshape(1, -1, 1).to(self.device)
+        else:
+            self.mask = None
+        
+        # init LOSS
+        loss = 0
+        # ------------------------------
+        # rec lambda
+        # ------------------------------
+        if self.args.rec_lambda:
+            loss_rec = criterion(outputs, batch_y)
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_rec: {loss_rec.item()}")
+            # LOSS
+            loss += self.args.rec_lambda * loss_rec 
+        # ------------------------------
+        # auxi lambda
+        # ------------------------------
+        if self.args.auxi_lambda:
+            # fft shape: [B, P, D]
+            if self.args.auxi_mode == "fft":
+                loss_auxi = torch.fft.fft(outputs, dim=1) - torch.fft.fft(batch_y, dim=1)
+            elif self.args.auxi_mode == "rfft":
+                if self.args.auxi_type == 'complex':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)
+                elif self.args.auxi_type == 'complex-phase':
+                    loss_auxi = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                elif self.args.auxi_type == 'complex-mag-phase':
+                    loss_auxi_mag = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).abs()
+                    loss_auxi_phase = (torch.fft.rfft(outputs, dim=1) - torch.fft.rfft(batch_y, dim=1)).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                elif self.args.auxi_type == 'phase':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                elif self.args.auxi_type == 'mag':
+                    loss_auxi = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                elif self.args.auxi_type == 'mag-phase':
+                    loss_auxi_mag = torch.fft.rfft(outputs, dim=1).abs() - torch.fft.rfft(batch_y, dim=1).abs()
+                    loss_auxi_phase = torch.fft.rfft(outputs, dim=1).angle() - torch.fft.rfft(batch_y, dim=1).angle()
+                    loss_auxi = torch.stack([loss_auxi_mag, loss_auxi_phase])
+                else:
+                    raise NotImplementedError
+            elif self.args.auxi_mode == "rfft-D":
+                loss_auxi = torch.fft.rfft(outputs, dim=-1) - torch.fft.rfft(batch_y, dim=-1)
+            elif self.args.auxi_mode == "rfft-2D":
+                loss_auxi = torch.fft.rfft2(outputs) - torch.fft.rfft2(batch_y)
+            elif self.args.auxi_mode == "legendre":
+                loss_auxi = leg_torch(outputs, self.args.leg_degree, device=self.device) - leg_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "chebyshev":
+                loss_auxi = chebyshev_torch(outputs, self.args.leg_degree, device=self.device) - chebyshev_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "hermite":
+                loss_auxi = hermite_torch(outputs, self.args.leg_degree, device=self.device) - hermite_torch(batch_y, self.args.leg_degree, device=self.device)
+            elif self.args.auxi_mode == "laguerre":
+                loss_auxi = laguerre_torch(outputs, self.args.leg_degree, device=self.device) - laguerre_torch(batch_y, self.args.leg_degree, device=self.device)
+            else:
+                raise NotImplementedError
+            
+            # mask
+            if self.mask is not None:
+                loss_auxi *= self.mask
+            
+            # auxi loss
+            if self.args.auxi_loss == "MAE":
+                # MAE, 最小化 element-wise error 的模长
+                loss_auxi = loss_auxi.abs().mean() if self.args.module_first else loss_auxi.mean().abs()  # check the dim of fft
+            elif self.args.auxi_loss == "MSE":
+                # MSE, 最小化 element-wise error 的模长
+                loss_auxi = (loss_auxi.abs()**2).mean() if self.args.module_first else (loss_auxi**2).mean().abs()
+            else:
+                raise NotImplementedError
+            # log
+            if (batch_index + 1) % 100 == 0:
+                print(f"\tloss_auxi: {loss_auxi.item()}")
+            
+            # LOSS
+            loss += self.args.auxi_lambda * loss_auxi
+        # TODO test
+        # if not self.args.add_fredf:
+        #     loss = criterion(outputs, batch_y)
+        # else:
+        #     loss = self._fredf_loss(batch_index = i, outputs=outputs, batch_y=batch_y, criterion=criterion)
+        return loss
 
     def _inverse_data(self, data, outputs, batch_y):
         """

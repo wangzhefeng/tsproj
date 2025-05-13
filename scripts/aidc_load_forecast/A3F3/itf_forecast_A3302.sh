@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=A1201
+export LOG_NAME=A3302
 
-model_name=Transformer
+model_name=iTransformer
 
 python -u run.py \
     --task_name long_term_forecast \
@@ -11,11 +11,11 @@ python -u run.py \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
-    --root_path ./dataset/electricity/A1F2/tf_data \
+    --root_path ./dataset/electricity/A3F3/tf_data \
     --data_path all_df.csv \
     --data all_df \
     --features MS \
-    --target 201_load \
+    --target 302_load \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -30,20 +30,18 @@ python -u run.py \
     --embed_type 0 \
     --d_model 64 \
     --d_ff 2048 \
-    --enc_in 21841 \
-    --dec_in 21841 \
-    --e_layers 12 \
-    --d_layers 12 \
+    --enc_in 7217 \
+    --dec_in 7217 \
+    --e_layers 6 \
+    --d_layers 6 \
     --factor 3 \
     --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
-    --padding 0 \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 1 \
+    --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
     --activation gelu \
@@ -54,7 +52,7 @@ python -u run.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
-    --devices 0,1,2,3,4,5,6,7
+    --devices 0,1,2,3,4,5,6,7 \

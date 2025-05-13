@@ -8,7 +8,7 @@ model_name=DLinear
 # --d_ff 2048
 
 # 训练、验证、测试
-python -u run_dl.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 0 \
@@ -29,7 +29,7 @@ python -u run_dl.py \
     --seq_len 96 \
     --label_len 48 \
     --pred_len 96 \
-    --train_ratio 0.7 \
+    --train_ratio 0.6 \
     --test_ratio 0.2 \
     --moving_avg 25 \
     --embed_type 0 \

@@ -69,7 +69,7 @@ def torch_gc(gpu_type: str = "cuda", device: str = "cuda:0"):
                 torch.cuda.empty_cache()  # 清空 CUDA 缓存
                 torch.cuda.ipc_collect()  # 收集 CUDA 内存碎片
         elif gpu_type == "mps":
-            torch.backends.mps.empty_cache()
+            torch.mps.empty_cache()
 
 
 def torch_gc_v1():

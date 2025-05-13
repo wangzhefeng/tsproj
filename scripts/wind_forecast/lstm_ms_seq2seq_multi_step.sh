@@ -4,7 +4,7 @@ export LOG_NAME=wind_lstm_ms_seq2seq_multi_step
 model_name=LSTM
 
 
-python -u run_tf.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \

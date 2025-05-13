@@ -3,8 +3,7 @@ export LOG_NAME=A1202
 
 model_name=Transformer_v2
 
-# small model: aidc data
-python -u run_tf.py \
+python -u run.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
@@ -25,8 +24,8 @@ python -u run_tf.py \
     --seq_len 72 \
     --label_len 12 \
     --pred_len 24 \
-    --train_ratio 0.7 \
-    --test_ratio 0.0 \
+    --train_ratio 0.6 \
+    --test_ratio 0.3 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
@@ -50,7 +49,7 @@ python -u run_tf.py \
     --activation gelu \
     --use_dtw 0 \
     --learning_rate 1e-5 \
-    --patience 14 \
+    --patience 7 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \

@@ -204,7 +204,7 @@ if __name__ == '__main__':
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
             if args.gpu_type == 'mps':
-                torch.backends.mps.empty_cache()
+                torch.mps.empty_cache()
             elif args.gpu_type == 'cuda':
                 torch.cuda.empty_cache()
     else:
@@ -234,6 +234,6 @@ if __name__ == '__main__':
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting, test=1)
         if args.gpu_type == 'mps':
-            torch.backends.mps.empty_cache()
+            torch.mps.empty_cache()
         elif args.gpu_type == 'cuda':
             torch.cuda.empty_cache()

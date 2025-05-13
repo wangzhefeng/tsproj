@@ -29,7 +29,7 @@ python -u run.py \
     --output 2 \
     --hidden_size 256 \
     --num_layers 2 \
-    --train_ratio 0.7 \
+    --train_ratio 0.6 \
     --test_ratio 0.2 \
     --iters 1 \
     --train_epochs 30 \
