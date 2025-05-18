@@ -171,26 +171,26 @@ class Exp_Forecast(Exp_Basic):
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
         # 数据预处理
         batch_x = batch_x.float().to(self.device)
-        batch_y = batch_y.float().to(self.device)
-        # batch_y = batch_y.float()  # TODO vali and forecast
+        if flag in ["vali", "forecast"]:
+            batch_y = batch_y.float()
+        else:
+            batch_y = batch_y.float().to(self.device)
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
-        # logger.info(f"debug::batch_x_mark.shape: {batch_x_mark.shape} batch_y_mark.shape: {batch_y_mark.shape}")
-        # logger.info(f"debug::batch_x: \n{batch_x}")
-        # logger.info(f"debug::batch_y: \n{batch_y}")
-        # logger.info(f"debug::batch_x_mark: \n{batch_x_mark}")
-        # logger.info(f"debug::batch_y_mark: \n{batch_y_mark}")
+        logger.info(f"debug::batch_x: \n{batch_x} \nbatch_x.shape: {batch_x.shape}")
+        logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
+        logger.info(f"debug::batch_x_mark: \n{batch_x_mark} \nbatch_x_mark.shape: {batch_x_mark.shape}")
+        logger.info(f"debug::batch_y_mark: \n{batch_y_mark} \nbatch_y_mark.shape: {batch_y_mark.shape}")
+        
+        # TODO
         if flag not in ["forecast"]:
-            # TODO v1 lastest batch
+            # v1 lastest batch
             if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
                 logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
-                # break
                 return None, None
-            # TODO v2 lastest batch
+            # v2 lastest batch
             # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
             #     logger.info(f"Train Stop::Data batch_x.shape[1] not equal to (batch_y.shape[1] + label_len + pred_len).")
-            #     # break
             #     return None, None
 
         # TODO decoder input
@@ -198,30 +198,34 @@ class Exp_Forecast(Exp_Basic):
             dec_inp = torch.zeros((batch_y.shape[0], self.args.pred_len, batch_y.shape[2])).float()
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-        # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-        # logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
-        # logger.info(f"debug::dec_inp.shape: {dec_inp.shape}")
+
         # encoder-decoder
         def _run_model():
-            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            if self.args.model in self.non_transformer:
+                outputs = self.model(batch_x)
+            else:
+                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
             if self.args.output_attention:
                 outputs = outputs[0]
             return outputs
+
         if self.args.use_amp:
             with torch.amp.autocast("cuda"):
                 outputs = _run_model()
         else:
             outputs = _run_model()
+        
         # output
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
+        
         # detach device
         if flag in ["vali", "test", "forecast"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
-        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+        logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+        logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
 
         return outputs, batch_y
 
@@ -541,6 +545,10 @@ class Exp_Forecast(Exp_Basic):
     def forecast(self, setting, load: bool=True):
         """
         模型预测
+        # TODO
+        https://snu77.blog.csdn.net/article/details/132881996
+        https://github.com/thuml/Autoformer/blob/main/exp/exp_main.py#L241
+        https://github.com/thuml/Autoformer/blob/main/predict.ipynb
         """
         # 构建预测数据集
         pred_data, pred_loader = self._get_data(flag='pred')
@@ -565,18 +573,23 @@ class Exp_Forecast(Exp_Basic):
         # 模型预测次数
         pred_steps = len(pred_loader)
         logger.info(f"Forecast steps: {pred_steps}")
-        # 模型评估模式
-        self.model.eval()
         # 模型预测
         preds, preds_flat = [], []
+        # 模型评估模式
+        self.model.eval() 
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
                 logger.info(f"forecast step: {i}")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "forecast")
-                if outputs is None and batch_y is None:
-                    break
-                # 输入输出逆转换
+                outputs, batch_y = self._model_forward(
+                    batch_x, 
+                    batch_y, 
+                    batch_x_mark, 
+                    batch_y_mark, 
+                    flag = "forecast"
+                )
+                
+                # TODO 输入输出逆转换
                 outputs = outputs.numpy()
                 batch_y = batch_y.numpy()
                 if pred_data.scale and self.args.inverse:
@@ -584,11 +597,12 @@ class Exp_Forecast(Exp_Basic):
                         outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
                     # inverse transform
                     shape = outputs.shape  # [batch, pred_len, 7]
-                    outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape) 
+                    outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
                     # or
                     # outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                 logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
                 logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+                
                 # 预测值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]

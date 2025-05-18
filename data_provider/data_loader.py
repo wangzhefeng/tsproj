@@ -23,6 +23,7 @@ if ROOT not in sys.path:
 import warnings
 warnings.filterwarnings('ignore')
 
+import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
@@ -256,9 +257,17 @@ class Dataset_Pred(Dataset):
         
         # 数据标准化
         self.scaler = StandardScaler()
+        self.y_scaler = StandardScaler()
         if self.scale:
-            self.scaler.fit(df_data.values)
-            data = self.scaler.transform(df_data.values)
+            if self.features == 'M' or self.features == 'S':
+                self.scaler.fit(df_data.values)
+                data = self.scaler.transform(df_data.values)
+            else:
+                self.scaler.fit(df_data.values[:, :-1])
+                self.y_scaler.fit(df_data.values[:, -1])
+                data_x = self.scaler.transform(df_data.values[:, :-1])
+                data_y = self.y_scaler.transform(df_data.values[:, -1])
+                data = np.concatenate((data_x, data_y), axis = 1)
         else:
             data = df_data.values
         logger.info(f"Train data after standardization: \n{data} \ndata shape: {data.shape}")
@@ -329,7 +338,11 @@ class Dataset_Pred(Dataset):
         return len(self.data_x) - self.seq_len + 1
 
     def inverse_transform(self, data):
-        return self.scaler.inverse_transform(data)
+        if self.features == 'M' or self.features == 'S':
+            return self.scaler.inverse_transform(data)
+        else:
+            
+            return self.y_scaler.inverse_transform(data)
 
 
 
