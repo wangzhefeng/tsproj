@@ -341,7 +341,6 @@ class Dataset_Pred(Dataset):
         if self.features == 'M' or self.features == 'S':
             return self.scaler.inverse_transform(data)
         else:
-            
             return self.y_scaler.inverse_transform(data)
 
 
