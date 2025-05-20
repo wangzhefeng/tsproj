@@ -41,6 +41,7 @@ def args_parse():
     parser.add_argument('--des', type=str, default='test', help='exp description')
     parser.add_argument('--is_training', type=int, required=True, default=0, help='Whether to conduct training')
     parser.add_argument('--is_testing', type=int, required=True, default=0, help='Whether to conduct testing')
+    parser.add_argument('--testing_step', type=int, required=True, default=1, help="Test step")
     parser.add_argument('--is_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
     parser.add_argument('--model', type=str, required=True, default='Transformer', help='model name, options: [Autoformer, Transformer, TimesNet]')
@@ -193,7 +194,6 @@ def run(args):
         args.train_epochs,
         args.root_path.split("/")[-2],
         args.target,
-        # TODO args.add_fredf,
     )
     
     # 模型训练
@@ -213,20 +213,6 @@ def run(args):
                 logger.info(f"{180 * '='}")
                 exp.test(flag="test", setting=training_setting, load=False)
 
-    # TODO 模型测试
-    """
-    if args.is_testing:
-        for ii in range(args.iters):
-            # setting record of experiments
-            test_setting = setting + str(ii)
-            logger.info(f">>>>>>>>> start testing: iter-{ii}: {test_setting}>>>>>>>>>>")
-            logger.info(f"{180 * '='}")
-            # 实例化
-            exp = Exp_Forecast(args)
-            # 模型测试
-            exp.test(flag="test", setting=test_setting, load=True)
-    """
-
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
         ii = "final"
@@ -242,7 +228,7 @@ def run(args):
 
     # 模型预测
     if args.is_forecasting: 
-        ii = "final"
+        ii = 0  # "final"
         # setting record of experiments
         forecasting_setting = setting + str(ii)
         logger.info(f">>>>>>>>> start forecasting: {forecasting_setting}>>>>>>>>>>")

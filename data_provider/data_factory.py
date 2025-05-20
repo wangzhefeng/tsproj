@@ -41,7 +41,7 @@ def data_provider(args, flag):
     # 是否丢弃最后一个 batch
     drop_last = False# if flag in ["pred"] else True
     # 数据集参数
-    if flag in ["train", "val"]:
+    if flag in ["train", "vali"]:
         batch_size = args.batch_size
         Data = Dataset_Train
     elif flag in "test":
@@ -64,6 +64,7 @@ def data_provider(args, flag):
         seasonal_patterns = args.seasonal_patterns,
         scale = args.scale,
         inverse = args.inverse,
+        testing_step = args.testing_step,
         cols = None,
     )
     # logger.info(f"{flag.capitalize()} dataset length: {len(data_set)}")

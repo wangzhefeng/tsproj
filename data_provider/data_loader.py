@@ -30,6 +30,7 @@ from torch.utils.data import Dataset
 
 from utils.augmentation import run_augmentation_single
 from utils.timefeatures import time_features
+from utils.filter_str import filter_number
 from utils.log_util import logger
 
 # global variable
@@ -51,6 +52,7 @@ class Dataset_Train(Dataset):
                  seasonal_patterns=None,
                  scale=True,
                  inverse=False,
+                 testing_step=1,
                  cols=None):
         self.args = args
         # data file path
@@ -58,8 +60,8 @@ class Dataset_Train(Dataset):
         self.data_path = data_path
         # data type
         self.flag = flag
-        assert flag in ['train', 'test', 'val']
-        type_map = {'train': 0, 'val': 1, 'test': 2}
+        assert flag in ['train', 'test', 'vali']
+        type_map = {'train': 0, 'vali': 1, 'test': 2}
         self.set_type = type_map[flag]
         # data size
         self.seq_len = 24 * 4 * 4 if size is None else size[0]
@@ -74,6 +76,7 @@ class Dataset_Train(Dataset):
         # data preprocess
         self.scale = scale
         self.inverse = inverse
+        self.testing_step = testing_step
         self.cols = cols
         # data read
         self.__read_data__()
@@ -126,12 +129,13 @@ class Dataset_Train(Dataset):
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp['date'])
         if self.timeenc == 0:
+            freq_num = filter_number(self.freq)[0]
             df_stamp['month'] = df_stamp['date'].apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp['date'].apply(lambda row: row.day, 1)
             df_stamp['weekday'] = df_stamp['date'].apply(lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp['date'].apply(lambda row: row.hour, 1)
             df_stamp['minute'] = df_stamp['date'].apply(lambda row: row.minute, 1)
-            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
+            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // freq_num)
             data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
@@ -157,10 +161,13 @@ class Dataset_Train(Dataset):
 
     def __getitem__(self, index):
         # data_x 索引
-        if self.flag in ["train", "val"]:
+        if self.flag in ["train", "vali"]:
             s_begin = index
         elif self.flag == "test":
-            s_begin = index * self.pred_len
+            if self.testing_step == 1:
+                s_begin = index
+            elif self.testing_step == self.pred_len:
+                s_begin = index * self.pred_len
         s_end = s_begin + self.seq_len
         # data_y 索引
         r_begin = s_end - self.label_len
@@ -202,6 +209,7 @@ class Dataset_Pred(Dataset):
                  seasonal_patterns=None,
                  scale=True, 
                  inverse=False,
+                 testing_step=None,
                  cols=None):
         self.args = args
         # data file path
@@ -221,6 +229,7 @@ class Dataset_Pred(Dataset):
         # data preprocess
         self.scale = scale
         self.inverse = inverse
+        self.testing_step=testing_step
         self.cols = cols
         # data read
         self.__read_data__()
@@ -329,8 +338,8 @@ class Dataset_Pred(Dataset):
         logger.info(f"debug::index: {index}")
         logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
         logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
-        logger.info(f"debug::seq_y index:      r_begin:(r_begin+label_len) {r_begin}:{r_begin+self.label_len}")
-        logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
+        logger.info(f"debug::seq_y index:      r_begin:s_end {r_begin}:{s_end}")
+        logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{s_end + self.pred_len}")
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 

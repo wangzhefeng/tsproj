@@ -171,7 +171,7 @@ class Exp_Forecast(Exp_Basic):
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
         # 数据预处理
         batch_x = batch_x.float().to(self.device)
-        if flag in ["vali", "forecast"]:
+        if flag in ["vali", "pred"]:
             batch_y = batch_y.float()
         else:
             batch_y = batch_y.float().to(self.device)
@@ -181,25 +181,18 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
         logger.info(f"debug::batch_x_mark: \n{batch_x_mark} \nbatch_x_mark.shape: {batch_x_mark.shape}")
         logger.info(f"debug::batch_y_mark: \n{batch_y_mark} \nbatch_y_mark.shape: {batch_y_mark.shape}")
-        
-        # TODO
-        if flag not in ["forecast"]:
-            # v1 lastest batch
-            if batch_y.shape[1] != (self.args.label_len + self.args.pred_len): 
+        # decoder input
+        if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
+            if flag in ["train", "vali", "test"]:
                 logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
                 return None, None
-            # v2 lastest batch
-            # if batch_x.shape[1] - (self.args.label_len + self.args.pred_len) != batch_y.shape[1]:
-            #     logger.info(f"Train Stop::Data batch_x.shape[1] not equal to (batch_y.shape[1] + label_len + pred_len).")
-            #     return None, None
-
-        # TODO decoder input
-        if self.args.pred_len > batch_y.shape[1]:
-            dec_inp = torch.zeros((batch_y.shape[0], self.args.pred_len, batch_y.shape[2])).float()
+            elif flag == "pred":
+                dec_inp = torch.zeros((batch_y.shape[0], self.args.pred_len, batch_y.shape[2])).float().to(batch_y.device)
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
-
+        logger.info(f"debug::dec_inp: \n{dec_inp} \ndec_inp.shape: {dec_inp.shape}")
+        
         # encoder-decoder
         def _run_model():
             if self.args.model in self.non_transformer:
@@ -209,19 +202,17 @@ class Exp_Forecast(Exp_Basic):
             if self.args.output_attention:
                 outputs = outputs[0]
             return outputs
-
+        
         if self.args.use_amp:
             with torch.amp.autocast("cuda"):
                 outputs = _run_model()
         else:
             outputs = _run_model()
-        
         # output
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
-        
         # detach device
-        if flag in ["vali", "test", "forecast"]:
+        if flag in ["vali", "test", "pred"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
         logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
@@ -256,7 +247,7 @@ class Exp_Forecast(Exp_Basic):
         """
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
-        vali_data, vali_loader = self._get_data(flag='val')
+        vali_data, vali_loader = self._get_data(flag='vali')
         # test_data, test_loader = self._get_data(flag='test')
         # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
@@ -347,7 +338,7 @@ class Exp_Forecast(Exp_Basic):
             train_loss = np.average(train_loss)
             vali_loss, vali_preds, vali_trues, \
             vali_preds_flat, vali_trues_flat = self.vali(vali_data, vali_loader, criterion, test_results_path)
-            logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
+            logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
             vali_losses.append(vali_loss)
@@ -392,9 +383,9 @@ class Exp_Forecast(Exp_Basic):
         模型验证
         """
         # 模型开始验证
-        logger.info(f"{40 * '-'}")
+        # logger.info(f"{40 * '-'}")
         logger.info(f"Model start validating...")
-        logger.info(f"{40 * '-'}")
+        # logger.info(f"{40 * '-'}")
         # 验证窗口数
         vali_steps = len(vali_loader)
         logger.info(f"Vali steps: {vali_steps}")
@@ -406,6 +397,7 @@ class Exp_Forecast(Exp_Basic):
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+                logger.info(f"vali step: {i}")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "vali")
                 if outputs is None and batch_y is None:
@@ -427,9 +419,9 @@ class Exp_Forecast(Exp_Basic):
         # 计算模型输出
         self.model.train()
         # log
-        logger.info(f"{40 * '-'}")
+        # logger.info(f"{40 * '-'}")
         logger.info(f"Validating Finished!")
-        logger.info(f"{40 * '-'}")
+        # logger.info(f"{40 * '-'}")
         
         return vali_loss, preds, trues, preds_flat, trues_flat
 
@@ -545,7 +537,6 @@ class Exp_Forecast(Exp_Basic):
     def forecast(self, setting, load: bool=True):
         """
         模型预测
-        # TODO
         https://snu77.blog.csdn.net/article/details/132881996
         https://github.com/thuml/Autoformer/blob/main/exp/exp_main.py#L241
         https://github.com/thuml/Autoformer/blob/main/predict.ipynb
@@ -573,10 +564,10 @@ class Exp_Forecast(Exp_Basic):
         # 模型预测次数
         pred_steps = len(pred_loader)
         logger.info(f"Forecast steps: {pred_steps}")
+        # 模型评估模式
+        self.model.eval()
         # 模型预测
         preds, preds_flat = [], []
-        # 模型评估模式
-        self.model.eval() 
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
                 logger.info(f"forecast step: {i}")
@@ -586,10 +577,9 @@ class Exp_Forecast(Exp_Basic):
                     batch_y, 
                     batch_x_mark, 
                     batch_y_mark, 
-                    flag = "forecast"
+                    flag = "pred"
                 )
-                
-                # TODO 输入输出逆转换
+                # 输入输出逆转换
                 outputs = outputs.numpy()
                 batch_y = batch_y.numpy()
                 if pred_data.scale and self.args.inverse:
@@ -602,7 +592,6 @@ class Exp_Forecast(Exp_Basic):
                     # outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                 logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
                 logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
-                
                 # 预测值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]

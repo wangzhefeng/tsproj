@@ -24,17 +24,12 @@ if ROOT not in sys.path:
 import torch
 
 from models import (
-    Transformer_v2,
-    Transformer,
-    iTransformer,
     Autoformer, 
     DLinear, 
+    iTransformer,
+    Transformer_v2,
+    Transformer,
     PatchTST,
-    TimesNet, 
-    MLP,
-    RNN,
-    GRU,
-    LSTM,
 )
 from utils.log_util import logger
 
@@ -55,7 +50,7 @@ class Exp_Basic:
             # ------------------------------
             # Time Series Library models
             # ------------------------------
-            'TimesNet': TimesNet,
+            # 'TimesNet': TimesNet,
             'Autoformer': Autoformer,
             'Transformer_v2': Transformer_v2,
             'Transformer': Transformer,
@@ -88,10 +83,10 @@ class Exp_Basic:
             # ------------------------------
             # Basic Neural Network model
             # ------------------------------
-            "MLP": MLP,
-            "RNN": RNN,
-            "GRU": GRU,
-            "LSTM": LSTM,
+            # "MLP": MLP,
+            # "RNN": RNN,
+            # "GRU": GRU,
+            # "LSTM": LSTM,
             # "BiLSTM": BiLSTM,
             # "Attention": Attention,
             # "CNN_Attention": CNN_Attention,
