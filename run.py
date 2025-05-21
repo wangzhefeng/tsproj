@@ -213,8 +213,23 @@ def run(args):
                 logger.info(f"{180 * '='}")
                 exp.test(flag="test", setting=training_setting, load=False)
 
+    # TODO 模型测试
+    if args.is_testing:
+        for ii in range(args.iters):
+            # setting record of experiments
+            test_setting = setting + str(ii)
+            logger.info(f">>>>>>>>> start testing: iter-{ii}: {test_setting}>>>>>>>>>>")
+            logger.info(f"{180 * '='}")
+            # 实例化
+            exp = Exp_Forecast(args)
+            # 模型测试
+            exp.test(flag="test", setting=test_setting, load=True)
+    
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
+        # update args
+        args.train_ratio = 0.8
+        args.test_ratio = 0.0
         ii = "final"
         # setting record of experiments
         final_training_setting = setting + str(ii)
@@ -223,8 +238,7 @@ def run(args):
         # 实例化
         exp = Exp_Forecast(args)
         # 模型训练
-        model, train_results = exp.train(final_training_setting)
-        logger.info(f"train_results: {train_results}")
+        model = exp.train(final_training_setting)
 
     # 模型预测
     if args.is_forecasting: 

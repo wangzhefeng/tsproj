@@ -65,7 +65,6 @@ def data_provider(args, flag):
         scale = args.scale,
         inverse = args.inverse,
         testing_step = args.testing_step,
-        cols = None,
     )
     # logger.info(f"{flag.capitalize()} dataset length: {len(data_set)}")
     data_loader = DataLoader(

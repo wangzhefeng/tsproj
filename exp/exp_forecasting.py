@@ -35,7 +35,7 @@ from utils.model_tools import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
 # metrics
 from utils.metrics_dl import metric, DTW
-from utils.plot_results import test_result_visual
+from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
 # log
 from utils.timestamp_utils import from_unix_time
@@ -177,10 +177,11 @@ class Exp_Forecast(Exp_Basic):
             batch_y = batch_y.float().to(self.device)
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        logger.info(f"debug::batch_x: \n{batch_x} \nbatch_x.shape: {batch_x.shape}")
-        logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
-        logger.info(f"debug::batch_x_mark: \n{batch_x_mark} \nbatch_x_mark.shape: {batch_x_mark.shape}")
-        logger.info(f"debug::batch_y_mark: \n{batch_y_mark} \nbatch_y_mark.shape: {batch_y_mark.shape}")
+        # logger.info(f"debug::batch_x: \n{batch_x} \nbatch_x.shape: {batch_x.shape}")
+        # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
+        # logger.info(f"debug::batch_x_mark: \n{batch_x_mark} \nbatch_x_mark.shape: {batch_x_mark.shape}")
+        # logger.info(f"debug::batch_y_mark: \n{batch_y_mark} \nbatch_y_mark.shape: {batch_y_mark.shape}")
+        
         # decoder input
         if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
             if flag in ["train", "vali", "test"]:
@@ -191,7 +192,7 @@ class Exp_Forecast(Exp_Basic):
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
-        logger.info(f"debug::dec_inp: \n{dec_inp} \ndec_inp.shape: {dec_inp.shape}")
+        # logger.info(f"debug::dec_inp: \n{dec_inp} \ndec_inp.shape: {dec_inp.shape}")
         
         # encoder-decoder
         def _run_model():
@@ -208,6 +209,7 @@ class Exp_Forecast(Exp_Basic):
                 outputs = _run_model()
         else:
             outputs = _run_model()
+        
         # output
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
@@ -230,7 +232,7 @@ class Exp_Forecast(Exp_Basic):
             if outputs.shape[-1] != batch_y.shape[-1]:
                 outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
             # inverse transform
-            shape = outputs.shape  # [batch, pred_len, 7]
+            shape = outputs.shape  # [batch, pred_len, enc_in/dec_in]
             outputs = data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
             batch_y = data.inverse_transform(batch_y.reshape(shape[0] * shape[1], -1)).reshape(shape)
             # or
@@ -270,7 +272,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Train start time: {from_unix_time(train_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
         # 训练窗口数
         train_steps = len(train_loader)
-        logger.info(f"Train steps: {train_steps}") 
+        logger.info(f"Train total steps: {train_steps}") 
         # 模型优化器
         optimizer = self._select_optimizer()
         logger.info(f"Train optimizer has builded...")
@@ -298,6 +300,7 @@ class Exp_Forecast(Exp_Basic):
             # 模型训练模式
             self.model.train()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
+                logger.info(f"Train step: {i} running...")
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
@@ -388,7 +391,7 @@ class Exp_Forecast(Exp_Basic):
         # logger.info(f"{40 * '-'}")
         # 验证窗口数
         vali_steps = len(vali_loader)
-        logger.info(f"Vali steps: {vali_steps}")
+        logger.info(f"Vali total steps: {vali_steps}")
         # 模型验证结果
         vali_loss = []
         preds, trues = [], []
@@ -397,7 +400,7 @@ class Exp_Forecast(Exp_Basic):
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
-                logger.info(f"vali step: {i}")
+                logger.info(f"Vali step: {i} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "vali")
                 if outputs is None and batch_y is None:
@@ -451,7 +454,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         # 模型测试次数
         test_steps = len(test_loader)
-        logger.info(f"Test steps: {test_steps}")
+        logger.info(f"Test total steps: {test_steps}")
         # 模型评估模式
         self.model.eval()
         # 测试结果收集
@@ -459,13 +462,12 @@ class Exp_Forecast(Exp_Basic):
         preds_flat, trues_flat = [], []
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
-                logger.info(f"test step: {i}")
+                logger.info(f"Test step: {i} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "test")
-                if outputs is None and batch_y is None:
-                    break 
+                if outputs is None and batch_y is None: break
                 # 输入输出逆转换
-                outputs, batch_y = self._inverse_data(test_data, outputs, batch_y) 
+                outputs, batch_y = self._inverse_data(test_data, outputs, batch_y)
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
@@ -494,7 +496,7 @@ class Exp_Forecast(Exp_Basic):
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                    test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
+                    predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
         # preds = np.array(preds)  # or 
         preds = np.concatenate(preds, axis = 0)
@@ -519,7 +521,7 @@ class Exp_Forecast(Exp_Basic):
         #     trues_flat = np.concatenate(trues_flat, axis = 0)
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
         # results_df = pd.DataFrame({
         #     "timestamp": pd.date_range("2024-12-01 00:00:00", periods=self.args.pred_len, freq=self.args.freq),
@@ -561,56 +563,45 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         logger.info(f"Model start forecasting...")
         logger.info(f"{40 * '-'}")
-        # 模型预测次数
+        # 模型预测(推理)次数
         pred_steps = len(pred_loader)
-        logger.info(f"Forecast steps: {pred_steps}")
+        logger.info(f"Forecast total steps: {pred_steps}")
         # 模型评估模式
         self.model.eval()
         # 模型预测
-        preds, preds_flat = [], []
+        preds = []
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
-                logger.info(f"forecast step: {i}")
+                logger.info(f"Forecast step: {i} running...")
                 # 前向传播
-                outputs, batch_y = self._model_forward(
-                    batch_x, 
-                    batch_y, 
-                    batch_x_mark, 
-                    batch_y_mark, 
-                    flag = "pred"
-                )
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "pred")
                 # 输入输出逆转换
-                outputs = outputs.numpy()
-                batch_y = batch_y.numpy()
-                if pred_data.scale and self.args.inverse:
-                    if outputs.shape[-1] != batch_y.shape[-1]:
-                        outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
-                    # inverse transform
-                    shape = outputs.shape  # [batch, pred_len, 7]
-                    outputs = pred_data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
-                    # or
-                    # outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
-                logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-                logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
-                # 预测值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, :, f_dim:]
-                # 预测结果收集
-                pred = outputs
-                preds.append(pred)
-                logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                
-                # TODO v1 and v2
-                # preds_flat.append(pred[0, :, -1].tolist())
-                # logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat shape: {preds_flat.shape}")
-                
-                # 预测数据可视化
-                inputs = batch_x.detach().cpu().numpy()
+                outputs = outputs.numpy()  # [1, pred_len, 1]
+                batch_y = batch_y.numpy()  # [1, pred_len, enc_in/dec_in]
+                inputs = batch_x.detach().cpu().numpy()[:, :, f_dim:]  # [1, seq_len, 1]
                 if pred_data.scale and self.args.inverse:
-                    shape = inputs.shape
-                    inputs = pred_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
-                pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
-                true_plot = inputs[0, :, -1]
+                    # TODO 数据逆转换 v1: output 最后一个维度转换为与 batch_y 一致: # [1, pred_len, enc_in/dec_in]
+                    # if outputs.shape[-1] != batch_y.shape[-1]:
+                    #     outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
+                    # inverse transform
+                    outputs = pred_data \
+                        .inverse_transform(outputs.reshape(outputs.shape[0] * outputs.shape[1], -1)) \
+                        .reshape(outputs.shape)
+                    # # TODO 数据逆转换 v1: 预测值提取
+                    # f_dim = -1 if self.args.features == 'MS' else 0
+                    # outputs = outputs[:, :, f_dim:]
+                    # 预测数据可视化数据处理
+                    inputs = pred_data \
+                        .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
+                        .reshape(inputs.shape)
+                    logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+                # 预测结果收集
+                preds.append(outputs)
+                trues_plot = inputs[0, :, -1]
+                preds_plot = np.concatenate((inputs[0, :, -1], outputs[0, :, -1]), axis=0)
+                logger.info(f"debug::trues_plot: \n{trues_plot} \ntrues_plot.shape: {trues_plot.shape}")
+                logger.info(f"debug::preds_plot: \n{preds_plot} \npreds_plot.shape: {preds_plot.shape}")
         # 最终预测值
         preds = np.array(preds).squeeze()
         logger.info(f"Forecast results: preds: \n{preds} \npreds shape: {preds.shape}")
@@ -619,7 +610,6 @@ class Exp_Forecast(Exp_Basic):
             "predict_value": preds,
         })
         logger.info(f"Forecast results: preds_df: \n{preds_df} \npreds_df.shape: {preds_df.shape}")
-
         # 最终预测值保存
         logger.info(f"{40 * '-'}")
         logger.info(f"Forecast results have been saved in path:")
@@ -631,7 +621,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Forecast visual results have been saved in path:")
         logger.info(f"{40 * '-'}")
         plot_path = os.path.join(pred_results_path, 'forecasting_prediction.png')
-        test_result_visual(pred_plot, true_plot, plot_path)
+        predict_result_visual(preds_plot, trues_plot, plot_path)
         logger.info(plot_path)
         # log
         logger.info(f"{40 * '-'}")
