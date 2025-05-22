@@ -8,6 +8,7 @@ python -u run.py \
     --des 'Exp' \
     --is_training 1 \
     --is_testing 1 \
+    --testing_step 24 \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \

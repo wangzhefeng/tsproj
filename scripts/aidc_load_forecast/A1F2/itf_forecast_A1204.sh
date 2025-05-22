@@ -3,11 +3,12 @@ export LOG_NAME=A1204
 
 model_name=iTransformer
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
     --is_testing 1 \
+    --testing_step 24 \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
@@ -54,7 +55,7 @@ python -u run.py \
     --scale 1 \
     --inverse 1 \
     --use_amp 0 \
-    --use_gpu 1 \
+    --use_gpu 0 \
     --gpu_type 'cuda' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

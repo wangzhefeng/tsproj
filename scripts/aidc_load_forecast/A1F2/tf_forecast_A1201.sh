@@ -3,12 +3,13 @@ export LOG_NAME=A1201
 
 model_name=Transformer
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
     --is_testing 1 \
-    --is_forecasting 0 \
+    --testing_step 24 \
+    --is_forecasting 1 \
     --model_id all_df_72_24 \
     --model $model_name \
     --root_path ./dataset/electricity/A1F2/tf_data \
@@ -21,11 +22,11 @@ python -u run.py \
     --predict_results ./saved_results/predict_results/ \
     --freq h \
     --embed timeF \
-    --seq_len 72 \
-    --label_len 12 \
+    --seq_len 168 \
+    --label_len 24 \
     --pred_len 24 \
-    --train_ratio 0.6 \
-    --test_ratio 0.3 \
+    --train_ratio 0.7 \
+    --test_ratio 0.1 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 64 \
@@ -37,24 +38,25 @@ python -u run.py \
     --factor 3 \
     --n_heads 1 \
     --c_out 1 \
-    --dropout 0.05 \
+    --dropout 0.01 \
     --rev 1 \
     --padding 0 \
     --output_attention 0 \
     --num_workers 0 \
     --iters 1 \
-    --train_epochs 1 \
-    --batch_size 1 \
+    --train_epochs 30 \
+    --batch_size 2 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 1e-5 \
-    --patience 7 \
+    --learning_rate 1e-6 \
+    --patience 14 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
+    --augmentation_ratio 0.1 \
     --use_amp 0 \
-    --use_gpu 0 \
-    --gpu_type 'cuda' \
+    --use_gpu 1 \
+    --gpu_type 'mps' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

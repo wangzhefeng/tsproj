@@ -3,11 +3,12 @@ export LOG_NAME=A3301
 
 model_name=iTransformer
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
     --is_testing 1 \
+    --testing_step 24 \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
