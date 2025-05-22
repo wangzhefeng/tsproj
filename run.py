@@ -214,7 +214,7 @@ def run(args):
                 exp.test(flag="test", setting=training_setting, load=False)
 
     # TODO 模型测试
-    if args.is_testing:
+    if not args.is_training and args.is_testing:
         for ii in range(args.iters):
             # setting record of experiments
             test_setting = setting + str(ii)

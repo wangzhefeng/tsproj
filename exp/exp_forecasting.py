@@ -217,8 +217,8 @@ class Exp_Forecast(Exp_Basic):
         if flag in ["vali", "test", "pred"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
-        logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
 
         return outputs, batch_y
 
@@ -229,6 +229,7 @@ class Exp_Forecast(Exp_Basic):
         if data.scale and self.args.inverse:
             outputs = outputs.numpy()
             batch_y = batch_y.numpy()
+            # 数据逆转换 output 最后一个维度转换为与 batch_y 一致: [1, pred_len, enc_in/dec_in]
             if outputs.shape[-1] != batch_y.shape[-1]:
                 outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
             # inverse transform
@@ -286,7 +287,6 @@ class Exp_Forecast(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.amp.GradScaler()
         # 训练、验证结果收集
-        train_results = {}
         train_losses, vali_losses = [], []
         # 分 epoch 训练
         for epoch in range(self.args.train_epochs):
@@ -296,21 +296,17 @@ class Exp_Forecast(Exp_Basic):
             # epoch 训练结果收集
             iter_count = 0
             train_loss = []
-            train_results[f"epoch-{epoch+1}"] = {"preds": [], "trues": [], "preds_flat": [], "trues_flat": []}
             # 模型训练模式
             self.model.train()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
-                logger.info(f"Train step: {i} running...")
+                # logger.info(f"Train step: {i} running...")
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
                 optimizer.zero_grad()
                 # 前向传播
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag="train")
-                if outputs is None and batch_y is None:
-                    break
-                # TODO 输入输出逆转换
-                # outputs, batch_y = self._inverse_data(train_data, outputs, batch_y)
+                if outputs is None and batch_y is None: break
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:].to(self.device)
@@ -322,7 +318,7 @@ class Exp_Forecast(Exp_Basic):
                 train_loss.append(loss.item())
                 # logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
-                if (i + 1) % 10 == 0:
+                if (i + 1) % 5 == 0:
                     speed = (time.time() - train_start_time) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                     logger.info(f'Epoch: {epoch + 1}, \tBatch: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/batch; left time: {left_time:.4f}s')
@@ -339,8 +335,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss, vali_preds, vali_trues, \
-            vali_preds_flat, vali_trues_flat = self.vali(vali_data, vali_loader, criterion, test_results_path)
+            vali_loss = self.vali(vali_loader, criterion, test_results_path)
             logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -357,8 +352,8 @@ class Exp_Forecast(Exp_Basic):
             if early_stopping.early_stop:
                 logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
                 break
-            # TODO 学习率调整
-            # adjust_learning_rate(optimizer, epoch + 1, self.args)
+            # 学习率调整
+            adjust_learning_rate(optimizer, epoch + 1, self.args)
         # -----------------------------
         # 模型加载
         # ------------------------------
@@ -381,21 +376,17 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
-    def vali(self, vali_data, vali_loader, criterion, path):
+    def vali(self, vali_loader, criterion, path):
         """
         模型验证
         """
         # 模型开始验证
-        # logger.info(f"{40 * '-'}")
         logger.info(f"Model start validating...")
-        # logger.info(f"{40 * '-'}")
         # 验证窗口数
         vali_steps = len(vali_loader)
         logger.info(f"Vali total steps: {vali_steps}")
         # 模型验证结果
         vali_loss = []
-        preds, trues = [], []
-        preds_flat, trues_flat = [], []
         # 模型评估模式
         self.model.eval()
         with torch.no_grad():
@@ -405,14 +396,10 @@ class Exp_Forecast(Exp_Basic):
                 outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "vali")
                 if outputs is None and batch_y is None:
                     break
-                # TODO 输入输出逆转换
-                # outputs, batch_y = self._inverse_data(vali_data, outputs, batch_y)
                 # 预测值/真实值提取
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
-                # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
-                # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
@@ -422,11 +409,8 @@ class Exp_Forecast(Exp_Basic):
         # 计算模型输出
         self.model.train()
         # log
-        # logger.info(f"{40 * '-'}")
         logger.info(f"Validating Finished!")
-        # logger.info(f"{40 * '-'}")
-        
-        return vali_loss, preds, trues, preds_flat, trues_flat
+        return vali_loss
 
     def test(self, flag, setting, load: bool=False):
         """
@@ -472,13 +456,13 @@ class Exp_Forecast(Exp_Basic):
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
-                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # 验证结果收集
                 pred = outputs
                 true = batch_y
                 preds.append(pred)
                 trues.append(true)
+                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
+                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO test batch_size > 1
                 # if test_loader.batch_size > 1:
                 #     for batch_idx in range(self.args.batch_size):
@@ -490,22 +474,20 @@ class Exp_Forecast(Exp_Basic):
                 if i % 5 == 0:
                     inputs = batch_x.detach().cpu().numpy()
                     if test_data.scale and self.args.inverse:
-                        shape = inputs.shape
-                        inputs = test_data.inverse_transform(inputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
-                        # or
+                        inputs = test_data \
+                            .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
+                            .reshape(inputs.shape)
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
-        # preds = np.array(preds)  # or 
-        preds = np.concatenate(preds, axis = 0)
-        # trues = np.array(trues)  # or 
-        trues = np.concatenate(trues, axis = 0)
+        preds = np.concatenate(preds, axis = 0)  # preds = np.array(preds) 
+        trues = np.concatenate(trues, axis = 0)  # trues = np.array(trues)        
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
+        # logger.info(f"debug::Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
+        # logger.info(f"debug::Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
         logger.info(f"{40 * '-'}")
         logger.info(f"Test metric results have been saved in path:")
         logger.info(f"{40 * '-'}")
@@ -521,6 +503,8 @@ class Exp_Forecast(Exp_Basic):
         #     trues_flat = np.concatenate(trues_flat, axis = 0)
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
+        # logger.info(f"debug::Test results: preds_flat: \n{preds_flat} \npreds_flat.shape: {preds_flat.shape}")
+        # logger.info(f"debug::Test results: trues_flat: \n{trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
         predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
         # results_df = pd.DataFrame({
@@ -595,13 +579,13 @@ class Exp_Forecast(Exp_Basic):
                     inputs = pred_data \
                         .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
                         .reshape(inputs.shape)
-                    logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+                    # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
                 # 预测结果收集
                 preds.append(outputs)
                 trues_plot = inputs[0, :, -1]
                 preds_plot = np.concatenate((inputs[0, :, -1], outputs[0, :, -1]), axis=0)
-                logger.info(f"debug::trues_plot: \n{trues_plot} \ntrues_plot.shape: {trues_plot.shape}")
-                logger.info(f"debug::preds_plot: \n{preds_plot} \npreds_plot.shape: {preds_plot.shape}")
+                # logger.info(f"debug::trues_plot: \n{trues_plot} \ntrues_plot.shape: {trues_plot.shape}")
+                # logger.info(f"debug::preds_plot: \n{preds_plot} \npreds_plot.shape: {preds_plot.shape}")
         # 最终预测值
         preds = np.array(preds).squeeze()
         logger.info(f"Forecast results: preds: \n{preds} \npreds shape: {preds.shape}")

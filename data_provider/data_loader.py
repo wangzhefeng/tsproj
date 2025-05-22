@@ -119,7 +119,7 @@ class Dataset_Train(Dataset):
             data = df_data.values
         logger.info(f"Train data shape after standardization: {data.shape}")
         # 训练/测试/验证数据集分割: 选取当前 flag 下的数据
-        logger.info(f"Train data length: {num_train}, Valid data length: {num_vali}, Test data length: {num_test}")
+        logger.info(f"Train data length: {border2s[0]-border1s[0]}, Valid data length: {border2s[1]-border1s[1]}, Test data length: {border2s[2]-border1s[2]}")
         logger.info(f"Train step: {1}, Valid step: {1}, Test step: {self.testing_step}")
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
         # 时间特征处理
@@ -147,7 +147,7 @@ class Dataset_Train(Dataset):
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
                 self.data_x, self.data_y, self.args
             )
-        logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
+        # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
         # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
         # logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")
 

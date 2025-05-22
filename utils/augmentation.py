@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+from utils.log_util import logger
 
 
 def jitter(x, sigma=0.03):
@@ -135,7 +136,7 @@ def spawner(x, labels, sigma=0.05, verbose=0):
             path2 = dtw.dtw(pat[random_points[i]:], random_sample[random_points[i]:], dtw.RETURN_PATH, slope_constraint="symmetric", window=window)
             combined = np.concatenate((np.vstack(path1), np.vstack(path2+random_points[i])), axis=1)
             if verbose:
-                # print(random_points[i])
+                # logger.info(random_points[i])
                 dtw_value, cost, DTW_map, path = dtw.dtw(pat, random_sample, return_flag = dtw.RETURN_ALL, slope_constraint="symmetric", window=window)
                 dtw.draw_graph1d(cost, DTW_map, path, pat, random_sample)
                 dtw.draw_graph1d(cost, DTW_map, combined, pat, random_sample)
@@ -144,7 +145,7 @@ def spawner(x, labels, sigma=0.05, verbose=0):
                 ret[i,:,dim] = np.interp(orig_steps, np.linspace(0, x.shape[1]-1., num=mean.shape[0]), mean[:,dim]).T
         else:
             # if verbose > -1:
-            #     print("There is only one pattern of class {}, skipping pattern average".format(l[i]))
+            #     logger.info("There is only one pattern of class {}, skipping pattern average".format(l[i]))
             ret[i,:] = pat
     return jitter(ret, sigma=sigma)
 
@@ -205,7 +206,7 @@ def wdba(x, labels, batch_size=6, slope_constraint="symmetric", use_window=True,
             ret[i,:] = average_pattern / weighted_sums[:,np.newaxis]
         else:
             # if verbose > -1:
-            #     print("There is only one pattern of class {}, skipping pattern average".format(l[i]))
+            #     logger.info("There is only one pattern of class {}, skipping pattern average".format(l[i]))
             ret[i,:] = x[i]
     return ret
 
@@ -247,7 +248,7 @@ def random_guided_warp(x, labels, slope_constraint="symmetric", use_window=True,
                 ret[i,:,dim] = np.interp(orig_steps, np.linspace(0, x.shape[1]-1., num=warped.shape[0]), warped[:,dim]).T
         else:
             # if verbose > -1:
-            #     print("There is only one pattern of class {}, skipping timewarping".format(l[i]))
+            #     logger.info("There is only one pattern of class {}, skipping timewarping".format(l[i]))
             ret[i,:] = pat
     return ret
 
@@ -320,7 +321,7 @@ def discriminative_guided_warp(x, labels, batch_size=6, slope_constraint="symmet
                 ret[i,:,dim] = np.interp(orig_steps, np.linspace(0, x.shape[1]-1., num=warped.shape[0]), warped[:,dim]).T
         else:
             # if verbose > -1:
-            #     print("There is only one pattern of class {}".format(l[i]))
+            #     logger.info("There is only one pattern of class {}".format(l[i]))
             ret[i,:] = pat
             warp_amount[i] = 0.
     if use_variable_slice:
@@ -340,7 +341,7 @@ def discriminative_guided_warp_shape(x, labels, batch_size=6, slope_constraint="
 
 
 def run_augmentation(x, y, args):
-    print("Augmenting %s"%args.data)
+    logger.info("Augmenting %s"%args.data)
     np.random.seed(args.seed)
     x_aug = x
     y_aug = y
@@ -350,7 +351,7 @@ def run_augmentation(x, y, args):
             x_temp, augmentation_tags = augment(x, y, args)
             x_aug = np.append(x_aug, x_temp, axis=0)
             y_aug = np.append(y_aug, y, axis=0)
-            print("Round %d: %s done"%(n, augmentation_tags))
+            logger.info("Round %d: %s done"%(n, augmentation_tags))
         if args.extra_tag:
             augmentation_tags += "_"+args.extra_tag
     else:
@@ -359,7 +360,7 @@ def run_augmentation(x, y, args):
 
 
 # def run_augmentation_single(x, y, args):
-#     # print("Augmenting %s"%args.data)
+#     # logger.info("Augmenting %s"%args.data)
 #     np.random.seed(args.seed)
 #     x_aug = x
 #     y_aug = y
@@ -368,7 +369,7 @@ def run_augmentation(x, y, args):
 #         for n in range(args.augmentation_ratio):
 #             x_temp, augmentation_tags = augment(x, y, args)
 #             x_aug = x_temp
-#             # print("Round %d: %s done"%(n, augmentation_tags))
+#             # logger.info("Round %d: %s done"%(n, augmentation_tags))
 #         if args.extra_tag:
 #             augmentation_tags += "_" + args.extra_tag
 #     else:
@@ -378,7 +379,7 @@ def run_augmentation(x, y, args):
 
 
 def run_augmentation_single(x, y, args):
-    # print("Augmenting %s"%args.data)
+    # logger.info("Augmenting %s"%args.data)
     np.random.seed(args.seed)
 
     x_aug = x
@@ -397,10 +398,10 @@ def run_augmentation_single(x, y, args):
         raise ValueError("Input must be (batch_size, sequence_length, num_channels) dimensional")
 
     if args.augmentation_ratio > 0:
-        augmentation_tags = "%d"%args.augmentation_ratio
+        augmentation_tags = "%d" % args.augmentation_ratio
         for n in range(args.augmentation_ratio):
             x_aug, augmentation_tags = augment(x_input, y, args)
-            # print("Round %d: %s done"%(n, augmentation_tags))
+            # logger.info("Round %d: %s done"%(n, augmentation_tags))
         if args.extra_tag:
             augmentation_tags += "_"+args.extra_tag
     else:
@@ -409,7 +410,9 @@ def run_augmentation_single(x, y, args):
     if(len(x.shape)<3):
         # Reverse to two-dimensional in whole series augmentation scenario
         x_aug = x_aug.squeeze(0)
+    
     return x_aug, y_aug, augmentation_tags
+
 
 def augment(x, y, args):
     import utils.augmentation as aug
