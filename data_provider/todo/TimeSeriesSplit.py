@@ -14,24 +14,12 @@
 # python libraries
 import os
 import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
-
-
-class TimeSeriesSplit:
-    pass
-
-
-class TimeSeriesSplitGap:
-    pass
-
-
-class TimeSeriesSplitSliding:
-    pass
 
 
 
@@ -50,21 +38,6 @@ def main():
         [3, 4],
         [1, 2],
         [3, 4],
-    ])
-    y = np.array([1, 2, 3, 4, 5, 6])
-
-    tscv = TimeSeriesSplit(n_splits = 5, max_train_size = None, test_size = None, gap = 0)
-
-    for i, (train_index, test_index) in enumerate(tscv.split(X)):
-        print(f"Fold {i}:")
-        print(f"  Train: index={train_index}")
-        print(f"  Test: index={test_index}")
-    # ------------------------------
-    # 
-    # ------------------------------
-    import numpy as np
-    from sklearn.model_selection import TimeSeriesSplit
-    X = np.array([
         [1, 2],
         [3, 4],
         [1, 2],
@@ -72,17 +45,11 @@ def main():
         [1, 2],
         [3, 4],
     ])
-    y = np.array([1, 2, 3, 4, 5, 6])
+    y = np.array([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6])
+    print(X.shape, y.shape)
+    tscv = TimeSeriesSplit(n_splits=3, max_train_size=None, test_size=2, gap=2)
+    for i, (train_index, test_index) in enumerate(tscv.split(X, y, groups=None)):
+        print(f"Fold {i}: {train_index} {test_index}")
 
-    tscv = TimeSeriesSplit(n_splits = 3, test_size = 2, gap = 2)
-
-    for i, (train_index, test_index) in enumerate(tscv.split(X)):
-        print(f"Fold {i}:")
-        print(f"  Train: index={train_index}")
-        print(f"  Test: index={test_index}")
-    # ------------------------------
-    # 
-    # ------------------------------
-    
 if __name__ == "__main__":
     main()

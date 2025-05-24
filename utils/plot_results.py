@@ -67,14 +67,15 @@ def predict_result_visual(preds, trues, path='./pic/test.pdf'):
     # 画布
     fig = plt.figure(figsize = (25, 5))
     # 创建折线图
-    plt.plot(trues, lw=1, label='Trues')
-    plt.plot(preds, lw=1, ls="--", label='Preds')
+    plt.plot(trues, label='Trues', lw=1, color="blue")
+    plt.plot(preds, label='Preds', lw=1, color="read", linestyle="--")
     # 增强视觉效果
     plt.xlabel("Time")
     plt.ylabel("Value")
-    plt.legend()
-    # plt.ylim(5, 20)
     plt.title('Trues and Preds Timeseries Plot')
+    # plt.ylim(5, 20)
+    # plt.xlim(0, 100)
+    plt.legend()
     plt.grid(True)
     plt.savefig(path, bbox_inches='tight')
     plt.show();

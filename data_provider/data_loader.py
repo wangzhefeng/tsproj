@@ -100,14 +100,15 @@ class Dataset_Train(Dataset):
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
+        df_stamp = df_raw[['date']]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         # 数据分割比例
-        num_train = int(len(df_raw) * self.args.train_ratio)  # 0.7
-        num_test = int(len(df_raw) * self.args.test_ratio)    # 0.2
-        num_vali = len(df_raw) - num_train - num_test         # 0.1
+        num_train = int(len(df_data) * self.args.train_ratio)  # 0.7
+        num_test = int(len(df_data) * self.args.test_ratio)    # 0.2
+        num_vali = len(df_data) - num_train - num_test         # 0.1
         # 数据分割索引
-        border1s = [0,         num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali,     len(df_raw)]
+        border1s = [0,         num_train - self.seq_len, len(df_data) - num_test - self.seq_len]
+        border2s = [num_train, num_train + num_vali,     len(df_data)]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
         # 数据标准化
         self.scaler = StandardScaler()
@@ -123,7 +124,7 @@ class Dataset_Train(Dataset):
         logger.info(f"Train step: {1}, Valid step: {1}, Test step: {self.testing_step}")
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
         # 时间特征处理
-        df_stamp = df_raw[['date']][border1:border2]
+        df_stamp = df_stamp[border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp['date'])
         if self.timeenc == 0:
             freq_num = filter_number(self.freq)[0]

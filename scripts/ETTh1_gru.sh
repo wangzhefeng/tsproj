@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=wind_lstm_ms_single_step
+export LOG_NAME=ETTh1_gru
 
-model_name=LSTM
+model_name=GRU
 
 python -u run.py \
     --task_name long_term_forecast \
@@ -10,31 +10,33 @@ python -u run.py \
     --is_testing 0 \
     --testing_step 24 \
     --is_forecasting 0 \
-    --model_id wind_lstm_ms_single_step \
+    --model_id ETTh1_gru \
     --model $model_name \
-    --root_path ./dataset \
-    --data_path wind_dataset.csv \
-    --data wind_dataset \
+    --root_path ./dataset/ETT-small/ \
+    --data_path ETTh1.csv \
+    --data ETTh1 \
     --features MS \
-    --target WIND \
+    --target OT \
     --pred_method recursive_multi_step \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
     --freq d \
     --embed timeF \
-    --seq_len 20 \
-    --feature_size 8 \
+    --window_len 6 \
+    --pred_len 2 \
+    --step_size 1 \
+    --feature_size 1 \
     --output_size 1 \
     --output 1 \
-    --hidden_size 256 \
+    --hidden_size 32 \
     --num_layers 2 \
-    --train_ratio 0.6 \
+    --train_ratio 0.8 \
     --test_ratio 0.2 \
     --iters 1 \
-    --train_epochs 30 \
-    --learning_rate 3e-4 \
-    --batch_size 32 \
+    --train_epochs 10 \
+    --learning_rate 5e-3 \
+    --batch_size 1 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
