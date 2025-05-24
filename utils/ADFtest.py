@@ -1,3 +1,5 @@
+# https://arch.readthedocs.io/en/latest/unitroot/generated/arch.unitroot.ADF.html
+
 import os
 
 import numpy as np

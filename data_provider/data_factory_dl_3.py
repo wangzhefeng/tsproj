@@ -63,12 +63,12 @@ def data_provider(args, flag):
         flag = flag
     )
     data_loader = DataLoader(
-        dataset = data_set, 
-        batch_size = batch_size, 
+        dataset = data_set,
+        batch_size = batch_size,
         shuffle = shuffle_flag,
         num_workers=args.num_workers,
         drop_last = drop_last,
-    ) 
+    )
     
     return data_set, data_loader
 
@@ -77,7 +77,26 @@ def data_provider(args, flag):
 
 # 测试代码 main 函数
 def main():
-    pass
+    from utils.args_tools import DotDict
+    args = {
+        "embed": "timeF",
+        "batch_size": 1,
+        "root_path": ".\\dataset\\ETT-small",
+        "data_path": "ETTh1.csv",
+        "target": "OT",
+        "features": "S",
+        "window_len": 6,
+        "pred_len": 1,
+        "step_size": 1,
+        "train_ratio": 0.8,
+        "test_ratio": 0.2,
+        "scale": True,
+        "num_workers": 0
+    }
+    args = DotDict(args)
+    # data
+    data_set, data_loader = data_provider(args, flag="train")
+    data_set, data_loader = data_provider(args, flag="test")
 
 if __name__ == "__main__":
     main()

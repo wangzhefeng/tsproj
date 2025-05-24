@@ -34,7 +34,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class TimeSeriesDataset(Dataset):
-    
+
     def __init__(self, 
                  args, 
                  root_path, 
@@ -64,15 +64,15 @@ class TimeSeriesDataset(Dataset):
         self.scale = scale
         # data read
         self.__read_data__()
-    
+
     def __read_data__(self):
         logger.info(f"{40 * '-'}")
         logger.info(f"Load and Preprocessing {self.flag} data...")
         logger.info(f"{40 * '-'}")
-        data_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        logger.info(f"Train data: \n{data_raw.head()} \nTrain data shape: {data_raw.shape}")
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        logger.info(f"Train data: \n{df_raw.head()} \nTrain data shape: {df_raw.shape}")
         # 缺失值处理
-        data_raw.dropna(axis=1, how='any', inplace=True)
+        df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after dropna: {df_raw.shape}")
         # 数据特征排序
         cols = list(df_raw.columns)
@@ -84,7 +84,7 @@ class TimeSeriesDataset(Dataset):
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
-            df_data = np.array(df_raw[[self.target]])
+            df_data = df_raw[[self.target]]
         df_stamp = df_raw[['date']]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         # 数据分割比例
@@ -103,14 +103,14 @@ class TimeSeriesDataset(Dataset):
         self.scaler = StandardScaler()
         # self.scaler = MinMaxScaler(feature_range=(0, 1))
         if self.scale:
-            train_data = df_data[border1[0]:border2[0]]
+            train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
         else:
             data = df_data.values
         logger.info(f"Train data shape after standardization: {data.shape}")
         # 训练/测试/验证数据集分割: 选取当前 flag 下的数据
-        logger.info(f"Train data length: {border2s[0]-border1s[0]}, Valid data length: {border2s[1]-border1s[1]}, Test data length: {border2s[2]-border1s[2]}")
+        logger.info(f"Train data length: {border2s[0]-border1s[0]}, Test data length: {border2s[2]-border1s[2]}")
         logger.info(f"Train step: {1}, Valid step: {1}, Test step: {1}")
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
         # 数据切分
