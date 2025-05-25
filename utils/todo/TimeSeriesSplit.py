@@ -7,7 +7,7 @@
 # * Date        : 2024-09-10
 # * Version     : 0.1.091017
 # * Description : 时间序列分割
-# * Link        : link
+# * Link        : https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 

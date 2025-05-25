@@ -18,7 +18,6 @@ ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
@@ -26,12 +25,17 @@ from statsmodels.tsa.stattools import adfuller
 import pmdarima as pm
 from pmdarima.arima.stationarity import ADFTest, PPTest, KPSSTest
 
+from utils.log_util import logger
+
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 """
-* 自相关图平稳检测：ACF 图、PACF 图，如果图看起来不相对平稳，模型可能需要差分项.
-* 差分平稳：ARIMAs that include differencing (i.e., d > 0) assume that the data becomes stationary after differencing. This is called difference-stationary. 
+# * 自相关图平稳检测：
+    - ACF 图、PACF 图，如果图看起来不相对平稳，模型可能需要差分项.
+* 差分平稳：
+    - ARIMAs that include differencing (i.e., d > 0) assume that the data becomes 
+      stationary after differencing. This is called difference-stationary. 
 * ADF test(Augmented Dickey-Fuller test)
 * `pmdarima.auto_arima` 能够自动确定适当的差分项.
 """
@@ -74,7 +78,7 @@ def ADF_test(series):
     """
     ADF test
     """
-    adf_test = ADF_test(alpha = 0.05)
+    adf_test = ADFTest(alpha = 0.05)
     p_val, should_diff = adf_test.should_diff(series)
     
     return p_val, should_diff
@@ -84,7 +88,7 @@ def PP_test(series):
     """
     PP tset
     """
-    pp_test = PP_test(alpha = 0.05)
+    pp_test = PPTest(alpha = 0.05)
     p_val, should_diff = pp_test.should_diff(series)
     
     return p_val, should_diff
@@ -94,7 +98,7 @@ def KPSS_test(series):
     """
     KPSS test
     """
-    kpss_test = KPSS_test(alpha = 0.05)
+    kpss_test = KPSSTest(alpha = 0.05)
     p_val, should_diff = kpss_test.should_diff(series)
     
     return p_val, should_diff
@@ -118,19 +122,23 @@ def stationarity_test(series):
     assert n_adf == n_kpss == n_pp == 0
 
 
-def stationarity_test(timeseries, window: int = 12):
+def stationarity_test(series, window: int = 12):
     """
     平稳性检验
-    """
-    plt.rcParams["figure.figsize"] = 15, 6
+    Augmented Dickey-Fuller (ADF) 测试的结果提供了是否拒绝时间序列具有单位根的依据，
+    即时间序列是否是非平稳的。ADF测试的两个关键输出是：
+        1. ADF 统计量：这是一个负数，它越小，越有可能拒绝单位根的存在。
+        2. p-值：如果 p-值低于给定的显著性水平（通常为0.05或0.01），则拒绝单位根的假设，表明时间序列是平稳的。
+    """ 
     # determing rolling statistics
-    rolmean = timeseries.rolling(window = window).mean()
-    rolstd = timeseries.rolling(window = window).std()
+    rolmean = series.rolling(window = window).mean()
+    rolstd = series.rolling(window = window).std()
     # rollmean = pd.Series.rolling(ts, window = 12).mean()
     # rollstd = pd.Series.rolling(ts, window = 12).std()
     
     # plot rolling statistics
-    orig = plt.plot(timeseries, color = "blue", label = "Original")
+    plt.rcParams["figure.figsize"] = 15, 6
+    orig = plt.plot(series, color = "blue", label = "Original")
     mean = plt.plot(rolmean, color = "red", label = "Rolling Mean")
     std = plt.plot(rolstd, color = "black", label = "Rolling Std")
     plt.legend(loc = "best")
@@ -139,9 +147,9 @@ def stationarity_test(timeseries, window: int = 12):
 
     # perform Dickey-Fuller test
     print("Results of Dickey-Fuller Test:")
-    dftest = adfuller(timeseries, autolag = "AIC")
-    dfoutput = pd.Series(
-        dftest[0:4], 
+    df_test = adfuller(series, autolag = "AIC")
+    df_output = pd.Series(
+        df_test[0:4], 
         index = [
             "Test Statistic", 
             "p-value", 
@@ -149,20 +157,16 @@ def stationarity_test(timeseries, window: int = 12):
             "Number of Observations Used"
         ],
     )
-    for key, value in dftest[4].items():
-        dfoutput["Cirtical Value (%s)" % key] = value
-    print(dfoutput)
+    for key, value in df_test[4].items():
+        df_output["Cirtical Value (%s)" % key] = value
+    print(df_output)
 
 
-__all__ = [
-    stationarity_test,
-]
 
 
 # 测试代码 main 函数
 def main():
-    ts = None
-    stationarity_test(ts)
+    pass
 
 if __name__ == "__main__":
     main()

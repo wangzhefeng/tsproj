@@ -62,30 +62,6 @@ plt.rcParams["font.family"].append("SimHei")  # 处理 matplotlib 字体问题
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def plot_array_curve(data_list: List, ycol: str, title: str):
-    """
-    绘制拱顶温度、烟道温度曲线
-    """
-    # data
-    df = pd.DataFrame({ycol: data_list})
-    # plot
-    fig = plt.figure()
-    plt.plot(df.index, df[ycol], marker = ".", linestyle = "-.")
-    plt.title(label = title)
-    plt.show();
-
-
-def plot_df_curve(df: pd.DataFrame, ycol: str, title: str):
-    """
-    绘制曲线
-    """
-    # plot
-    fig = plt.figure()
-    plt.plot(df.index, df[ycol], marker = ".", linestyle = "-.")
-    plt.title(label = title)
-    plt.show();
-
-
 def plot_heatmap(dfs: List, 
                  stat: str = "corr",  # 协方差矩阵: "cov"
                  method: str = "pearson", 

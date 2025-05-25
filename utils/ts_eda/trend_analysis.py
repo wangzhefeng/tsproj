@@ -21,6 +21,8 @@ ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.seasonal import seasonal_decompose
 
@@ -51,6 +53,30 @@ def plot_trend(df, model: str="multiplicative"):
     plt.show();
 
 
+def trend_remove(df: pd.DataFrame, method: str, chart: bool = False) -> None:
+    """
+    趋势性去除
+    """
+    # 平方跟活 N 次根变换
+    # 差分
+    # 对数转换
+    if method == "log":
+        ts_log = np.log(df)
+        if chart:
+            plt.plot(ts_log)
+            plt.show()
+        return ts_log
+    # 移动平均消除趋势
+    elif method == "moving":
+        ts_log = np.log(df)
+        moving_avg = ts_log.rolling(window = 12).mean()
+        if chart:
+            plt.plot(ts_log)
+            plt.plot(moving_avg, color = "red")
+            plt.show()
+        return moving_avg
+
+
 
 
 # 测试代码 main 函数
@@ -66,6 +92,9 @@ def main():
     plt.show()
     
     plot_trend(df, model="additive")
+
+    # trend remove
+    trend_remove(df, method = "log", chart = False)
 
 if __name__ == "__main__":
     main()

@@ -35,7 +35,7 @@ from utils.model_tools import adjust_learning_rate, EarlyStopping
 from utils.losses import mape_loss, mase_loss, smape_loss
 # metrics
 from utils.metrics_dl import metric, DTW
-from utils.plot_results import test_result_visual
+from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
 # log
 from utils.timestamp_utils import from_unix_time
@@ -652,7 +652,7 @@ class Exp_Forecast(Exp_Basic):
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                    test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
+                    predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
         # preds = np.array(preds)  # or 
         preds = np.concatenate(preds, axis = 0)
@@ -677,7 +677,7 @@ class Exp_Forecast(Exp_Basic):
         #     trues_flat = np.concatenate(trues_flat, axis = 0)
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
         # log
         logger.info(f"{40 * '-'}")
@@ -754,7 +754,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
         # log
         logger.info(f"{40 * '-'}")
@@ -852,67 +852,12 @@ class Exp_Forecast(Exp_Basic):
         
         return preds_seq
 
-    @staticmethod
-    def plot_train_results(pred, true, task = "Train"):
-        plt.figure(figsize = (15, 8))
-        plt.plot(pred, label = "Pred")
-        plt.plot(true, label = "True")
-        plt.xlabel("Time")
-        plt.ylabel("Value")
-        plt.title(f"{task} Predictions")
-        plt.legend()
-        plt.grid()
-        plt.tight_layout()
-        plt.show();
-
 
 
 
 # 测试代码 main 函数
 def main():
-    from utils.tsproj_dl.config.gru import Config
-    # config
-    configs = Config()
-    exp = Exp_Forecast(args=configs)
-    # model train
-    exp.train()
-    # model predict
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = exp.predict_directly_multi_output(plot_size = 200)
-    logger.info(f"y_train_pred: \n{y_train_pred}")
-    logger.info(f"y_test_pred: \n{y_test_pred}")
-    # result plot
-    exp.plot_train_results(y_train_pred, y_train_true, task="Train")
-    exp.plot_train_results(y_test_pred, y_test_true, task="Test")
-    '''
-    # ------------------------------
-    # 模型测试
-    # ------------------------------
-    model = None
-    # multi-sequence
-    # --------------
-    predictions_multiseq = model.predict_sequences_multiple(
-        data = x_test, # shape: (656, 49, 1)
-        window_size = configs['data']['sequence_length'],  # 50
-        prediction_len = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(predictions_multiseq).shape)
-    plot_results_multiple(predictions_multiseq, y_test, configs['data']['sequence_length'], title = configs.data)
-    
-    # point by point
-    # --------------
-    predictions_pointbypoint = model.predict_point_by_point(data = x_test)
-    logger.info(np.array(predictions_pointbypoint).shape)
-    plot_results(predictions_pointbypoint, y_test, title = configs.data)
-    
-    # full-sequence
-    # --------------
-    prediction_fullseq = model.predict_sequence_full(
-        data = x_test,
-        window_size = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(prediction_fullseq).shape)
-    plot_results(prediction_fullseq, y_test, title = configs.data)
-    '''
-    
+    pass
+ 
 if __name__ == "__main__":
     main()

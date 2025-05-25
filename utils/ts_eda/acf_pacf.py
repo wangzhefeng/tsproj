@@ -17,13 +17,10 @@ import sys
 ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
+from typing import List
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-import pmdarima as pm
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -32,11 +29,9 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 def get_acf(series: pd.Series, is_visual: bool = True):
     """
     计算 ACF，ACF 可视化
-
-    Args:
-        series (pd.Series): _description_
-        is_visual (bool): _description_
     """
+    import pmdarima as pm
+
     series = pm.c(series.values) if isinstance(series, pd.Series) else series
     acf_value = pm.acf(series)
 
@@ -49,11 +44,9 @@ def get_acf(series: pd.Series, is_visual: bool = True):
 def get_pacf(series: pd.Series, is_visual: bool = True):
     """
     计算 PACF，PACF 可视化
-
-    Args:
-        series (pd.Series): _description_
-        is_visual (bool): _description_
     """
+    import pmdarima as pm
+
     series = pm.c(series.values) if isinstance(series, pd.Series) else series
     pacf_value = pm.pacf(series)
 
@@ -67,9 +60,12 @@ def get_acf_pacf(series: pd.Series, nlags: int = 3):
     """
     ACF，PACF
     """
+    import statsmodels.api as sm
+    
     lag_acf = sm.tsa.stattools.acf(series, nlags = nlags)
     lag_pacf = sm.tsa.stattools.pacf(series, nlags = nlags, method = "ols")
 
+    fig = plt.figure(figsize = (12, 8))
     plt.subplot(121)
     plt.plot(lag_acf)
     plt.axhline(y = 0, linestyle = "--", color = "gray")
@@ -90,57 +86,48 @@ def get_acf_pacf(series: pd.Series, nlags: int = 3):
     return lag_acf, lag_pacf
 
 
+def plot_acf_pacf(series_list: List[pd.Series], series_names: List[str], nlags: int = 3):
+    """
+    plot ACF, PACF
+
+    Args:
+        series_list (List[pd.Series]): _description_
+        series_names (List[str]): _description_
+    """
+    from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+    fig, ax = plt.subplots(len(series_list), 2, figsize = (12, 8))
+    fig.subplots_adjust(hspace = 0.5)
+    for i, series in enumerate(series_list):
+        plot_acf(series, lags=nlags,ax = ax[i][0])
+        ax[i][0].set_title(f'ACF({series_names[i]})')
+        plot_pacf(series, lags=nlags, ax = ax[i][1])
+        ax[i][1].set_title(f'PACF({series_names[i]})')
+    plt.tight_layout()
+    plt.show();
+
+
 
 
 # 测试代码 main 函数
 def main():
-    """
-    import akshare as ak
+    # ------------------------------
+    # data
+    # ------------------------------
+    import numpy as np
     # 白噪声
     white_noise = np.random.standard_normal(size = 1000)
 
     # 随机游走
     x = np.random.standard_normal(size = 1000)
     random_walk = np.cumsum(x)
-
-    # GDP
-    df = ak.macro_china_gdp()
-    df = df.set_index('季度')
-    df.index = pd.to_datetime(df.index)
-    gdp = df['国内生产总值-绝对值'][::-1].astype('float')
-
-    # GDP DIFF
-    gdp_diff = gdp.diff(4).dropna() 
-    
-    # acf, pacf plot
-    fig, ax = plt.subplots(4, 2)
-    fig.subplots_adjust(hspace = 0.5)
-
-    plot_acf(white_noise, ax = ax[0][0])
-    ax[0][0].set_title('ACF(white_noise)')
-    plot_pacf(white_noise, ax = ax[0][1])
-    ax[0][1].set_title('PACF(white_noise)')
-
-    plot_acf(random_walk, ax = ax[1][0])
-    ax[1][0].set_title('ACF(random_walk)')
-    plot_pacf(random_walk, ax = ax[1][1])
-    ax[1][1].set_title('PACF(random_walk)')
-
-    plot_acf(gdp, ax = ax[2][0])
-    ax[2][0].set_title('ACF(gdp)')
-    plot_pacf(gdp, ax = ax[2][1])
-    ax[2][1].set_title('PACF(gdp)')
-
-    plot_acf(gdp_diff, ax = ax[3][0])
-    ax[3][0].set_title('ACF(gdp_diff)')
-    plot_pacf(gdp_diff, ax = ax[3][1])
-    ax[3][1].set_title('PACF(gdp_diff)')
-
-    plt.show()
-    """
-    # vecvor
+    # ------------------------------
+    # pmdarima
+    # ------------------------------
+    # import pmdarima as pm
     # x = pm.c(1, 2, 3, 4, 5, 6, 7)
     # print(x)
+
     # acf_value = get_acf(x)
     # print(acf_value)
 
@@ -148,10 +135,17 @@ def main():
     # print(pacf_value)
     
     # ------------------------------
-    # 
+    # statsmodels
     # ------------------------------
-    x = pd.Series([1, 2, 3, 4, 5, 6, 7])
-    get_acf_pacf(x)
+    get_acf_pacf(white_noise)
+    get_acf_pacf(random_walk)
+
+    # ------------------------------
+    # plot
+    # ------------------------------
+    series_list = [white_noise, random_walk]
+    series_names = ['white_noise', 'random_walk']
+    plot_acf_pacf(series_list, series_names)
 
 if __name__ == "__main__":
     main()
