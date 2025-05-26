@@ -147,7 +147,7 @@ lightning_logs/
 *.npy
 *.pkl
 *.ts
-*.xlsx
+# *.xlsx
 
 # ---------------------------------------
 # custom setting
