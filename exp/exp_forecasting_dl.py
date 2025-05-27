@@ -15,9 +15,9 @@
 # python libraries
 import os
 import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 import time
 
 import numpy as np
@@ -28,14 +28,14 @@ import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
 # data pipeline
-from data_provider.data_factory_dl import data_provider
+from data_provider.data_factory_dl_1 import data_provider
 # model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # loss
 from utils.losses import mape_loss, mase_loss, smape_loss
 # metrics
 from utils.metrics_dl import metric, DTW
-from utils.plot_results import test_result_visual
+from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
 # log
 from utils.timestamp_utils import from_unix_time
@@ -652,7 +652,7 @@ class Exp_Forecast(Exp_Basic):
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                    test_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
+                    predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
         # preds = np.array(preds)  # or 
         preds = np.concatenate(preds, axis = 0)
@@ -677,7 +677,84 @@ class Exp_Forecast(Exp_Basic):
         #     trues_flat = np.concatenate(trues_flat, axis = 0)
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        test_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        logger.info(test_results_path)
+        # log
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Testing Finished!")
+        logger.info(f"{40 * '-'}")
+
+        return
+
+    def test_v3(self, flag, setting, load: bool=False):
+        """
+        模型测试
+        """
+        # 数据集构建
+        test_data, test_loader = self._get_data(flag=flag) 
+        # 模型加载
+        if load:
+            logger.info(f"{40 * '-'}")
+            logger.info("Pretrained model has loaded from:")
+            logger.info(f"{40 * '-'}")
+            model_checkpoint_path = self._get_model_path(setting)
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"]) 
+            logger.info(model_checkpoint_path)
+        # 测试结果保存地址
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Test results will be saved in path:")
+        logger.info(f"{40 * '-'}")
+        test_results_path = self._get_test_results_path(setting) 
+        logger.info(test_results_path) 
+        # 模型开始测试
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Model start testing...")
+        logger.info(f"{40 * '-'}")
+        # 模型测试次数
+        test_steps = len(test_loader)
+        logger.info(f"Test steps: {test_steps}")
+        # 模型评估模式
+        self.model.eval()
+        # 测试结果收集
+        preds, trues = [], []
+        preds_flat, trues_flat = [], []
+        with torch.no_grad():
+            for i, data_batch in enumerate(test_loader):
+                logger.info(f"test step: {i}")
+                x_test, y_test = data_batch
+                # 前向传播
+                outputs = self.model(x_test)
+                from utils.metrics_dl import MAE
+                mae = MAE(outputs.detach().numpy(), np.array(y_test))
+                logger.info(f"MAE: {mae:.4f}")
+                # 验证结果收集
+                for j in range(self.args.batch_size):
+                    for i in range(self.predict_len):
+                        preds.append(outputs[j][i][0].detach().numpy())
+                        trues.append(y_test[j][i][0].detach().numpy()) 
+                if i == 1:
+                    break 
+        # 测试结果保存
+        preds = np.array(preds).reshape(1, -1)
+        trues = np.array(trues).reshape(1, -1)
+        preds = test_data.inverse_transform(preds)
+        trues = test_data.inverse_transform(trues)
+        logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
+        logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
+        
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Test metric results have been saved in path:")
+        logger.info(f"{40 * '-'}")
+        self._test_results_save(preds, trues, setting, test_results_path)
+        logger.info(test_results_path)
+        
+        # 测试结果可视化
+        logger.info(f"{40 * '-'}")
+        logger.info(f"Test visual results have been saved in path:")
+        logger.info(f"{40 * '-'}")
+        preds_flat = np.concatenate(preds, axis = 0)
+        trues_flat = np.concatenate(trues, axis = 0)
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
         logger.info(test_results_path)
         # log
         logger.info(f"{40 * '-'}")
@@ -775,67 +852,12 @@ class Exp_Forecast(Exp_Basic):
         
         return preds_seq
 
-    @staticmethod
-    def plot_train_results(pred, true, task = "Train"):
-        plt.figure(figsize = (15, 8))
-        plt.plot(pred, label = "Pred")
-        plt.plot(true, label = "True")
-        plt.xlabel("Time")
-        plt.ylabel("Value")
-        plt.title(f"{task} Predictions")
-        plt.legend()
-        plt.grid()
-        plt.tight_layout()
-        plt.show();
-
 
 
 
 # 测试代码 main 函数
 def main():
-    from utils.tsproj_dl.config.gru import Config
-    # config
-    configs = Config()
-    exp = Exp_Forecast(args=configs)
-    # model train
-    exp.train()
-    # model predict
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = exp.predict_directly_multi_output(plot_size = 200)
-    logger.info(f"y_train_pred: \n{y_train_pred}")
-    logger.info(f"y_test_pred: \n{y_test_pred}")
-    # result plot
-    exp.plot_train_results(y_train_pred, y_train_true, task="Train")
-    exp.plot_train_results(y_test_pred, y_test_true, task="Test")
-    '''
-    # ------------------------------
-    # 模型测试
-    # ------------------------------
-    model = None
-    # multi-sequence
-    # --------------
-    predictions_multiseq = model.predict_sequences_multiple(
-        data = x_test, # shape: (656, 49, 1)
-        window_size = configs['data']['sequence_length'],  # 50
-        prediction_len = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(predictions_multiseq).shape)
-    plot_results_multiple(predictions_multiseq, y_test, configs['data']['sequence_length'], title = configs.data)
-    
-    # point by point
-    # --------------
-    predictions_pointbypoint = model.predict_point_by_point(data = x_test)
-    logger.info(np.array(predictions_pointbypoint).shape)
-    plot_results(predictions_pointbypoint, y_test, title = configs.data)
-    
-    # full-sequence
-    # --------------
-    prediction_fullseq = model.predict_sequence_full(
-        data = x_test,
-        window_size = configs['data']['sequence_length'],  # 50
-    )
-    logger.info(np.array(prediction_fullseq).shape)
-    plot_results(prediction_fullseq, y_test, title = configs.data)
-    '''
-    
+    pass
+ 
 if __name__ == "__main__":
     main()

@@ -4,6 +4,8 @@ import lightgbm as lgb
 from statsmodels.tsa.arima.model import ARIMA
 import matplotlib.pyplot as plt
 
+from utils.plot_results import plot_forecast_results
+
 
 def generate_time_series_data(n_samples=1000):
     """生成模拟时间序列数据"""
@@ -77,18 +79,6 @@ def weighted_average(predictions_1, predictions_2, weight_1=0.7, weight_2=0.3):
     return weight_1 * np.array(predictions_1) + weight_2 * np.array(predictions_2)
 
 
-def plot_results(y_train, y_test, predictions, future_steps):
-    """可视化结果"""
-    plt.figure(figsize=(10, 6))
-    plt.plot(np.arange(len(y_train)), y_train, label='Training Data', color='blue')
-    plt.plot(np.arange(len(y_train), len(y_train) + len(y_test)), y_test, label='Test Data', color='green')
-    plt.plot(np.arange(len(y_train), len(y_train) + future_steps), predictions, label='Predictions', color='red', linestyle='--')
-    plt.axvline(x=len(y_train), color='gray', linestyle='--', label='Train/Test Split')
-    plt.legend()
-    plt.title('Recursive Multi-step Forecasting with Model Ensemble')
-    plt.xlabel('Time')
-    plt.ylabel('Value')
-    plt.show()
 
 
 def main():
@@ -120,8 +110,7 @@ def main():
     ensemble_predictions = weighted_average(lgb_predictions, arima_predictions, weight_1=0.7, weight_2=0.3)
 
     # 可视化结果
-    plot_results(y_train, y_test, ensemble_predictions, future_steps)
-
+    plot_forecast_results(y_train, y_test, ensemble_predictions, future_steps)
 
 if __name__ == '__main__':
     main()

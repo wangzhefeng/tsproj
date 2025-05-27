@@ -14,10 +14,11 @@
 # python libraries
 import os
 import sys
-ROOT = os.getcwd()
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+ROOT = str(os.getcwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
 
+import torch
 import torch.nn as nn
 
 # global variable
@@ -53,6 +54,7 @@ class Model(nn.Module):
             device=self.cfgs.device,
             dtype=self.cfgs.dtype
         )
+        self.dropout = nn.Dropout(0.1)
         # fc
         self.linear = nn.Linear(
             in_features = self.cfgs.hidden_size, 
@@ -60,28 +62,76 @@ class Model(nn.Module):
             device=self.cfgs.device,
             dtype=self.cfgs.dtype,
         )
+        self.relu = nn.ReLU()
 
     def forward(self, x, hidden = None):
         # 获取 batch size
         batch_size = x.shape[0]
+
         # 初始化隐藏层状态
         if hidden is None:
             h_0 = x.data.new(self.num_layers, batch_size, self.hidden_size).fill_(0).float()
         else:
             h_0 = hidden
+        
         # GRU
         output, h_0 = self.gru(x, h_0)
+
+        # TODO dropout
+        # output = self.dropout(output)
+
         # 获取 GRU 输出的维度信息
         batch_size, seq_len, hidden_size = output.shape
+
         # 将 output 变成 (batch_size * seq_len, hidden_dim)
         output = output.reshape(-1, hidden_size)
+        # TODO output = output[:, -self.pred_len:, :]
+
         # 全连接层
         output = self.linear(output)  # shape: (batch_size * seq_len, 1)
+        # TODO output = self.relu(output)
+
         # 转换维度，用于输出
         # TODO output = output.reshape(seq_len, batch_size, -1)
         output = output.reshape(batch_size, seq_len, -1).permute(1, 0, 2)
+
         # 只需返回最后一个时间片的数据
         return output[-1]
+
+
+class GRU(nn.Module):
+    
+    def __init__(self, feature_size=1, hidden_size=32, num_layers=1, output_size=1, pred_len= 4):
+        super(GRU, self).__init__()
+        
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.pred_len = pred_len
+
+        self.gru = nn.GRU(
+            feature_size, 
+            hidden_size, 
+            num_layers=num_layers, 
+            batch_first=True
+        )
+        self.dropout = nn.Dropout(0.1)
+        self.fc = nn.Linear(hidden_size, output_size)
+        self.relu = nn.ReLU()
+    
+    def forward(self, x):
+        h0_gru = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        
+        out, _ = self.gru(x, h0_gru)
+        out = self.dropout(out)
+        
+        # 取最后 pred_len 时间步的输出
+        out = out[:, -self.pred_len:, :]
+        
+        out = self.fc(out)
+        out = self.relu(out)
+        
+        return out
+
 
 
 

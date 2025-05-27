@@ -20,6 +20,7 @@ if ROOT not in sys.path:
 import warnings
 warnings.filterwarnings("ignore")
 
+import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
@@ -28,27 +29,48 @@ plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def plot_results(preds, trues, title: str = "result"):
+def plot_test_results(preds, trues, title: str = "result"):
     """
     绘图展示结果
     """
-    fig = plt.figure(facecolor = 'white')
-    ax = fig.add_subplot(111)
-    ax.plot(trues, label = 'True Data')
-    plt.plot(preds, label = 'Prediction')
+    fig = plt.figure(facecolor = 'white', figsize=(15, 5))
+    plt.plot(trues, label = 'Trues')
+    plt.plot(preds, label = 'Preds')
     plt.legend()
+    plt.xlabel('Time')
+    plt.ylabel('Value')
     plt.title(title)
-    plt.show()
+    plt.grid()
+    plt.tight_layout()
     plt.savefig(f'images/{title}_results.png')
+    plt.show();
+
+
+def plot_results(y_train, y_test, y_pred, horizon, title: str="result"):
+    """
+    可视化结果
+    """
+    fig = plt.figure(figsize=(10, 6))
+    plt.plot(np.arange(len(y_train)),                             y_train, label='Training Data', color='blue')
+    plt.plot(np.arange(len(y_train), len(y_train) + len(y_test)), y_test,  label='Test Data',     color='green')
+    plt.plot(np.arange(len(y_train), len(y_train) + horizon),     y_pred,  label='Predictions',   color='red', linestyle='--')
+    plt.axvline(x=len(y_train), color='gray', linestyle='--', label='Train/Test Split')
+    plt.legend()
+    plt.xlabel('Time')
+    plt.ylabel('Value')
+    plt.title(title)
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(f'images/{title}_results.png')
+    plt.show();
 
 
 def plot_results_multiple(preds, trues, preds_len: int, title: str = "results_multiple"):
     """
     绘图展示结果
     """
-    fig = plt.figure(facecolor = 'white')
-    ax = fig.add_subplot(111)
-    ax.plot(trues, label = 'True Data')
+    fig = plt.figure(facecolor = 'white', figsize=(15, 5))
+    plt.plot(trues, label = 'True Data')
     for i, data in enumerate(preds):
         padding = [None for p in range(i * preds_len)]
         plt.plot(padding + data, label = 'Prediction')
@@ -67,28 +89,18 @@ def predict_result_visual(preds, trues, path='./pic/test.pdf'):
     # 画布
     fig = plt.figure(figsize = (25, 5))
     # 创建折线图
-    plt.plot(trues, lw=1, label='Trues')
-    plt.plot(preds, lw=1, ls="--", label='Preds')
+    plt.plot(trues, label='Trues', lw=1, color="blue")
+    plt.plot(preds, label='Preds', lw=1, color="read", linestyle="--")
     # 增强视觉效果
     plt.xlabel("Time")
     plt.ylabel("Value")
-    plt.legend()
-    # plt.ylim(5, 20)
     plt.title('Trues and Preds Timeseries Plot')
+    # plt.ylim(5, 20)
+    # plt.xlim(0, 100)
+    plt.legend()
     plt.grid(True)
     plt.savefig(path, bbox_inches='tight')
     plt.show();
-
-
-def series_plot(df, col):
-    plt.figure(figsize=(15, 5))
-    plt.plot(df["ds"], df[col])
-    plt.xlabel("Date [H]")
-    plt.ylabel("有功功率")
-    plt.title("有功功率")
-    # plt.legend()
-    plt.tight_layout()
-    plt.grid()
 
 
 def plot_cv_predictions(cv_plot_df, device_data, data_type = "split"):
