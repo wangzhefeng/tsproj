@@ -1,5 +1,7 @@
 __author__ = 'Brian Iwana'
 
+# https://mp.weixin.qq.com/s?__biz=MzIwNDA5NDYzNA==&mid=2247491743&idx=1&sn=2bceb18eded5a72d1b773748c437d84a&chksm=96c7cd5aa1b0444c28b53bb64ab79087a7b35ab4182a375b31cb8f0c82bddaa51b6709f41478&scene=178&cur_album_id=1364202321906941952&search_click_id=#rd
+
 import math
 import sys
 
