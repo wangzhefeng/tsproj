@@ -26,84 +26,21 @@ simplefilter("ignore")
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
-plt.style.use("seaborn-v0_8-whitegrid")  # print(plt.style.available)
-plt.rc(
-    "figure",
-    autolayout=True,
-    figsize=(11, 4.5),
-    titleweight="bold",
-    titlesize=18,
-)
-plt.rc(
-    "axes",
-    labelweight="bold",
-    labelsize="large",
-    titleweight="bold",
-    titlesize=16,
-    titlepad=10,
-)
-plot_params = dict(
-    color="0.75",
-    style=".-",
-    markeredgecolor="0.25",
-    markerfacecolor="0.25",
-    legend=False,
-)
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]
 os.environ['LOG_NAME'] = LOGGING_LABEL
 
+from utils.ts_plot import scatter_reg_plot, model_result_plot
 from utils.log_util import logger
 
 
+# ------------------------------
 # data path
+# ------------------------------
 data_dir = Path("./dataset/ts_course_data")
 logger.info(f"data_dir: {data_dir}")
-
-# ------------------------------
-# linear regression: book sales
-# ------------------------------
-# data
-df = pd.read_csv(
-    data_dir / "book_sales.csv", 
-    index_col="Date", 
-    parse_dates=["Date"]
-)
-df = df.drop("Paperback", axis=1)
-logger.info(f"df: \n{df.head()}")
-
-# time-step features
-df["Time"] = np.arange(len(df.index))
-logger.info(f"df: \n{df.head()}")
-# time-step feature plot
-# fig, ax = plt.subplots()
-# ax.plot("Time", "Hardcover", data=df, color="0.75")
-# ax = sns.regplot(x="Time", y="Hardcover", data=df, ci=None, scatter_kws=dict(color="0.25"))
-# ax.set_xlabel("Time")
-# ax.set_ylabel("Hardcover")
-# ax.set_title("Time Plot of Hardcover Sales")
-# plt.show();
-
-# lag features
-df["Lag_1"] = df["Hardcover"].shift(1)
-df = df.reindex(columns=["Hardcover", "Time", "Lag_1"])
-logger.info(f"df: \n{df.head()}")
-# lag feature plot
-# fig, ax = plt.subplots()
-# ax = sns.regplot(x="Lag_1", y="Hardcover", data=df, ci=None, scatter_kws=dict(color="0.25"))
-# ax.set_aspect("equal")
-# ax.set_xlabel("Lag_1")
-# ax.set_ylabel("Hardcover")
-# ax.set_title("Lag Plot of Hardcover Sales")
-# plt.show();
-
-
-
 
 # ------------------------------
 # linear regression: tunnel traffic 
@@ -115,100 +52,115 @@ tunnel = pd.read_csv(
     parse_dates=["Day"]
 )
 tunnel = tunnel.to_period()
+df = tunnel.copy()
 logger.info(f"tunnel: \n{tunnel}")
 
 
 # time-step features: linear model
 # ------------------------------
-df = tunnel.copy()
+# time-step features
 df["Time"] = np.arange(len(tunnel.index))
 logger.info(f"df: \n{df}")
 
+# time-step feature plot
+scatter_reg_plot(df, "Time", "NumVehicles")
+
+# data split
 X = df.loc[:, ["Time"]]
 y = df.loc[:, "NumVehicles"]
 logger.info(f"X: \n{X}")
 logger.info(f"y: \n{y}")
 
+# model
 model = LinearRegression()
 model.fit(X, y)
 
-y_pred = pd.Series(model.predict(X), index=X.index)
-logger.info(f"y_pred: \n{y_pred}")
+# model fit
+y_fit = pd.Series(model.predict(X), index=X.index)
+logger.info(f"y_fit: \n{y_fit}")
 
-# time-step feature model plot
-fig, ax = plt.subplots()
-ax.plot(X["Time"], y, ".", color="0.25")
-ax.plot(X["Time"], y_pred)
-# ax.set_aspect("equal")
-ax.set_xlabel("Time")
-ax.set_ylabel("NumVehicles")
-ax.set_title("Lag Plot of Tunnel Traffic")
-plt.show();
-
-fig, ax = plt.subplots()
-ax = y.plot(**plot_params)
-ax = y_pred.plot()
-plt.show();
+# model results plot
+model_result_plot(
+    y_train=y,
+    y_test=None,
+    y_fit=y_fit,
+    y_pred=None,
+    y_fore=None,
+    xlabel="Time",
+    ylabel="NumVehicles",
+    title="Time Plot of Tunnel Traffic Forecast",
+)
 
 
 # lag features: linear model
 # ------------------------------
+# lag features
 df["Lag_1"] = df["NumVehicles"].shift(1)
 df = df.dropna(axis=0)
 logger.info(f"df: \n{df}")
 
+# lag feature plot
+scatter_reg_plot(df, "Lag_1", "NumVehicles", aspect=True)
+
+# data split
 X = df[["Lag_1"]]
 y = df["NumVehicles"]
 logger.info(f"X: \n{X}")
 logger.info(f"y: \n{y}")
 
+# model fit
 model = LinearRegression()
 model.fit(X, y)
+y_fit = pd.Series(model.predict(X), index=X.index)
+logger.info(f"y_fit: \n{y_fit}")
 
-y_pred = pd.Series(model.predict(X), index=X.index)
-logger.info(f"y_pred: \n{y_pred}")
+# model results plot
+model_result_plot(
+    y_train=y,
+    y_test=None,
+    y_fit=y_fit,
+    y_pred=None,
+    y_fore=None,
+    xlabel="Lag_1",
+    ylabel="NumVehicles",
+    title="Lag_1 Plot of Tunnel Traffic Forecast",
+)
 
-# lag feature model plot
-fig, ax = plt.subplots()
-ax.plot(X["Lag_1"], y, ".", color="0.25")
-ax.plot(X["Lag_1"], y_pred)
-ax.set_aspect("equal")
-ax.set_xlabel("Lag_1")
-ax.set_ylabel("NumVehicles")
-ax.set_title("Lag Plot of Tunnel Traffic")
-plt.show();
-
-
-fig, ax = plt.subplots()
-ax = y.plot(**plot_params)
-ax = y_pred.plot()
-plt.show();
 
 # time-step and lag features: linear model
 # ------------------------------
-df["Lag_1"] = df["NumVehicles"].shift(1)
-df = df.dropna(axis=0)
-logger.info(f"df: \n{df}")
-
+# data split
 X = df[["Time", "Lag_1"]]
 y = df["NumVehicles"]
 logger.info(f"X: \n{X}")
 logger.info(f"y: \n{y}")
 
+scaler = StandardScaler()
+scaler_target = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+y_scaled = scaler_target.fit_transform(y.values.reshape(-1, 1))
+# logger.info(f"X_scaled: \n{X_scaled}")
+# logger.info(f"y_scaled: \n{y_scaled}")
+
+# model fit
 model = LinearRegression()
 model.fit(X, y)
+y_fit = model.predict(X)
+y_fit = pd.Series(y_fit, index=y.index)
+# y_fit = scaler_target.inverse_transform(model.predict(X_scaled))
+# y_fit = pd.Series(y_fit.squeeze(), index=y.index)
 
-y_pred = pd.Series(model.predict(X), index=X.index)
-logger.info(f"y_pred: \n{y_pred}")
-
-# lag feature model plot
-fig, ax = plt.subplots()
-ax = y.plot(**plot_params)
-ax = y_pred.plot()
-plt.show();
-
-
-
+# model results plot
+model_result_plot(
+    y_train=y,
+    y_test=None,
+    y_fit=y_fit,
+    y_pred=None,
+    y_fore=None,
+    xlabel="Time",
+    ylabel="NumVehicles",
+    title="Time and Lag_1 Plot of Tunnel Traffic Forecast",
+)
 
 
 
