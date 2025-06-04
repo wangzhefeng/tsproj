@@ -72,6 +72,7 @@ def non_white_noise(is_print: bool = False, is_plot: bool = False):
         gdp_diff.plot()
         plt.show()
 
+
 def white_noise_check(white_noise_series):
     """
     白噪声序列自相关性检验
@@ -229,7 +230,6 @@ def main():
     # white_noise_series = white_noise(size = 1000)
     # white_noise_check(white_noise_series)
     non_stationarity(is_plot = True)
-    
 
 if __name__ == "__main__":
     main()

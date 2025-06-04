@@ -92,7 +92,7 @@ def scatter_reg_plot(data, x, y, aspect: bool=False):
     """
     fig, ax = plt.subplots()
     # ax.plot(x, y, data=data, color="0.75")
-    ax = sns.regplot(x=x, y=y, data=data, ci=None, scatter_kws=dict(color="0.25"))
+    ax = sns.regplot(x=x, y=y, data=data, ci=None, scatter_kws=dict(color="0.25", s=9))
     if aspect:
         ax.set_aspect("equal")
     ax.set_xlabel(x)
