@@ -58,6 +58,7 @@ def main():
     
     # data split
     tscv = TimeSeriesSplit(n_splits=5)
+    tscv.split(OT)
 
 
 if __name__ == "__main__":
