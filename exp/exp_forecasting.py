@@ -171,7 +171,7 @@ class Exp_Forecast(Exp_Basic):
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
         # 数据预处理
         batch_x = batch_x.float().to(self.device)
-        if flag in ["vali", "pred"]:
+        if flag in ["valid", "pred"]:
             batch_y = batch_y.float()
         else:
             batch_y = batch_y.float().to(self.device)
@@ -184,7 +184,7 @@ class Exp_Forecast(Exp_Basic):
         
         # decoder input
         if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
-            if flag in ["train", "vali", "test"]:
+            if flag in ["train", "valid", "test"]:
                 logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
                 return None, None
             elif flag == "pred":
@@ -214,7 +214,7 @@ class Exp_Forecast(Exp_Basic):
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
         # detach device
-        if flag in ["vali", "test", "pred"]:
+        if flag in ["valid", "test", "pred"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
         # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
@@ -250,7 +250,7 @@ class Exp_Forecast(Exp_Basic):
         """
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
-        vali_data, vali_loader = self._get_data(flag='vali')
+        vali_data, vali_loader = self._get_data(flag='valid')
         # test_data, test_loader = self._get_data(flag='test')
         # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
@@ -335,7 +335,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss = self.vali(vali_loader, criterion, test_results_path)
+            vali_loss = self.valid(vali_loader, criterion, test_results_path)
             logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -361,7 +361,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Training Finished!")
         logger.info(f"{40 * '-'}")
         # plot losses
-        logger.info("Plot and save train/vali losses...")
+        logger.info("Plot and save train/valid losses...")
         plot_losses(
             train_epochs=self.args.train_epochs,
             train_losses=train_losses, 
@@ -376,7 +376,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
-    def vali(self, vali_loader, criterion, path):
+    def valid(self, vali_loader, criterion, path):
         """
         模型验证
         """
@@ -393,7 +393,7 @@ class Exp_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
                 logger.info(f"Vali step: {i} running...")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "vali")
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "valid")
                 if outputs is None and batch_y is None:
                     break
                 # 预测值/真实值提取
@@ -403,7 +403,7 @@ class Exp_Forecast(Exp_Basic):
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
-                # logger.info(f"debug::vali step: {i}, vali loss: {loss.item()}")
+                # logger.info(f"debug::valid step: {i}, valid loss: {loss.item()}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出
@@ -412,12 +412,12 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Validating Finished!")
         return vali_loss
 
-    def test(self, flag, setting, load: bool=False):
+    def test(self, setting, load: bool=False):
         """
         模型测试
         """
         # 数据集构建
-        test_data, test_loader = self._get_data(flag=flag) 
+        test_data, test_loader = self._get_data(flag="test") 
         # 模型加载
         if load:
             logger.info(f"{40 * '-'}")

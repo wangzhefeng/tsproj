@@ -26,10 +26,11 @@ import torch
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-def plot_values_classifier(train_epochs, examples_seen, train_values, val_values, label: str = "loss", results_path: str = None):
+def plot_values_classifier(train_epochs, examples_seen, 
+                           train_values, val_values, 
+                           label: str = "loss", results_path: str = None):
     # epochs tensor
     epochs_tensor = torch.linspace(0, train_epochs, len(train_values))
-    
     # plot training and validation loss against epochs
     fig, ax1 = plt.subplots(figsize = (5, 3))
     ax1.plot(epochs_tensor, train_values, label = f"Training {label}")
@@ -48,20 +49,23 @@ def plot_values_classifier(train_epochs, examples_seen, train_values, val_values
     
     # adjust layout to make room
     fig.tight_layout()
+    # grid
+    plt.grid(True)
     # save fig
     plt.savefig(os.path.join(results_path, f"{label}-plot.pdf"))
-    # show fig on notebook
-    plt.show()
+    # show fig
+    plt.show();
 
 
-def plot_losses(train_epochs, train_losses, vali_losses, label: str = "loss", results_path: str = None):
+def plot_losses(train_epochs, 
+                train_losses, vali_losses, 
+                label: str = "loss", results_path: str = None):
     # epochs seen
     epochs_seen = torch.linspace(0, train_epochs, len(train_losses))
-    
     # plot training and validation loss against epochs
     fig, ax1 = plt.subplots(figsize = (5, 3))
     ax1.plot(epochs_seen, train_losses, label = f"Training {label}")
-    ax1.plot(epochs_seen, vali_losses, linestyle = "-.", label = f"Validation {label}")
+    ax1.plot(epochs_seen, vali_losses, label = f"Validation {label}", linestyle = "-.")
     ax1.set_xlabel("Epochs")
     ax1.set_ylabel(label.capitalize())
     ax1.legend(loc = "upper right")
@@ -74,7 +78,7 @@ def plot_losses(train_epochs, train_losses, vali_losses, label: str = "loss", re
     # save fig
     plt.savefig(os.path.join(results_path, f"{label}_plot.pdf"))
     # show fig
-    plt.show()
+    plt.show();
 
 
 

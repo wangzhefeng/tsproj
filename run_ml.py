@@ -34,7 +34,7 @@ LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def args_parse():
-    pass 
+    pass
 
 
 def run(args):

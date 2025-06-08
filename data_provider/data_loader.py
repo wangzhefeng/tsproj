@@ -59,8 +59,8 @@ class Dataset_Train(Dataset):
         self.data_path = data_path
         # data type
         self.flag = flag
-        assert flag in ['train', 'test', 'vali']
-        type_map = {'train': 0, 'vali': 1, 'test': 2}
+        assert flag in ['train', 'test', 'valid']
+        type_map = {'train': 0, 'valid': 1, 'test': 2}
         self.set_type = type_map[flag]
         # data size
         self.seq_len = 24 * 4 * 4 if size is None else size[0]
@@ -154,7 +154,7 @@ class Dataset_Train(Dataset):
 
     def __getitem__(self, index):
         # data_x 索引
-        if self.flag in ["train", "vali"]:
+        if self.flag in ["train", "valid"]:
             s_begin = index
         elif self.flag == "test":
             if self.testing_step == 1:

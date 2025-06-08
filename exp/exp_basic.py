@@ -30,6 +30,7 @@ from models import (
     Transformer_v2,
     Transformer,
     PatchTST,
+    LSTM2LSTM,
 )
 from utils.log_util import logger
 
@@ -99,6 +100,7 @@ class Exp_Basic:
             # "LSTM_CNN": LSTM_CNN,
             # "TCN": TCN,
             # "Transformer": Transformer,
+            "LSTM2LSTM": LSTM2LSTM,
         }
         if args.model == 'Mamba':
             logger.info('Please make sure you have successfully installed mamba_ssm')
@@ -154,7 +156,7 @@ class Exp_Basic:
     def train(self):
         pass
 
-    def vali(self):
+    def valid(self):
         pass
 
     def test(self):

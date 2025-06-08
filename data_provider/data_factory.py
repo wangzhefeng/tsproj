@@ -41,7 +41,7 @@ def data_provider(args, flag):
     # 是否丢弃最后一个 batch
     drop_last = False# if flag in ["pred"] else True
     # 数据集参数
-    if flag in ["train", "vali"]:
+    if flag in ["train", "valid"]:
         batch_size = args.batch_size
         Data = Dataset_Train
     elif flag in "test":

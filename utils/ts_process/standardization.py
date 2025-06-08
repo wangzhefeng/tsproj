@@ -17,9 +17,10 @@ import sys
 ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
+from math import sqrt
 
 from sklearn.preprocessing import StandardScaler
-from math import sqrt
+import torch
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -50,7 +51,7 @@ def stan_series(series):
     return normalized, inversed
 
 
-class StandardScaler():
+class StandardScaler:
     """
     标准化
     """
@@ -64,6 +65,31 @@ class StandardScaler():
 
     def inverse_transform(self, data):
         return (data * self.std) + self.mean
+
+
+class StandardScaler:
+    
+    def __init__(self):
+        self.mean = 0.0
+        self.std = 1.0
+
+    def fit(self, data):
+        self.mean = data.mean(0)
+        self.std = data.std(0)
+
+    def transform(self, data):
+        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) if torch.is_tensor(data) else self.mean
+        std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
+        return (data - mean) / std
+
+    def inverse_transform(self, data):
+        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) if torch.is_tensor(data) else self.mean
+        std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
+        if data.shape[-1] != mean.shape[-1]:
+            mean = mean[-1:]
+            std = std[-1:]
+        return (data * std) + mean
+
 
 
 

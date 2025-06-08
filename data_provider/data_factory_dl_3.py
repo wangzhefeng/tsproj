@@ -23,7 +23,7 @@ if ROOT not in sys.path:
 
 from torch.utils.data import DataLoader
 
-from data_provider.data_loader_dl_3 import TimeSeriesDataset
+from data_provider.data_loader_dl_3 import Dataset_Train
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -40,23 +40,24 @@ def data_provider(args, flag):
     # 是否丢弃最后一个 batch
     drop_last = False# if flag in ["pred"] else True
     # 数据集参数
-    if flag in ["train", "vali"]:
+    if flag in ["train", "valid"]:
         batch_size = args.batch_size
-        Data = TimeSeriesDataset
+        Data = Dataset_Train
     elif flag in "test":
         batch_size = 1
-        Data = TimeSeriesDataset
+        Data = Dataset_Train
     elif flag == "pred":
         batch_size = 1
-        Data = TimeSeriesDataset
+        Data = Dataset_Train
     # 构建 Dataset 和 DataLoader
     data_set = Data(
         args = args,
         root_path = args.root_path,
         data_path = args.data_path,
         target = args.target,
+        freq = args.freq,
         features = args.features,
-        window_len = args.window_len,
+        seq_len = args.seq_len,
         pred_len = args.pred_len,
         step_size = args.step_size,
         scale = args.scale,
@@ -78,24 +79,33 @@ def data_provider(args, flag):
 # 测试代码 main 函数
 def main():
     from utils.args_tools import DotDict
+    
     args = {
         "embed": "timeF",
         "batch_size": 1,
         "root_path": ".\\dataset\\ETT-small",
         "data_path": "ETTh1.csv",
         "target": "OT",
+        "freq": "h",
         "features": "S",
-        "window_len": 6,
-        "pred_len": 1,
-        "step_size": 1,
-        "train_ratio": 0.8,
+        "seq_len": 6,  # 窗口大小(历史)
+        "pred_len": 3,  # 预测长度
+        "step_size": 1,  # 滑窗步长
+        "feature_size": 7,  # 特征个数
+        "hidden_size": 256,
+        "kernel_size": 3,
+        "num_layers": 2,
+        "train_ratio": 0.7,
         "test_ratio": 0.2,
         "scale": True,
-        "num_workers": 0
+        "num_workers": 0,
+        "rolling_predict": True,  # 是否进行滚动预测功能
+        "rolling_data_path": "ETTh1Test.csv"  # 滚动数据集的数据
     }
     args = DotDict(args)
     # data
     data_set, data_loader = data_provider(args, flag="train")
+    data_set, data_loader = data_provider(args, flag="valid")
     data_set, data_loader = data_provider(args, flag="test")
 
 if __name__ == "__main__":

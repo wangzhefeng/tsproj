@@ -31,6 +31,7 @@ class Encoder(nn.Module):
 
     def __init__(self, feature_size, hidden_size, num_layers) -> None:
         super(Encoder, self).__init__()
+
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.lstm = nn.LSTM(
@@ -57,6 +58,7 @@ class Decoder(nn.Module):
 
     def __init__(self, feature_size, hidden_size, num_layers, output_size) -> None:
         super(Decoder, self).__init__()
+        
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.output_size = output_size
@@ -101,50 +103,7 @@ class Seq2Seq(nn.Module):
 
 # 测试代码 main 函数
 def main():
-    from tsproj_dl.config.seq2seq_lstm import Config
-    from data_provider.data_loader_dl import Data_Loader
-    from exp.exp_forecasting_dl import train, plot_train_results
-
-    # config
-    config = Config()
-    
-    # data
-    data_loader = Data_Loader(cfgs = config)
-    train_loader, test_loader = data_loader.run()
-
-    # model
-    model = Seq2Seq(
-        feature_size = config.feature_size,
-        hidden_size = config.hidden_size,
-        num_layers = config.num_layers,
-        output_size = config.output_size,
-    )
-    
-    # loss
-    loss_func = nn.MSELoss()
-    
-    # optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
-    
-    # model train
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = train(
-        config = config,
-        train_loader = train_loader,
-        test_loader = test_loader,
-        model = model,
-        loss_func = loss_func,
-        optimizer = optimizer,
-        x_train_tensor = data_loader.x_train_tensor, 
-        y_train_tensor = data_loader.y_train_tensor,
-        x_test_tensor = data_loader.x_test_tensor,
-        y_test_tensor = data_loader.y_test_tensor,
-        plot_size = 200,
-        scaler = data_loader.scaler,
-    )
-    
-    # result plot
-    plot_train_results(y_train_pred, y_train_true)
-    plot_train_results(y_test_pred, y_test_true)
+    pass
 
 if __name__ == "__main__":
     main()

@@ -16,8 +16,6 @@
 Loss functions for PyTorch.
 """
 
-import pdb
-
 import numpy as np
 import torch as t
 import torch.nn as nn
@@ -44,7 +42,7 @@ class mape_loss(nn.Module):
                 freq: int,
                 forecast: t.Tensor, 
                 target: t.Tensor, 
-                mask: t.Tensor) -> t.float:
+                mask: t.Tensor):
         """
         MAPE loss as defined in: https://en.wikipedia.org/wiki/Mean_absolute_percentage_error
 
@@ -68,7 +66,7 @@ class smape_loss(nn.Module):
                 freq: int,
                 forecast: t.Tensor, 
                 target: t.Tensor, 
-                mask: t.Tensor) -> t.float:
+                mask: t.Tensor):
         """
         sMAPE loss as defined in https://robjhyndman.com/hyndsight/smape/ (Makridakis 1993)
 
@@ -95,7 +93,7 @@ class mase_loss(nn.Module):
                 freq: int,
                 forecast: t.Tensor, 
                 target: t.Tensor, 
-                mask: t.Tensor) -> t.float:
+                mask: t.Tensor):
         """
         MASE loss as defined in "Scaled Errors" https://robjhyndman.com/papers/mase.pdf
 

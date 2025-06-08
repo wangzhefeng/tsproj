@@ -178,7 +178,7 @@ class Exp_Forecast(Exp_Basic):
         # 数据预处理
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float().to(self.device)
-        # batch_y = batch_y.float()  # TODO vali and forecast
+        # batch_y = batch_y.float()  # TODO valid and forecast
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
         # logger.info(f"debug::batch_x.shape: {batch_x.shape} batch_y.shape: {batch_y.shape}")
@@ -223,7 +223,7 @@ class Exp_Forecast(Exp_Basic):
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
         # detach device
-        if flag in ["vali", "test", "forecast"]:
+        if flag in ["valid", "test", "forecast"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
         # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
@@ -458,7 +458,7 @@ class Exp_Forecast(Exp_Basic):
             # 模型验证
             train_loss = np.average(train_loss)
             vali_loss, vali_preds, vali_trues, \
-            vali_preds_flat, vali_trues_flat = self.vali(vali_data, vali_loader, criterion, test_results_path)
+            vali_preds_flat, vali_trues_flat = self.valid(vali_data, vali_loader, criterion, test_results_path)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -484,7 +484,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Training Finished!")
         logger.info(f"{40 * '-'}")
         # plot losses
-        logger.info("Plot and save train/vali losses...")
+        logger.info("Plot and save train/valid losses...")
         plot_losses(
             train_epochs=self.args.train_epochs,
             train_losses=train_losses, 
@@ -499,7 +499,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
-    def vali(self, vali_data, vali_loader, criterion, path):
+    def valid(self, vali_data, vali_loader, criterion, path):
         """
         模型验证
         """
@@ -519,7 +519,7 @@ class Exp_Forecast(Exp_Basic):
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "vali")
+                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "valid")
                 if outputs is None and batch_y is None:
                     break
                 # TODO 输入输出逆转换
@@ -533,7 +533,7 @@ class Exp_Forecast(Exp_Basic):
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
-                # logger.info(f"debug::vali step: {i}, vali loss: {loss.item()}")
+                # logger.info(f"debug::valid step: {i}, valid loss: {loss.item()}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出

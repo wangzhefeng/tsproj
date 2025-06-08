@@ -19,16 +19,17 @@ ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 import time
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
 # data pipeline
-from data_provider.data_factory_dl_1 import data_provider
+# from data_provider.data_factory_dl_1 import data_provider
+from data_provider.data_factory_dl_3 import data_provider
 # model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # loss
@@ -40,9 +41,6 @@ from utils.plot_losses import plot_losses
 # log
 from utils.timestamp_utils import from_unix_time
 from utils.log_util import logger
-
-plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
@@ -72,13 +70,14 @@ class Exp_Forecast(Exp_Basic):
         
         return model
     
+    # TODO
     def _build_multi_model(self):
         """
         多个模型构建
         """
         # 模型列表
         models = []
-        for i in range(self.args.output):
+        for i in range(self.args.target_size):
             model = self._build_model()
             # 模型收集
             models.append(model)
@@ -110,20 +109,27 @@ class Exp_Forecast(Exp_Basic):
         """
         优化器
         """
-        optimizer = torch.optim.AdamW(
-            self.model.parameters(), 
-            lr = self.args.learning_rate
-        )
+        if self.args.optimizer.lower() == "adam":
+            optimizer = torch.optim.Adam(
+                self.model.parameters(), 
+                lr = self.args.learning_rate
+            )
+        elif self.args.optimizer.lower() == "adamw":
+            optimizer = torch.optim.AdamW(
+                self.model.parameters(), 
+                lr = self.args.learning_rate
+            )
         
         return optimizer
     
+    # TODO
     def _select_multip_optimizer(self):
         """
         优化器
         """
         optimizers = [
             self._select_optimizer()
-            for i in range(self.args.output)
+            for i in range(self.args.target_size)
         ]
         
         return optimizers
@@ -216,6 +222,7 @@ class Exp_Forecast(Exp_Basic):
             self.model = torch.load(self.args.checkpoints)
         self.model.eval()
 
+    # TODO
     def _inverse_data(self, data, outputs, batch_y):
         """
         输入输出逆转换
@@ -234,7 +241,7 @@ class Exp_Forecast(Exp_Basic):
         """
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
-        vali_data, vali_loader = self._get_data(flag='val')
+        vali_data, vali_loader = self._get_data(flag='valid')
         # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
         logger.info(f"Model checkpoint will be saved in path:")
@@ -245,7 +252,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         logger.info(f"Train results will be saved in path:")
         logger.info(f"{40 * '-'}")
-        test_results_path = self._get_test_results_path(setting) 
+        test_results_path = self._get_test_results_path(setting)
         logger.info(test_results_path)
         # 模型训练
         logger.info(f"{40 * '-'}")
@@ -275,7 +282,7 @@ class Exp_Forecast(Exp_Basic):
         for epoch in range(self.args.train_epochs):
             # time: epoch 训练开始时间
             epoch_start_time = time.time()
-            logger.info(f"Epoch: {epoch+1} \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
+            # logger.info(f"Epoch: {epoch+1} \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
             # epoch 训练结果收集
             iter_count = 0
             train_loss = []
@@ -286,6 +293,8 @@ class Exp_Forecast(Exp_Basic):
                 iter_count += 1
                 # 取出数据
                 x_train, y_train = data_batch
+                x_train = x_train.float().to(self.device)
+                y_train = y_train.float().to(self.device)
                 # 模型优化器梯度归零
                 optimizer.zero_grad()
                 # 前向传播
@@ -299,12 +308,12 @@ class Exp_Forecast(Exp_Basic):
                 # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
                 # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
                 # 计算训练损失
-                if self.args.output_size == 1:
+                if self.args.target_size == 1:
                     loss = criterion(outputs, y_train.reshape(-1, 1))
                 else:
                     loss = criterion(outputs, y_train)
                 train_loss.append(loss.item())
-                logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
+                # logger.info(f"debug::train step: {i}, train loss: {loss}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 10 == 0:
                     speed = (time.time() - train_start_time) / iter_count
@@ -320,10 +329,11 @@ class Exp_Forecast(Exp_Basic):
                 else:
                     loss.backward()
                     optimizer.step()
-            logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
+            # logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
+            # TODO tqdm.write(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss = self.vali(vali_loader, criterion)
+            vali_loss = self.valid(vali_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, Steps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -341,7 +351,7 @@ class Exp_Forecast(Exp_Basic):
                 logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
                 break
             # 学习率调整
-            adjust_learning_rate(optimizer, epoch + 1, self.args)
+            # adjust_learning_rate(optimizer, epoch + 1, self.args)
         # -----------------------------
         # 模型加载
         # ------------------------------
@@ -349,7 +359,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Training Finished!")
         logger.info(f"{40 * '-'}")
         # plot losses
-        logger.info("Plot and save train/vali losses...")
+        logger.info("Plot and save train/valid losses...")
         plot_losses(
             train_epochs=self.args.train_epochs,
             train_losses=train_losses, 
@@ -364,6 +374,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
+    # TODO
     def train_multi_model(self, setting):
         """
         模型训练
@@ -439,7 +450,7 @@ class Exp_Forecast(Exp_Basic):
                     # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
                     # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
                     # 计算训练损失
-                    if self.args.output_size == 1:
+                    if self.args.target_size == 1:
                         loss = criterion(outputs, y_train[:, model_idx].reshape(-1, 1))
                     else:
                         loss = criterion(outputs, y_train[:, model_idx])
@@ -490,7 +501,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"Training Finished!")
         logger.info(f"{40 * '-'}")
         # plot losses
-        logger.info("Plot and save train/vali losses...")
+        logger.info("Plot and save train/valid losses...")
         plot_losses(
             train_epochs=self.args.train_epochs,
             train_losses=train_losses, 
@@ -508,14 +519,12 @@ class Exp_Forecast(Exp_Basic):
         
         return None
 
-    def vali(self, vali_loader, criterion):
+    def valid(self, vali_loader, criterion):
         """
         模型验证
         """
         # 模型开始验证
-        logger.info(f"{40 * '-'}")
         logger.info(f"Model start validating...")
-        logger.info(f"{40 * '-'}")
         # 验证窗口数
         vali_steps = len(vali_loader)
         logger.info(f"Vali steps: {vali_steps}")
@@ -526,26 +535,27 @@ class Exp_Forecast(Exp_Basic):
         with torch.no_grad():
             for i, data_batch in enumerate(vali_loader):
                 x_vali, y_vali = data_batch
+                x_vali = x_vali.float().to(self.device)
+                y_vali = y_vali.float()
                 # 前向传播
                 outputs = self.model(x_vali)
                 # 计算/保存验证损失
-                if self.args.output_size == 1:
-                    loss = criterion(outputs, y_vali.reshape(-1, 1))
+                if self.args.target_size == 1:
+                    loss = criterion(outputs.detach().cpu(), y_vali.reshape(-1, 1))
                 else:
-                    loss = criterion(outputs, y_vali)
+                    loss = criterion(outputs.detach().cpu(), y_vali)
                 vali_loss.append(loss.item())
-                logger.info(f"debug::vali step: {i}, vali loss: {loss}")
+                # logger.info(f"debug::valid step: {i}, valid loss: {loss}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出
         self.model.train()
         # log
-        logger.info(f"{40 * '-'}")
         logger.info(f"Validating Finished!")
-        logger.info(f"{40 * '-'}")
         
         return vali_loss
 
+    # TODO
     def vali_multi_model(self, vali_loader, criterion, model_idx):
         """
         模型验证
@@ -567,12 +577,12 @@ class Exp_Forecast(Exp_Basic):
                 # 前向传播
                 outputs = self.model(x_vali)
                 # 计算/保存验证损失
-                if self.args.output_size == 1:
+                if self.args.target_size == 1:
                     loss = criterion(outputs, y_vali[:, model_idx].reshape(-1, 1))
                 else:
                     loss = criterion(outputs, y_vali[:, model_idx])
                 vali_loss.append(loss.item())
-                logger.info(f"debug::vali step: {i}, vali loss: {loss}")
+                logger.info(f"debug::valid step: {i}, valid loss: {loss}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出
@@ -584,12 +594,12 @@ class Exp_Forecast(Exp_Basic):
         
         return vali_loss
 
-    def test(self, flag, setting, load: bool=False):
+    def test_dl_1(self, setting, load: bool=False):
         """
         模型测试
         """
         # 数据集构建
-        test_data, test_loader = self._get_data(flag=flag) 
+        test_data, test_loader = self._get_data(flag="test") 
         # 模型加载
         if load:
             logger.info(f"{40 * '-'}")
@@ -654,14 +664,12 @@ class Exp_Forecast(Exp_Basic):
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
         # 测试结果保存
-        # preds = np.array(preds)  # or 
         preds = np.concatenate(preds, axis = 0)
-        # trues = np.array(trues)  # or 
         trues = np.concatenate(trues, axis = 0)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        # logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
+        logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
+        logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
         logger.info(f"{40 * '-'}")
         logger.info(f"Test metric results have been saved in path:")
         logger.info(f"{40 * '-'}")
@@ -677,7 +685,7 @@ class Exp_Forecast(Exp_Basic):
         #     trues_flat = np.concatenate(trues_flat, axis = 0)
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_pred.png")) 
         logger.info(test_results_path)
         # log
         logger.info(f"{40 * '-'}")
@@ -686,26 +694,26 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
-    def test_v3(self, flag, setting, load: bool=False):
+    def test_dl_3(self, setting, load: bool=False):
         """
         模型测试
         """
         # 数据集构建
-        test_data, test_loader = self._get_data(flag=flag) 
+        test_data, test_loader = self._get_data(flag="test")
         # 模型加载
         if load:
             logger.info(f"{40 * '-'}")
             logger.info("Pretrained model has loaded from:")
             logger.info(f"{40 * '-'}")
             model_checkpoint_path = self._get_model_path(setting)
-            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"]) 
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
             logger.info(model_checkpoint_path)
         # 测试结果保存地址
         logger.info(f"{40 * '-'}")
         logger.info(f"Test results will be saved in path:")
         logger.info(f"{40 * '-'}")
-        test_results_path = self._get_test_results_path(setting) 
-        logger.info(test_results_path) 
+        test_results_path = self._get_test_results_path(setting)
+        logger.info(test_results_path)
         # 模型开始测试
         logger.info(f"{40 * '-'}")
         logger.info(f"Model start testing...")
@@ -722,18 +730,24 @@ class Exp_Forecast(Exp_Basic):
             for i, data_batch in enumerate(test_loader):
                 logger.info(f"test step: {i}")
                 x_test, y_test = data_batch
+                x_test = x_test.float().to(self.device)
+                y_test = y_test.float().to(self.device)
                 # 前向传播
                 outputs = self.model(x_test)
-                from utils.metrics_dl import MAE
-                mae = MAE(outputs.detach().numpy(), np.array(y_test))
-                logger.info(f"MAE: {mae:.4f}")
                 # 验证结果收集
-                for j in range(self.args.batch_size):
-                    for i in range(self.predict_len):
-                        preds.append(outputs[j][i][0].detach().numpy())
-                        trues.append(y_test[j][i][0].detach().numpy()) 
+                y_pred = outputs[:, 0, :]
+                y_test = y_test[:, 0, :]
+                y_pred = test_data.inverse_transform(y_pred.detach().cpu().numpy())
+                y_test = test_data.inverse_transform(y_test.detach().cpu().numpy())
+                # for j in range(self.args.batch_size):
+                for i in range(self.args.pred_len):
+                    preds.append(outputs[i][-1])
+                    trues.append(y_test[i][-1])
+                logger.info(f"debug::preds: \n{preds}")
+                logger.info(f"debug::trues: \n{trues}")
+                # TODO debug
                 if i == 1:
-                    break 
+                    break
         # 测试结果保存
         preds = np.array(preds).reshape(1, -1)
         trues = np.array(trues).reshape(1, -1)
@@ -741,20 +755,18 @@ class Exp_Forecast(Exp_Basic):
         trues = test_data.inverse_transform(trues)
         logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
         logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
-        
         logger.info(f"{40 * '-'}")
         logger.info(f"Test metric results have been saved in path:")
         logger.info(f"{40 * '-'}")
         self._test_results_save(preds, trues, setting, test_results_path)
         logger.info(test_results_path)
-        
         # 测试结果可视化
         logger.info(f"{40 * '-'}")
         logger.info(f"Test visual results have been saved in path:")
         logger.info(f"{40 * '-'}")
         preds_flat = np.concatenate(preds, axis = 0)
         trues_flat = np.concatenate(trues, axis = 0)
-        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path=os.path.join(test_results_path, "test_pred.png")) 
         logger.info(test_results_path)
         # log
         logger.info(f"{40 * '-'}")

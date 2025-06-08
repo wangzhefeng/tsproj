@@ -22,9 +22,9 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 import argparse
 
-# from exp.exp_forecasting_dl import Exp_Forecast
-from exp.exp_forecasting import Exp_Forecast
-from utils.print_args import print_args
+# from exp.exp_forecasting import Exp_Forecast
+from exp.exp_forecasting_dl import Exp_Forecast
+from utils.args_tools import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
 from utils.log_util import logger
@@ -41,6 +41,7 @@ def args_parse():
     parser.add_argument('--des', type=str, default='test', help='exp description')
     parser.add_argument('--is_training', type=int, required=True, default=0, help='Whether to conduct training')
     parser.add_argument('--is_testing', type=int, required=True, default=0, help='Whether to conduct testing')
+    # TODO
     parser.add_argument('--testing_step', type=int, required=True, default=1, help="Test step")
     parser.add_argument('--is_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
@@ -49,12 +50,12 @@ def args_parse():
     parser.add_argument('--root_path', type=str, required=True, default='./dataset/', help='root path of the data file')
     parser.add_argument('--data_path', type=str, required=True, default='ETTh1.csv', help='data file')
     parser.add_argument('--data', type=str, required=True, default='ETTh1', help='dataset type')
+    parser.add_argument('--target', type=str, required=True, default='OT', help='target feature in S or MS task')    
     parser.add_argument('--freq', type=str, required=True, default='h', 
-                        help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], \
-                              you can also use more detailed freq like 15min or 3h')
+                        help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
     parser.add_argument('--features', type=str, default='MS', 
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
-    parser.add_argument('--target', type=str, required=True, default='OT', help='target feature in S or MS task')    
+    # output dirs
     parser.add_argument('--checkpoints', type=str, default='./saved_results/pretrained_models/', help='location of model models')
     parser.add_argument('--test_results', type=str, default='./saved_results/test_results/', help='location of model models')
     parser.add_argument('--predict_results', type=str, default='./saved_results/predict_results/', help='location of model models') 
@@ -62,6 +63,8 @@ def args_parse():
     parser.add_argument('--seq_len', type=int, required=True, default=72, help='input sequence length')
     parser.add_argument('--label_len', type=int, default=12, help='start token length')
     parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
+    # TODO
+    parser.add_argument("--step_size", type=int, default=1, help="step size")
     parser.add_argument('--train_ratio', type=float, required=True, default=0.7, help='train dataset ratio')
     parser.add_argument('--test_ratio', type=float, required=True, default=0.2, help='test dataset ratio')
     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
@@ -110,6 +113,7 @@ def args_parse():
     parser.add_argument('--patience', type = int, default=3, help = 'early stopping patience')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='optimizer learning rate')
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
+    parser.add_argument("--optimizer", type=str, default="adam", help="optimizer type")
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
     parser.add_argument('--use_amp', type=int, default=0, help='use automatic mixed precision training') 
     # de-stationary projector params
@@ -158,11 +162,16 @@ def args_parse():
     # TODO RNNs
     parser.add_argument("--pred_method", type=str, default="recursive_multi_step", 
                         help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
+    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
     parser.add_argument("--feature_size", type=int, default=1, help="feature size")
     parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
-    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
-    parser.add_argument("--output_size", type=int, default=1, help="output size")
-    parser.add_argument("--output", type=int, default=1, help="output")
+    parser.add_argument("--kernel_size", type=int, default=3, help="kernel size")
+    parser.add_argument("--target_size", type=int, default=1, help="target size")
+    parser.add_argument("--lr_scheduler", type=int, default=1, help="learning rate scheduler")
+    parser.add_argument("--teacher_forcing", type=float, default=0.3, help="teacher forcing")
+    parser.add_argument("--inspect_fit", type=int, default=1, help="inspect fit")
+    parser.add_argument("--rolling_predict", type=int, default=1, help="rolling predict")
+    parser.add_argument("--rolling_data_path", type=str, default="ETTh1Test.csv", help="rolling data path")
     # 命令行参数解析
     args = parser.parse_args()
 
@@ -211,7 +220,7 @@ def run(args):
             if args.is_testing:
                 logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
                 logger.info(f"{180 * '='}")
-                exp.test(flag="test", setting=training_setting, load=False)
+                exp.test_dl_3(setting=training_setting, load=False)
 
     # TODO 模型测试
     if not args.is_training and args.is_testing:
@@ -223,7 +232,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型测试
-            exp.test(flag="test", setting=test_setting, load=True)
+            exp.test_dl_3(setting=test_setting, load=True)
     
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
