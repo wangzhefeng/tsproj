@@ -92,16 +92,15 @@ class M4Dataset:
         info_file = os.path.join(dataset_file, 'M4-info.csv')
         train_cache_file = os.path.join(dataset_file, 'training.npz')
         test_cache_file = os.path.join(dataset_file, 'test.npz')
+        # info
         m4_info = pd.read_csv(info_file)
+        # data
         return M4Dataset(
-            ids=m4_info.M4id.values,
-            groups=m4_info.SP.values,
-            frequencies=m4_info.Frequency.values,
-            horizons=m4_info.Horizon.values,
-            values=np.load(
-                train_cache_file if training else test_cache_file,
-                allow_pickle=True
-            )
+            ids = m4_info.M4id.values,
+            groups = m4_info.SP.values,
+            frequencies = m4_info.Frequency.values,
+            horizons = m4_info.Horizon.values,
+            values = np.load(train_cache_file if training else test_cache_file, allow_pickle=True)
         )
 
 
@@ -140,8 +139,12 @@ class M4Meta:
 
 # 测试代码 main 函数
 def main():
+    # ------------------------------
+    # info
+    # ------------------------------
     info_file_path = "./dataset/m4/M4-info.csv"
     m4_info = load_m4_info(info_file_path)
+    print(m4_info.shape)
     print(m4_info.head())
 
 if __name__ == "__main__":
