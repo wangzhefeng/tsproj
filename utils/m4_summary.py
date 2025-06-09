@@ -22,11 +22,15 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from data_provider.m4 import M4Dataset, M4Meta
+from utils.m4 import M4Dataset, M4Meta
 
 
 def group_values(values, groups, group_name):
     return np.array([v[~np.isnan(v)] for v in values[groups == group_name]])
+
+
+def round_all(d):
+    return dict(map(lambda kv: (kv[0], np.round(kv[1], 3)), d.items()))
 
 
 def mase(forecast, insample, outsample, frequency):
@@ -91,27 +95,33 @@ class M4Summary:
                                                      insample=insample[i],
                                                      outsample=target[i],
                                                      frequency=frequency) for i in range(len(model_forecast))])
-
             naive2_smapes[group_name] = np.mean(smape_2(naive2_forecast, target))
             grouped_smapes[group_name] = np.mean(smape_2(forecast=model_forecast, target=target))
             grouped_mapes[group_name] = np.mean(mape(forecast=model_forecast, target=target))
-
+        
+        grouped_model_mases = self.summarize_groups(model_mases)
+        grouped_naive2_mases = self.summarize_groups(naive2_mases)
+        grouped_naive2_smapes = self.summarize_groups(naive2_smapes)
         grouped_smapes = self.summarize_groups(grouped_smapes)
         grouped_mapes = self.summarize_groups(grouped_mapes)
-        grouped_model_mases = self.summarize_groups(model_mases)
-        grouped_naive2_smapes = self.summarize_groups(naive2_smapes)
-        grouped_naive2_mases = self.summarize_groups(naive2_mases)
+        
         for k in grouped_model_mases.keys():
-            grouped_owa[k] = (grouped_model_mases[k] / grouped_naive2_mases[k] + grouped_smapes[k] / grouped_naive2_smapes[k]) / 2
+            grouped_owa[k] = (
+                (grouped_model_mases[k] / grouped_naive2_mases[k] + \
+                grouped_smapes[k] / grouped_naive2_smapes[k]) / 2
+            )
 
-        def round_all(d):
-            return dict(map(lambda kv: (kv[0], np.round(kv[1], 3)), d.items()))
-
-        return round_all(grouped_smapes), round_all(grouped_owa), round_all(grouped_mapes), round_all(grouped_model_mases)
+        return (
+            round_all(grouped_smapes),
+            round_all(grouped_owa),
+            round_all(grouped_mapes),
+            round_all(grouped_model_mases)
+        )
 
     def summarize_groups(self, scores):
         """
         Re-group scores respecting M4 rules.
+        
         :param scores: Scores per group.
         :return: Grouped scores.
         """

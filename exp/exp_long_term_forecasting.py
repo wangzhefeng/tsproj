@@ -9,10 +9,8 @@
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.
 # ***************************************************
 
-# python libraries
 import os
 import sys
 ROOT = str(os.getcwd())
@@ -22,30 +20,19 @@ import time
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
-# data pipeline
 from data_provider.data_factory import data_provider
-# model training
+from utils.model_memory import model_memory_size
 from utils.model_tools import adjust_learning_rate, EarlyStopping
-# loss
 from utils.losses import mape_loss, mase_loss, smape_loss
-# metrics
 from utils.metrics_dl import metric, DTW
 from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
-# log
 from utils.timestamp_utils import from_unix_time
 from utils.log_util import logger
-
-plt.rcParams['font.sans-serif']=['SimHei']    # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False    # 用来显示负号
-
-# global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 class Exp_Forecast(Exp_Basic):
@@ -60,15 +47,14 @@ class Exp_Forecast(Exp_Basic):
         """
         模型构建
         """
-        # 构建 Transformer 模型
+        # 时间序列模型初始化
         logger.info(f"Initializing model {self.args.model}...")
         model = self.model_dict[self.args.model].Model(self.args)
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
             model = nn.DataParallel(model, device_ids=self.args.devices)
         # 打印模型参数量
-        total = sum([param.nelement() for param in model.parameters()])
-        logger.info(f'Number of model parameters: {(total / 1e6):.2f}M')
+        total_memory_gb = model_memory_size(model, verbose=True)
 
         return model
 
@@ -97,7 +83,10 @@ class Exp_Forecast(Exp_Basic):
         """
         优化器
         """
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = self.args.learning_rate)
+        optimizer = torch.optim.Adam(
+            self.model.parameters(), 
+            lr = self.args.learning_rate
+        )
         
         return optimizer
     
@@ -251,7 +240,6 @@ class Exp_Forecast(Exp_Basic):
         # 数据集构建
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='valid')
-        # test_data, test_loader = self._get_data(flag='test')
         # checkpoint 保存路径
         logger.info(f"{40 * '-'}")
         logger.info(f"Model checkpoint will be saved in path:")
@@ -281,7 +269,7 @@ class Exp_Forecast(Exp_Basic):
         criterion = self._select_criterion()
         logger.info(f"Train criterion has builded...")
         # 早停类实例
-        early_stopping = EarlyStopping(patience = self.args.patience, verbose = True)
+        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
         logger.info(f"Train early stopping instance has builded, patience: {self.args.patience}")
         # 自动混合精度训练
         if self.args.use_amp:
@@ -335,7 +323,7 @@ class Exp_Forecast(Exp_Basic):
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss = self.valid(vali_loader, criterion, test_results_path)
+            vali_loss = self.valid(vali_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -376,7 +364,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
-    def valid(self, vali_loader, criterion, path):
+    def valid(self, vali_loader, criterion):
         """
         模型验证
         """
@@ -456,7 +444,7 @@ class Exp_Forecast(Exp_Basic):
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
-                # 验证结果收集
+                # 测试结果收集
                 pred = outputs
                 true = batch_y
                 preds.append(pred)

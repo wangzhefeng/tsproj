@@ -9,12 +9,8 @@
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.
 # ***************************************************
 
-__all__ = []
-
-# python libraries
 import os
 import sys
 ROOT = str(os.getcwd())
@@ -28,9 +24,6 @@ from utils.args_tools import print_args
 from utils.device import torch_gc
 from utils.random_seed import set_seed
 from utils.log_util import logger
-
-# global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
 def args_parse():
