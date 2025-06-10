@@ -32,7 +32,7 @@ from sklearn.preprocessing import StandardScaler
 LOGGING_LABEL = Path(__file__).name[:-3]
 os.environ['LOG_NAME'] = LOGGING_LABEL
 
-from utils.ts_plot import scatter_reg_plot, model_result_plot
+from utils.plot_results import scatter_reg_plot, model_result_plot
 from utils.log_util import logger
 
 

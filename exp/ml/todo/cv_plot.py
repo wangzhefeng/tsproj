@@ -102,10 +102,13 @@ def plot_cv_indices(cv, n_splits, X, y, date_col = None):
 
 
 
+
 # 测试代码 main 函数
 def main():
     n_points = 100
     n_splits = 5
+
+    # data
     X = np.random.randn(n_points, 10)
     percentiles_classes = [0.1, 0.3, 0.6]
     y = np.hstack([
@@ -115,7 +118,9 @@ def main():
     logger.info(f"X: \n{X}")
     logger.info(f"y: \n{y}")
     
+    # TimeSeriesSplit
     tscv = TimeSeriesSplit(n_splits=n_splits)
+    # plot
     plot_cv_indices(tscv, n_splits, X, y)
 
 if __name__ == "__main__":
