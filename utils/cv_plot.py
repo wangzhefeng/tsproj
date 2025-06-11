@@ -75,7 +75,8 @@ def plot_cv_indices(cv, n_splits, X, y, date_col = None):
             marker = '_', 
             lw = 10, 
             cmap = cmap_cv,
-            vmin = -0.2, vmax = 1.2,
+            vmin = -0.2, 
+            vmax = 1.2,
         )
     # Formatting
     yticklabels = list(range(n_splits))
@@ -94,7 +95,7 @@ def plot_cv_indices(cv, n_splits, X, y, date_col = None):
         ylim = [n_splits+0.2, -0.2]
     )
     ax.legend(
-        [Patch(color=cmap_cv(.8)), Patch(color=cmap_cv(.02))],
+        [Patch(color=cmap_cv(0.8)), Patch(color=cmap_cv(0.2))],
         ['Testing set', 'Training set'], loc=(1.02, .8)
     )
     ax.set_title('{}'.format(type(cv).__name__), fontsize=15)
@@ -106,7 +107,7 @@ def plot_cv_indices(cv, n_splits, X, y, date_col = None):
 # 测试代码 main 函数
 def main():
     n_points = 100
-    n_splits = 5
+    n_splits = 18
 
     # data
     X = np.random.randn(n_points, 10)
@@ -119,8 +120,12 @@ def main():
     logger.info(f"y: \n{y}")
     
     # TimeSeriesSplit
-    tscv = TimeSeriesSplit(n_splits=n_splits)
-    # plot
+    # rolling windows
+    tscv = TimeSeriesSplit(n_splits=n_splits, max_train_size=20, test_size=5, gap=0)
+    plot_cv_indices(tscv, n_splits, X, y)
+    
+    # expanding windows
+    tscv = TimeSeriesSplit(n_splits=n_splits, max_train_size=None, test_size=5, gap=0)
     plot_cv_indices(tscv, n_splits, X, y)
 
 if __name__ == "__main__":
