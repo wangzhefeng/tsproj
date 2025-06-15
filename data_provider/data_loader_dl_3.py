@@ -143,8 +143,11 @@ class Dataset_Train(Dataset):
         for i in range(0, input_data_len - self.seq_len, self.step_size):
             train_seq = input_data[i:(i + self.seq_len)]
             if (i + self.seq_len + self.pred_len) > input_data_len:
-                break
-            train_label = input_data[(i + self.seq_len):(i + self.seq_len + self.pred_len)]
+                break 
+            if self.features == "MS" or self.features == "S":
+                train_label = input_data[:, -1:][(i + self.seq_len):(i + self.seq_len + self.pred_len)]
+            else:
+                train_label = input_data[(i + self.seq_len):(i + self.seq_len + self.pred_len)]
             output_seq.append((train_seq, train_label))
         # logger.info(f"output_seq[0][0]: \n{output_seq[0][0]} \noutput_seq[0][0].shape: {output_seq[0][0].shape}")
         # logger.info(f"output_seq[0][1]: \n{output_seq[0][1]} \noutput_seq[0][1].shape: {output_seq[0][1].shape}")

@@ -18,16 +18,18 @@ ROOT = str(os.getcwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
+import torch
 import torch.nn as nn
 
 # global variable
 LOGGING_LABEL = __file__.split('/')[-1][:-3]
 
 
-class Model(nn.Module):
+class Model_todo(nn.Module):
 
     def __init__(self, feature_size, hidden_size, num_layers, output_size) -> None:
         super(Model, self).__init__()
+
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         # rnn
@@ -57,6 +59,65 @@ class Model(nn.Module):
 
         output = output[:, -1, :]
         return output
+
+
+class Model(nn.Module):
+
+    def __init__(self, args) -> None:
+        super(Model, self).__init__()
+
+        self.feature_size = args.feature_size
+        self.hidden_size = args.hidden_size
+        self.target_size = args.target_size
+        self.num_layers = args.num_layers
+        self.pred_len = args.pred_len
+        # hideen layer
+        self.hidden = nn.Linear(
+            in_features = args.feature_size, 
+            out_features = args.hidden_size,
+        )
+        # relu
+        self.relu = nn.ReLU()
+        # rnn
+        self.rnn = nn.RNN(
+            input_size = args.hidden_size, 
+            hidden_size = args.hidden_size, 
+            num_layers = args.num_layers, 
+            bias = True,
+            batch_first = True,
+        )
+        # fc layer
+        self.linear = nn.Linear(
+            in_features = args.hidden_size, 
+            out_features = args.target_size,
+            bias = True,
+        )
+
+    def forward(self, x, hidden = None):
+        # rnn module data shape: [seq_len, batch_size, feature_size]
+
+        # [batch_size, obs_len, feature_size]
+        batch_size, obs_len, feature_size = x.shape
+        # [batch_size, obs_len, hidden_size]
+        x_concat = self.hidden(x)
+        # [batch_size, obs_len-1, hidden_size]
+        H = torch.zeros(batch_size, obs_len-1, self.hidden_size).to(self.args.device)
+        # [num_layers, batch_size, hidden_size]
+        ht = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.args.device)
+        for t in range(obs_len):
+            # [batch_size, 1, hidden_size]
+            xt = x_concat[:, t, :].viwe(batch_size, 1, -1)
+            # ht: [num_layers, batch_size, hidden_size]
+            out, ht = self.rnn(xt, ht)
+            # [batch_size, hidden_size]
+            htt = ht[-1, :, :]
+            if t != obs_len - 1:
+                H[:, t, :] = htt
+        # [batch_size, obs_len-1, hidden_size]
+        H = self.relu(H)
+        x = self.linear(H)
+
+        return x[:, -self.pred_len, :]
 
 
 

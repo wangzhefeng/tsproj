@@ -775,6 +775,128 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
+    # TODO
+    def inspect_model_fit(self, setting, load, train_data, train_loader):
+        """
+        检验模型拟合情况
+        """
+        # 模型加载
+        if load:
+            logger.info(f"{40 * '-'}")
+            logger.info("Pretrained model has loaded from:")
+            logger.info(f"{40 * '-'}")
+            model_checkpoint_path = self._get_model_path(setting)
+            self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
+            logger.info(model_checkpoint_path)
+        # 模型评估模式
+        self.model.eval()
+        # 测试结果收集
+        preds, trues= [], []
+        # 模型测试
+        for x_train, y_train in train_loader:
+            x_train = x_train.float().to(self.device)
+            y_train = y_train.float().to(self.device)
+            # 前向传播
+            outputs = self.model(x_train)
+            # 验证结果收集
+            y_pred = outputs[:, 0, :]
+            y_test = y_train[:, 0, :]
+            y_pred = train_data.inverse_transform(y_pred.detach().cpu().numpy())
+            y_test = train_data.inverse_transform(y_test.detach().cpu().numpy())
+            for i in range(len(y_pred)):
+                preds.append(y_pred[i][-1])
+                trues.append(y_test[i][-1])
+
+    def forecast_v3(self, rolling_data):
+        # 预测未知数据的功能
+        df = pd.read_csv(self.args.data_path)
+        df = pd.concat((df, rolling_data), axis=0).reset_index(drop=True)
+        df = df.iloc[:, 1:][-self.args.seq_len:].values  # 转换为nadarry
+        pre_data = scaler.transform(df)
+        tensor_pred = torch.FloatTensor(pre_data).to(device)
+        tensor_pred = tensor_pred.unsqueeze(0)  # 单次预测 , 滚动预测功能暂未开发后期补上
+        model = model
+        model.load_state_dict(torch.load('save_model.pth'))
+        model.eval()  # 评估模式 
+        pred = model(tensor_pred)[0]
+    
+        pred = scaler.inverse_transform(pred.detach().cpu().numpy())
+        if show:
+            # 计算历史数据的长度
+            history_length = len(df[:, -1])
+            # 为历史数据生成x轴坐标
+            history_x = range(history_length)
+            plt.figure(figsize=(10, 5))
+            # 为预测数据生成x轴坐标
+            # 开始于历史数据的最后一个点的x坐标
+            prediction_x = range(history_length - 1, history_length + len(pred[:, -1]) - 1)
+    
+            # 绘制历史数据
+            plt.plot(history_x, df[:, -1], label='History')
+    
+            # 绘制预测数据
+            # 注意这里预测数据的起始x坐标是历史数据的最后一个点的x坐标
+            plt.plot(prediction_x, pred[:, -1], marker='o', label='Prediction')
+            plt.axvline(history_length - 1, color='red')  # 在图像的x位置处画一条红色竖线
+            # 添加标题和图例
+            plt.title("History and Prediction")
+            plt.legend()
+        return pred
+
+    def rolling_forecast(self):
+        # 滚动预测
+        history_data = pd.read_csv(args.data_path)[args.target][-args.window_size * 4:].reset_index(drop=True)
+        pre_data = pd.read_csv(args.roolling_data_path)
+        columns = pre_data.columns[1:]
+        columns = ['forecast' + column for column in columns]
+        dict_of_lists = {column: [] for column in columns}
+        results = []
+        for i in range(int(len(pre_data)/args.pre_len)):
+            rolling_data = pre_data.iloc[:args.pre_len * i]  # 转换为nadarry
+            pred = predict(model, args, device, scaler, rolling_data)
+            if args.feature == 'MS' or args.feature == 'S':
+                for i in range(args.pred_len):
+                    results.append(pred[i][0].detach().cpu().numpy())
+            else:
+                for j in range(args.output_size):
+                    for i in range(args.pre_len):
+                        dict_of_lists[columns[j]].append(pred[i][j])
+            print(pred)
+        if args.feature == 'MS' or args.feature == 'S':
+            df = pd.DataFrame({'date':pre_data['date'], '{}'.format(args.target): pre_data[args.target],
+                                'forecast{}'.format(args.target): pre_data[args.target]})
+            df.to_csv('Interval-{}'.format(args.data_path), index=False)
+        else:
+            df = pd.DataFrame(dict_of_lists)
+            new_df = pd.concat((pre_data,df), axis=1)
+            new_df.to_csv('Interval-{}'.format(args.data_path), index=False)
+        pre_len = len(dict_of_lists['forecast' + args.target])
+        
+        # 绘图
+        import matplotlib.pyplot as plt
+        plt.figure()
+        if self.args.feature == 'MS' or self.args.feature == 'S':
+            plt.plot(range(len(history_data)), history_data,label='Past Actual Values')
+            plt.plot(range(len(history_data), len(history_data) + pre_len), pre_data[args.target][:pre_len].tolist(), label='Predicted Actual Values')
+            plt.plot(range(len(history_data), len(history_data) + pre_len), results, label='Predicted Future Values')
+        else:
+            plt.plot(range(len(history_data)), history_data,
+                    label='Past Actual Values')
+            plt.plot(range(len(history_data), len(history_data) + pre_len), pre_data[args.target][:pre_len].tolist(), label='Predicted Actual Values')
+            plt.plot(range(len(history_data), len(history_data) + pre_len), dict_of_lists['forecast' + args.target], label='Predicted Future Values')
+        # 添加图例
+        plt.legend()
+        plt.style.use('ggplot')
+        # 添加标题和轴标签
+        plt.title('Past vs Predicted Future Values')
+        plt.xlabel('Time Point')
+        plt.ylabel('Value')
+        # 在特定索引位置画一条直线
+        plt.axvline(x=len(history_data), color='blue', linestyle='--', linewidth=2)
+        # 显示图表
+        plt.savefig('forcast.png')
+        plt.show()
+
     def forecast_single_step(self, data):
         """
         单步预测
