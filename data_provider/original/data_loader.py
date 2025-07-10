@@ -33,8 +33,8 @@ from torch.utils.data import Dataset
 
 from data_provider.m4 import M4Dataset, M4Meta
 from data_provider.uea import Normalizer, interpolate_missing, subsample
-from utils.augmentation import run_augmentation_single
-from utils.timefeatures import time_features
+from utils.ts.augmentation import run_augmentation_single
+from utils.ts.timefeatures import time_features
 
 warnings.filterwarnings('ignore')
 

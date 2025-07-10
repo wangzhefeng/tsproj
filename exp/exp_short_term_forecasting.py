@@ -26,9 +26,9 @@ import torch.nn as nn
 from exp.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
 from utils.model_tools import EarlyStopping, adjust_learning_rate
-from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.m4 import M4Meta
-from utils.m4_summary import M4Summary
+from utils.ts.losses import mape_loss, mase_loss, smape_loss
+from utils.ts.m4 import M4Meta
+from utils.ts.m4_summary import M4Summary
 from utils.model_memory import model_memory_size
 from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
@@ -130,7 +130,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
         """
         测试结果保存
         """
-        from utils.metrics_dl import metric, DTW
+        from utils.ts.metrics_dl import metric, DTW
         # 计算测试结果评价指标
         mse, rmse, mae, mape, mape_accuracy, mspe = metric(preds, trues)
         dtw = DTW(preds, trues) if self.args.use_dtw else -999

@@ -122,7 +122,7 @@ def data_provider(args, flag):
 
 # 测试代码 main 函数
 def main():
-    from utils.args_tools import DotDict
+    from utils.ts.args_tools import DotDict
     args = {
         "task_name": "short_term_forecast",
         "flag": "train",

@@ -203,7 +203,7 @@ class Data_Loader:
 
 # 测试代码 main 函数
 def main():
-    from utils.tsproj_dl.config.gru import Config
+    from utils.ts.tsproj_dl.config.gru import Config
     
     configs = Config()
 

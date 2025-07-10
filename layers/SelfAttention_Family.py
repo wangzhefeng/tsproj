@@ -6,7 +6,7 @@ import torch.nn as nn
 from einops import rearrange, repeat
 from reformer_pytorch import LSHSelfAttention
 
-from utils.masking import TriangularCausalMask, ProbMask
+from utils.ts.masking import TriangularCausalMask, ProbMask
 
 
 class FlowAttention(nn.Module):

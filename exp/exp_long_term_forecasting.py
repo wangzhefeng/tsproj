@@ -27,8 +27,8 @@ from exp.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
 from utils.model_memory import model_memory_size
 from utils.model_tools import adjust_learning_rate, EarlyStopping
-from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.metrics_dl import metric, DTW
+from utils.ts.losses import mape_loss, mase_loss, smape_loss
+from utils.ts.metrics_dl import metric, DTW
 from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
 from utils.timestamp_utils import from_unix_time

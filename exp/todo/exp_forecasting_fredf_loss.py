@@ -32,10 +32,10 @@ from data_provider.data_factory import data_provider
 # model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # loss
-from utils.losses import mape_loss, mase_loss, smape_loss
+from utils.ts.losses import mape_loss, mase_loss, smape_loss
 # metrics
-from utils.metrics_dl import metric, DTW
-from utils.polynomial import (
+from utils.ts.metrics_dl import metric, DTW
+from utils.ts.polynomial import (
     leg_torch,
     chebyshev_torch, 
     hermite_torch,

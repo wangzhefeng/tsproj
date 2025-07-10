@@ -81,7 +81,7 @@ class Model(nn.Module):
 # 测试代码 main 函数
 def main():
     """
-    from utils.tsproj_dl.config.lstm import Config
+    from utils.ts.tsproj_dl.config.lstm import Config
     from tsproj_dl.data_provider.data_loader import Data_Loader
     from tsproj_dl.exp.exp_forecasting import train, plot_train_results
     

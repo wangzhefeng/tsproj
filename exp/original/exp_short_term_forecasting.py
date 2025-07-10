@@ -10,8 +10,8 @@ import torch.nn as nn
 from exp.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
 from data_provider.m4 import M4Meta
-from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.m4_summary import M4Summary
+from utils.ts.losses import mape_loss, mase_loss, smape_loss
+from utils.ts.m4_summary import M4Summary
 from utils.model_tools import EarlyStopping, adjust_learning_rate
 from utils.plot_results import test_result_visual
 

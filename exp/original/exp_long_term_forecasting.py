@@ -8,9 +8,9 @@ import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
 from data_provider.data_factory import data_provider
-from utils.losses import mape_loss, mase_loss, smape_loss
-from utils.metrics import metric, DTW
-# from utils.dtw_metric import accelerated_dtw, dtw
+from utils.ts.losses import mape_loss, mase_loss, smape_loss
+from utils.ts.metrics import metric, DTW
+# from utils.ts.dtw_metric import accelerated_dtw, dtw
 from utils.model_tools import EarlyStopping, adjust_learning_rate
 from utils.plot_results import test_result_visual
 

@@ -26,7 +26,7 @@ warnings.filterwarnings('ignore')
 import numpy as np
 from torch.utils.data import Dataset
 
-from utils.m4 import M4Dataset, M4Meta
+from utils.ts.m4 import M4Dataset, M4Meta
 from utils.log_util import logger
 
 

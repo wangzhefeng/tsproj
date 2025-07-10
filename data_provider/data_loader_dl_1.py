@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from utils.timefeatures import time_features
+from utils.ts.timefeatures import time_features
 from utils.log_util import logger
 
 # global variable

@@ -28,8 +28,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 
-from utils.augmentation import run_augmentation_single
-from utils.timefeatures import time_features
+from utils.ts.augmentation import run_augmentation_single
+from utils.ts.timefeatures import time_features
 from utils.filter_str import filter_number
 from utils.log_util import logger
 
