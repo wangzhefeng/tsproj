@@ -43,24 +43,28 @@ import seaborn as sns
 import plotly.express as px
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.metrics import mean_absolute_percentage_error
+
 # 绘图风格
 plt.style.use("seaborn-v0_8-whitegrid")  # "ggplot", "classic", "darkgrid"
+
 # 用来正常显示中文标签
 plt.rcParams["font.sans-serif"]=["SimHei"]  # 'Arial Unicode MS'
 # 处理 matplotlib 字体问题
 plt.rcParams["font.family"].append("SimHei")
 # 用来显示负号
 plt.rcParams["axes.unicode_minus"] = False
+
 # TODO 字体尺寸设置
 # plt.rcParams["font.size"] = 10  # mpl font size
 # sns.mpl.rc("font", size = 14)  # sns font size
 title_fontsize = 13
 label_fontsize = 7
+
 # figure 设置
 # sns.mpl.rc("figure", figsize = (16, 6))
-plt.tight_layout()
-plt.rcParams["figure.autolayout"] = True
-plt.rcParams["axes.grid"] = True
+# plt.tight_layout()
+# plt.rcParams["figure.autolayout"] = True
+# plt.rcParams["axes.grid"] = True
 plt.rc(
     "figure",
     autolayout=True,
@@ -75,7 +79,10 @@ plt.rc(
     titleweight="bold",
     titlesize=16,
     titlepad=10,
+    grid=True,
 )
+
+
 train_scatter_plot_params = dict(
     color="0.75",
     style=".-",
@@ -121,7 +128,7 @@ def predict_result_visual(preds: np.array, trues: np.array, path='./path/test.pd
     """
     fig = plt.figure(figsize=(25, 8))
     plt.plot(trues, lw=1.2, label='Trues')
-    plt.plot(preds, lw=1.2, label='Preds', ls=".-")
+    plt.plot(preds, lw=1.2, label='Preds', ls="-.")
     plt.legend()
     plt.xlabel("Time")
     plt.ylabel("Value")
@@ -243,6 +250,13 @@ def model_result_plot(y_train: pd.Series, y_test: pd.Series,
         ylabel (str): _description_
         title (str): _description_
     """
+    import matplotlib as mpl
+    font_name = [
+        "Arial Unicode MS", 
+        # "SimHei"
+    ]
+    mpl.rcParams["font.sans-serif"] = font_name
+    mpl.rcParams["axes.unicode_minus"] = False
     # result plot
     fig, ax = plt.subplots()
     if y_train is not None:
