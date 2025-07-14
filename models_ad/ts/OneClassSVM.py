@@ -22,7 +22,7 @@ from sklearn import svm
 
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def OneClassSvmOutlierDetection(data, kernel="rbf", gamma=0.1, nu=0.3):

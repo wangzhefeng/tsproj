@@ -17,7 +17,8 @@ __all__ = []
 # python libraries
 import os
 import sys
-ROOT = str(os.getcwd())
+from pathlib import Path
+ROOT = str(Path.cwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 import glob
@@ -39,7 +40,7 @@ from utils.ts.timefeatures import time_features
 warnings.filterwarnings('ignore')
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class Dataset_ETT_hour(Dataset):

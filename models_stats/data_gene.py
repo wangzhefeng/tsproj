@@ -26,7 +26,7 @@ mpl.rcParams["font.sans-serif"] = font_name
 mpl.rcParams["axes.unicode_minus"] = False
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def white_noise(timesteps: int, is_print: bool = False, is_plot: bool = False):

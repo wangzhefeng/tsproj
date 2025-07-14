@@ -22,7 +22,7 @@ from sklearn.neighbors import LocalOutlierFactor as LOF
 
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def LofOutlierDetection(data, neighbor = 50, dist_metric = "l1", contamination = "auto"):

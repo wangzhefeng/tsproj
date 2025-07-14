@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from layers.SeriesDecomp import series_decomp
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class my_Layernorm(nn.Module):

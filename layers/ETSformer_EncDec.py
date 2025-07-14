@@ -22,7 +22,7 @@ from einops import rearrange, reduce, repeat
 from scipy.fftpack import next_fast_len
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class Transform:

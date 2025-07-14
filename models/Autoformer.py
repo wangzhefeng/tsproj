@@ -27,7 +27,7 @@ from layers.Autoformer_EncDec import (
 from layers.Embed import DataEmbedding_wo_pos
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class Model(nn.Module):

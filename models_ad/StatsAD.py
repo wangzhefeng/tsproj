@@ -24,7 +24,7 @@ from scipy.stats import zscore
 
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def NSigma(series, num_sigma: int = 3):

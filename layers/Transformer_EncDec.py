@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class ConvLayer(nn.Module):

@@ -24,7 +24,7 @@ from scipy.special import eval_legendre
 from sympy import Poly, Symbol, chebyshevt, legendre
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def legendreDer(k, x):

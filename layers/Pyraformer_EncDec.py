@@ -23,7 +23,7 @@ from layers.Embed import DataEmbedding
 from layers.SelfAttention_Family import AttentionLayer, FullAttention
 
 # global variable
-LOGGING_LABEL = __file__.split('/')[-1][:-3]
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 def get_mask(input_size, window_size, inner_size):
