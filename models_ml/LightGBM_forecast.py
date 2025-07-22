@@ -8,8 +8,7 @@
 # * Version     : 1.0.121116
 # * Description : description
 # * Link        : https://mp.weixin.qq.com/s?__biz=MzIwNDA5NDYzNA==&mid=2247487120&idx=1&sn=9783b3d4f75f2c3282452815c26d7a49&chksm=96c42355a1b3aa43392107567654bac5a15e91ef89201a77be1047a80429d9c43e1bd2774200&scene=178&cur_album_id=1364202321906941952&search_click_id=#rd
-# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.增加 log;
+# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)增加 log;
 # ***************************************************
 
 __all__ = []

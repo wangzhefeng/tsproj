@@ -9,7 +9,6 @@
 # * Description : description
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.
 # ***************************************************
 
 __all__ = []
@@ -23,13 +22,13 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 import warnings
 warnings.filterwarnings("ignore")
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+import xgboost as xgb
 from sklearn.metrics import (
     r2_score,                        # R2
     mean_squared_error,              # MSE
@@ -37,12 +36,10 @@ from sklearn.metrics import (
     mean_absolute_error,             # MAE
     mean_absolute_percentage_error,  # MAPE
 )
-import xgboost as xgb
 
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]
 os.environ['LOG_NAME'] = LOGGING_LABEL
-
 from utils.log_util import logger
 
 

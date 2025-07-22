@@ -9,7 +9,6 @@
 # * Description : https://blog.csdn.net/java1314777/article/details/134407174
 # * Link        : link
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.
 # ***************************************************
 
 __all__ = []
@@ -79,7 +78,7 @@ def data_provider(args, flag):
 
 # 测试代码 main 函数
 def main():
-    from utils.ts.args_tools import DotDict
+    from utils.args_tools import DotDict
     
     args = {
         "embed": "timeF",

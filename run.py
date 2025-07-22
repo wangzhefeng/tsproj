@@ -21,7 +21,7 @@ import argparse
 
 # from exp.exp_forecasting import Exp_Forecast
 from exp.exp_forecasting_dl import Exp_Forecast
-from utils.ts.args_tools import print_args_ts
+from utils.args_tools import print_args_ts
 from utils.device import torch_gc
 from utils.random_seed import set_seed
 from utils.log_util import logger

@@ -9,7 +9,6 @@
 # * Description : 向量自回归模型(VAR)
 # * Link        : https://www.statsmodels.org/stable/vector_ar.html#var
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# * TODO        : 1.
 # ***************************************************
 
 __all__ = []
