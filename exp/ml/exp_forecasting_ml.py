@@ -72,19 +72,17 @@ from utils.log_util import logger
 
 class Model:
 
-    def __init__(self, args, 
-                 history_series = None, weather_history_data = None, date_history_data = None, 
-                 future_series = None, weather_future_data = None, date_future_data = None) -> None:
+    def __init__(self, args) -> None:
         self.args = args
         # datetime index
         self.args.train_start_time = args.time_range["start_time"]
         self.args.train_end_time = args.time_range["now_time"]
         self.args.forecast_start_time = args.time_range["now_time"]
         self.args.forecast_end_time = args.time_range["future_time"]
-        self.train_start_time_str = self.args.train_start_time.strftime("%Y%m%d")
-        self.train_end_time_str = self.args.train_end_time.strftime("%Y%m%d")
-        self.forecast_start_time_str = self.args.forecast_start_time.strftime("%Y%m%d")
-        self.forecast_end_time_str = self.args.forecast_end_time.strftime("%Y%m%d")
+        # self.train_start_time_str = self.args.train_start_time.strftime("%Y%m%d")
+        # self.train_end_time_str = self.args.train_end_time.strftime("%Y%m%d")
+        # self.forecast_start_time_str = self.args.forecast_start_time.strftime("%Y%m%d")
+        # self.forecast_end_time_str = self.args.forecast_end_time.strftime("%Y%m%d")
         logger.info(f"train_start_time_str: {self.train_start_time_str}")
         logger.info(f"train_end_time_str: {self.train_end_time_str}")
         logger.info(f"forecast_start_time_str: {self.forecast_start_time_str}")
@@ -168,15 +166,7 @@ class Model:
     # TODO
     def __categorical_feature_engineering(self, df, col):
         pass
-
-    def __calc_features_corr(self, df, train_features):
-        """
-        分析预测特征与目标特征的相关性
-        """
-        features_corr = df[train_features + ['load']].corr()
     
-        return features_corr
-
     def process_history_data(self, input_data: Dict = None):
         """
         历史数据预处理
@@ -492,6 +482,15 @@ class Model:
         cv_plot_df_window["Y_preds"] = y_pred
         
         return cv_plot_df_window
+    
+    # TODO
+    def __calc_features_corr(self, df, train_features):
+        """
+        分析预测特征与目标特征的相关性
+        """
+        features_corr = df[train_features + ['load']].corr()
+    
+        return features_corr
     
     def _window_test(self, X_train, Y_train, X_test):
         """
@@ -852,33 +851,33 @@ class Model:
 
 @dataclass
 class ModelConfig:
-    data_dir = Path("./dataset/exp_ml")
-    
-    date_ts_feat = "time"                         # 日期数据时间戳特征名称
-    weather_ts_feat = "time"                      # 天气数据时间戳特征名称
-    
-    target = "y"                                  # 预测目标变量名称
-    target_ts_feat = "time"                        # 功率数据时间戳特征名称
+    data_dir = Path("./dataset/electricity/exp_ml")
+    # target series
+    target = "h_total_use"                        # 预测目标变量名称
+    target_ts_feat = "count_data_time"            # 功率数据时间戳特征名称
     target_series_numeric_features = []           # 目标时间序列的数值特征
     target_series_categorical_features = []       # 目标时间序列的类别特征
-    
+    freq = "5min"                                 # 数据频率
+    # date type
+    date_ts_feat = "date"                         # 日期数据时间戳特征名称
+    # weather
+    weather_ts_feat = "ts"                        # 天气数据时间戳特征名称
+    # model params
     pred_method = "multip-step-directly"          # 预测方法
     scale = False                                 # 是否进行标准化
     target_transform = False                      # 预测目标是否需要转换
     target_transform_predict = None               # 预测目标的转换特征是否需要预测
-    freq = "5min"                                 # 数据频率
-    
+    date_type = None                              # 日期类型，用于区分工作日，非工作日
     lags = []                                     # 特征滞后数列表
-    n_lags = len(lags)                            # 特征滞后数个数(1,2,...)
-    n_per_day = 24 * 12                           # 每天样本数量
-    history_days = 30                             # 历史数据天数
+    n_lags = len(lags)                            # 特征滞后数个数
+    n_per_day = 24 * 4                            # 每天样本数量
+    history_days = 19                             # 历史数据天数
     predict_days = 1                              # 预测未来1天的功率
-    window_days = 30                              # 滑动窗口天数
+    window_days = 7                               # 滑动窗口天数
     horizon = predict_days * n_per_day            # 预测未来 1天(24小时)的功率/数据划分长度/预测数据长度
     n_windows = history_days - (window_days - 1)  # 测试滑动窗口数量, >=1, 1: 单个窗口
     window_len = window_days * n_per_day if n_windows > 1 else history_days * n_per_day   # 测试窗口数据长度(训练+测试)
-    date_type = None                                                                      # 日期类型，用于区分工作日，非工作日
-    now_time = datetime.datetime(2025, 5, 19, 0, 0, 0).replace(tzinfo=None, minute=0, second=0, microsecond=0)  
+    now_time = datetime.datetime(2025, 7, 10, 0, 0, 0).replace(tzinfo=None, minute=0, second=0, microsecond=0)  
     time_range = {
         "start_time": now_time.replace(hour=0) - datetime.timedelta(days=history_days),   # 时间序列历史数据开始时刻
         "now_time": now_time,                                                             # 时间序列当前时刻(模型预测的日期时间)
