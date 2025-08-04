@@ -12,7 +12,6 @@
 # ***************************************************
 
 # python libraries
-import os
 import sys
 from pathlib import Path
 ROOT = str(Path.cwd())
@@ -29,6 +28,7 @@ class Model(nn.Module):
 
     def __init__(self, feature_size, seq_len, hidden_size, output_size):
         super(Model, self).__init__()
+        
         # 全连接层
         self.linear1 = nn.Linear(in_features = feature_size * seq_len, out_features = hidden_size[0])
         self.linear2 = nn.Linear(in_features = hidden_size[0], out_features = hidden_size[1])

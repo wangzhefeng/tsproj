@@ -25,10 +25,10 @@ import torch.nn as nn
 LOGGING_LABEL = Path(__file__).name[:-3]
 
 
-class Model_todo(nn.Module):
+class Model_v1(nn.Module):
 
     def __init__(self, feature_size, hidden_size, num_layers, output_size) -> None:
-        super(Model, self).__init__()
+        super(Model_v1, self).__init__()
 
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -37,12 +37,14 @@ class Model_todo(nn.Module):
             input_size = feature_size, 
             hidden_size = hidden_size, 
             num_layers = num_layers, 
+            bias = True,
             batch_first = True
         )
         # fc layer
         self.linear = nn.Linear(
             in_features = hidden_size, 
-            out_features = output_size
+            out_features = output_size,
+            bias = True,
         )
 
     def forward(self, x, hidden = None):
@@ -58,23 +60,21 @@ class Model_todo(nn.Module):
         output = self.linear(output)
 
         output = output[:, -1, :]
+        
         return output
 
 
-class Model(nn.Module):
+class Model_v2(nn.Module):
 
     def __init__(self, args) -> None:
-        super(Model, self).__init__()
+        super(Model_v2, self).__init__()
 
-        self.feature_size = args.feature_size
-        self.hidden_size = args.hidden_size
-        self.num_layers = args.num_layers
-        self.target_size = args.target_size
-        self.pred_len = args.pred_len
+        self.args = args
         # hideen layer
         self.hidden = nn.Linear(
-            in_features = args.feature_size, 
+            in_features = args.feature_size,
             out_features = args.hidden_size,
+            bias = True,
         )
         # relu
         self.relu = nn.ReLU()
@@ -85,44 +85,80 @@ class Model(nn.Module):
             num_layers = args.num_layers, 
             bias = True,
             batch_first = True,
-        )
+        )  # [batch_size,seq_len,hidden_size]
         # fc layer
+        output_size = 1 if (args.features == "MS" or args.features == "S") else args.feature_size
         self.linear = nn.Linear(
             in_features = args.hidden_size, 
-            out_features = args.target_size,
+            out_features = output_size,
             bias = True,
         )
 
-    def forward(self, x, hidden = None):
-        # [batch_size, obs_len, feature_size]
-        batch_size, obs_len, feature_size = x.shape
-        # [batch_size, obs_len, hidden_size]
+    def forward(self, x):
+        # [batch_size, seq_len, feature_size]
+        batch_size, seq_len, feature_size = x.shape
+        # [batch_size, seq_len, hidden_size]
         x_concat = self.hidden(x)
-        # [batch_size, obs_len-1, hidden_size]
-        H = torch.zeros(batch_size, obs_len-1, self.hidden_size).to(self.args.device)
+        # [batch_size, seq_len-1, hidden_size]
+        H = torch.zeros(batch_size, seq_len-1, self.args.hidden_size).to(x.device)
         # [num_layers, batch_size, hidden_size]
-        ht = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.args.device)
-        for t in range(obs_len):
+        h_t = torch.zeros(self.args.num_layers, batch_size, self.args.hidden_size).to(x.device)
+        for t in range(seq_len):
             # [batch_size, 1, hidden_size]
-            xt = x_concat[:, t, :].viwe(batch_size, 1, -1)
+            x_t = x_concat[:, t, :].viwe(batch_size, 1, -1)
             # ht: [num_layers, batch_size, hidden_size]
-            out, ht = self.rnn(xt, ht)
+            out, h_t = self.rnn(x_t, h_t)
             # [batch_size, hidden_size]
-            htt = ht[-1, :, :]
-            if t != obs_len - 1:
+            htt = h_t[-1, :, :]
+            if t != seq_len - 1:
                 H[:, t, :] = htt
-        # [batch_size, obs_len-1, hidden_size]
+        # [batch_size, seq_len-1, hidden_size]
         H = self.relu(H)
+        # [batch_size, hidden_size, output_size]
         x = self.linear(H)
 
-        return x[:, -self.pred_len, :]
+        return x[:, -self.args.pred_len, :]
 
 
 
 
 # 测试代码 main 函数
 def main():
-    pass
+    from utils.log_util import logger
+
+    # command arguments
+    args = { 
+        # data 
+        # ----------------------------
+        "root_path": "./dataset/ETT-small",  # 数据集目录
+        "data_path": "ETTh1.csv",  # 数据文件名
+        "target": "OT",  # 数据目标特征
+        "time": "date",  # 数据时间列名
+        "freq": "h",  # 数据频率
+        "seq_len": 120,  # 窗口大小(历史)
+        "pred_len": 24,  # 预测长度
+        "step_size": 1,  # 滑窗步长
+        "batch_size": 1,
+        "train_ratio": 0.7,
+        "test_ratio": 0.2, 
+        "embed": "timeF",
+        "scale": True,
+        "num_workers": 0,
+        # task
+        # ----------------------------
+        "features": "S",
+        "feature_size": 1,  # 特征个数(除了时间特征)
+        "hidden_size": 128,
+        "num_layers": 2,
+        "rolling_predict": True,  # 是否进行滚动预测功能
+        "rolling_data_path": "ETTh1Test.csv"  # 滚动数据集的数据
+    }
+    from utils.args_tools import DotDict
+    args = DotDict(args)
+    
+    # model
+    rnn2 = Model_v2(args)
+    logger.info(f"rnn2: \n{rnn2}")
 
 if __name__ == "__main__":
     main()

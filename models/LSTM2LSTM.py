@@ -108,12 +108,12 @@ class Model(nn.Module):
         super().__init__()
         
         self.input_size = args.feature_size
-        self.output_size = args.target_size
+        self.output_size = args.output_size
         self.pred_len = args.pred_len
         self.teacher_forcing = args.teacher_forcing
         self.encoder = LSTMEncoder(args.num_layers, args.feature_size, args.seq_len, args.hidden_size)
-        self.decoder_cell = AttentionDecoderCell(args.feature_size, args.target_size, args.seq_len, args.hidden_size)
-        self.linear = nn.Linear(args.feature_size, args.target_size)
+        self.decoder_cell = AttentionDecoderCell(args.feature_size, args.output_size, args.seq_len, args.hidden_size)
+        self.linear = nn.Linear(args.feature_size, args.output_size)
 
     def __call__(self, x_batch, y_batch=None):
         # encoder

@@ -36,7 +36,7 @@ python -u run_dl.py \
     --feature_size 7 \
     --hidden_size 128 \
     --kernel_size 3 \
-    --target_size 7 \
+    --output_size 7 \
     --teacher_forcing 0.3 \
     --train_ratio 0.6 \
     --test_ratio 0.2 \

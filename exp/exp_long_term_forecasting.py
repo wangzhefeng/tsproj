@@ -11,13 +11,13 @@
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
 # ***************************************************
 
-import os
 import sys
 from pathlib import Path
 ROOT = str(Path.cwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 import time
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -25,15 +25,23 @@ import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
+# data pipeline
 from data_provider.TFs_type.data_factory import data_provider
-from utils.model_memory import model_memory_size
+# model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
+# loss
 from utils.ts.losses import mape_loss, mase_loss, smape_loss
+# metric
 from utils.ts.metrics_dl import metric, DTW
 from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
+# log
+from utils.model_memory import model_memory_size
 from utils.timestamp_utils import from_unix_time
 from utils.log_util import logger
+
+# global variable
+LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class Exp_Forecast(Exp_Basic):
@@ -83,11 +91,17 @@ class Exp_Forecast(Exp_Basic):
     def _select_optimizer(self):
         """
         优化器
-        """
-        optimizer = torch.optim.Adam(
-            self.model.parameters(), 
-            lr = self.args.learning_rate
-        )
+        """ 
+        if self.args.optimizer.lower() == "adam":
+            optimizer = torch.optim.Adam(
+                self.model.parameters(), 
+                lr = self.args.learning_rate,
+            )
+        elif self.args.optimizer.lower() == "adamw":
+            optimizer = torch.optim.AdamW(
+                self.model.parameters(), 
+                lr = self.args.learning_rate,
+            )
         
         return optimizer
     
@@ -96,10 +110,10 @@ class Exp_Forecast(Exp_Basic):
         模型保存路径
         """
         # 模型保存路径
-        model_path = os.path.join(self.args.checkpoints, setting)
-        os.makedirs(model_path, exist_ok=True)
+        model_path = Path(self.args.checkpoints).joinpath(setting)
+        model_path.mkdir(parents=True, exist_ok=True)
         # 最优模型保存路径
-        model_checkpoint_path = os.path.join(model_path, "checkpoint.pth")
+        model_checkpoint_path = model_path.joinpath("checkpoint.pth")
         
         return model_checkpoint_path
 
@@ -107,8 +121,8 @@ class Exp_Forecast(Exp_Basic):
         """
         结果保存路径
         """
-        results_path = os.path.join(self.args.test_results, setting)
-        os.makedirs(results_path, exist_ok=True)
+        results_path = Path(self.args.test_results).joinpath(setting)
+        results_path.mkdir(parents=True, exist_ok=True)
         
         return results_path
 
@@ -116,10 +130,10 @@ class Exp_Forecast(Exp_Basic):
         """
         结果保存路径
         """
-        results_path = os.path.join(self.args.predict_results, setting)
-        os.makedirs(results_path, exist_ok=True)
+        results_path = Path(self.args.predict_results).joinpath(setting)
+        results_path.mkdir(parents=True, exist_ok=True)
         
-        return results_path 
+        return results_path
 
     def _test_results_save(self, preds, trues, setting, path):
         """
@@ -129,9 +143,8 @@ class Exp_Forecast(Exp_Basic):
         mse, rmse, mae, mape, mape_accuracy, mspe = metric(preds, trues)
         dtw = DTW(preds, trues) if self.args.use_dtw else -999
         logger.info(f"Test results: mse:{mse:.4f} rmse:{rmse:.4f} mae:{mae:.4f} mape:{mape:.4f} mape accuracy:{mape_accuracy:.4f} mspe:{mspe:.4f} dtw: {dtw:.4f}")
-        
         # result1 保存
-        with open(os.path.join(path, "result_forecast.txt"), 'a') as file:
+        with open(Path(path).joinpath("result_forecast.txt"), 'a') as file:
             file.write(setting + "  \n")
             file.write(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, mape accuracy:{mape_accuracy}, mspe:{mspe}, dtw:{dtw}")
             file.write('\n')
@@ -139,24 +152,20 @@ class Exp_Forecast(Exp_Basic):
             file.close()
         # result2 保存
         np.save(
-            os.path.join(path, 'metrics.npy'), 
+            Path(path).joinpath('metrics.npy'), 
             np.array([mae, mse, rmse, mape, mape_accuracy, mspe, dtw])
         )
-        np.save(os.path.join(path, 'preds.npy'), preds)
-        np.save(os.path.join(path, 'trues.npy'), trues)
+        np.save(Path(path).joinpath('preds.npy'), preds)
+        np.save(Path(path).joinpath('trues.npy'), trues)
     
     def _pred_results_save(self, preds, preds_df, path):
         """
         预测结果保存
         """
         if preds is not None:
-            np.save(os.path.join(path, "prediction.npy"), preds) 
+            np.save(Path(path).joinpath("prediction.npy"), preds) 
         if preds_df is not None:
-            preds_df.to_csv(
-                os.path.join(path, "prediction.csv"), 
-                encoding="utf_8_sig", 
-                index=False
-            )
+            preds_df.to_csv(Path(path).joinpath("prediction.csv"), encoding="utf_8_sig", index=False)
     
     def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
         # 数据预处理
@@ -469,7 +478,7 @@ class Exp_Forecast(Exp_Basic):
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                    predict_result_visual(pred_plot, true_plot, path = os.path.join(test_results_path, str(i) + '.pdf')) 
+                    predict_result_visual(pred_plot, true_plot, path=Path(test_results_path).joinpath(f'{str(i)}.pdf')) 
         # 测试结果保存
         preds = np.concatenate(preds, axis = 0)  # preds = np.array(preds) 
         trues = np.concatenate(trues, axis = 0)  # trues = np.array(trues)        
@@ -494,7 +503,7 @@ class Exp_Forecast(Exp_Basic):
         trues_flat = np.concatenate(trues, axis = 0)
         # logger.info(f"debug::Test results: preds_flat: \n{preds_flat} \npreds_flat.shape: {preds_flat.shape}")
         # logger.info(f"debug::Test results: trues_flat: \n{trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
-        predict_result_visual(preds_flat, trues_flat, path = os.path.join(test_results_path, "test_prediction.png")) 
+        predict_result_visual(preds_flat, trues_flat, path=Path(test_results_path).joinpath("test_prediction.png")) 
         logger.info(test_results_path)
         # results_df = pd.DataFrame({
         #     "timestamp": pd.date_range("2024-12-01 00:00:00", periods=self.args.pred_len, freq=self.args.freq),
@@ -593,7 +602,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         logger.info(f"Forecast visual results have been saved in path:")
         logger.info(f"{40 * '-'}")
-        plot_path = os.path.join(pred_results_path, 'forecasting_prediction.png')
+        plot_path = Path(pred_results_path).joinpath('forecasting_prediction.png')
         predict_result_visual(preds_plot, trues_plot, plot_path)
         logger.info(plot_path)
         # log

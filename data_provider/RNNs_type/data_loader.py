@@ -21,10 +21,10 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 from typing import List, Tuple
 
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
 import torch
+import pandas as pd
 from torch.utils.data import Dataset
+from sklearn.preprocessing import StandardScaler
 
 from utils.time_col_tools import time_col_distinct, time_col_rename
 from utils.log_util import logger
@@ -68,9 +68,9 @@ class Dataset_Train(Dataset):
         # data trans
         self.scale = scale
         # data read
-        self.__read_data__()
+        self.__read_data()
 
-    def __read_data__(self):
+    def __read_data(self):
         logger.info(f"{40 * '-'}")
         logger.info(f"Load and Preprocess {self.flag} data...")
         logger.info(f"{40 * '-'}")
@@ -145,11 +145,13 @@ class Dataset_Train(Dataset):
         for i in range(0, input_data_len - self.seq_len, self.step_size):            
             # 滑窗停止条件
             if (i + self.seq_len + self.pred_len) > input_data_len:
-                break 
+                break
             # logger.info(f"debug::input_data[0:10]: \n{input_data[0:10]} \ninput_data[0:10].shape: {input_data[0:10].shape}")
+            
             # predict seq
             train_seq = input_data[i:(i + self.seq_len)]
             # logger.info(f"debug::train_seq: \n{train_seq} \ntrain_seq.shape: {train_seq.shape}")
+            
             # targee seq
             if self.features == "MS" or self.features == "S":
                 train_label = input_data[:, -1:][(i + self.seq_len):(i + self.seq_len + self.pred_len)]

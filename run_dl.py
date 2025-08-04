@@ -159,7 +159,7 @@ def args_parse():
     parser.add_argument("--feature_size", type=int, default=1, help="feature size")
     parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
     parser.add_argument("--kernel_size", type=int, default=3, help="kernel size")
-    parser.add_argument("--target_size", type=int, default=1, help="target size")
+    parser.add_argument("--output_size", type=int, default=1, help="target size")
     parser.add_argument("--lr_scheduler", type=int, default=1, help="learning rate scheduler")
     parser.add_argument("--teacher_forcing", type=float, default=0.3, help="teacher forcing")
     parser.add_argument("--inspect_fit", type=int, default=1, help="inspect fit")
@@ -199,7 +199,7 @@ def run(args):
     )
     
     # 模型训练
-    if args.is_training: 
+    if args.is_training:
         for ii in range(args.iters):
             # setting record of experiments
             training_setting = setting + str(ii)

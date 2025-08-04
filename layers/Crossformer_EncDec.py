@@ -12,11 +12,18 @@
 # ***************************************************
 
 # python libraries
+import os
+import sys
+from pathlib import Path
+ROOT = str(Path.cwd())
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
+
 import torch
 import torch.nn as nn
 from einops import rearrange
 
-from layers.SelfAttention import TwoStageAttentionLayer
+from layers.SelfAttention_Family import TwoStageAttentionLayer
 
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]

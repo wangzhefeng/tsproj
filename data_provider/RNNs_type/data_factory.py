@@ -24,7 +24,10 @@ if ROOT not in sys.path:
 
 from torch.utils.data import DataLoader
 
-from data_provider.RNNs_type.data_loader import Dataset_Train
+from data_provider.RNNs_type.data_loader import (
+    Dataset_Train,
+    Dataset_Pred,
+)
 
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]
@@ -49,7 +52,7 @@ def data_provider(args, flag):
         Data = Dataset_Train
     elif flag == "pred":
         batch_size = 1
-        Data = Dataset_Train
+        Data = Dataset_Pred
     # 构建 Dataset 和 DataLoader
     data_set = Data(
         args = args,
@@ -82,26 +85,29 @@ def data_provider(args, flag):
 # 测试代码 main 函数
 def main():    
     # command arguments
-    args = {
-        "embed": "timeF",
-        "batch_size": 1,
-        "root_path": "./dataset/ETT-small",
-        "data_path": "ETTh1.csv",
-        "target": "OT",
-        "time": "date",
-        "freq": "h",
-        "features": "S",
+    args = { 
+        # data 
+        # ----------------------------
+        "root_path": "./dataset/ETT-small",  # 数据集目录
+        "data_path": "ETTh1.csv",  # 数据文件名
+        "target": "OT",  # 数据目标特征
+        "time": "date",  # 数据时间列名
+        "freq": "h",  # 数据频率
         "seq_len": 6,  # 窗口大小(历史)
         "pred_len": 3,  # 预测长度
-        "step_size": 2,  # 滑窗步长
-        "feature_size": 7,  # 特征个数
-        "hidden_size": 256,
-        "kernel_size": 3,
-        "num_layers": 2,
+        "step_size": 1,  # 滑窗步长
+        "batch_size": 1,
         "train_ratio": 0.7,
-        "test_ratio": 0.2,
+        "test_ratio": 0.2, 
+        "embed": "timeF",
         "scale": True,
         "num_workers": 0,
+        # task
+        # ----------------------------
+        "features": "MS",
+        "feature_size": 7,  # 特征个数(除了时间特征)
+        "hidden_size": 128,
+        "num_layers": 2,
         "rolling_predict": True,  # 是否进行滚动预测功能
         "rolling_data_path": "ETTh1Test.csv"  # 滚动数据集的数据
     }

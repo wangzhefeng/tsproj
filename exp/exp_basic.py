@@ -31,6 +31,7 @@ from models import (
     Transformer,
     PatchTST,
     LSTM2LSTM,
+    RNN,
 )
 from utils.log_util import logger
 
@@ -85,7 +86,7 @@ class Exp_Basic:
             # Basic Neural Network model
             # ------------------------------
             # "MLP": MLP,
-            # "RNN": RNN,
+            "RNN": RNN,
             # "GRU": GRU,
             # "LSTM": LSTM,
             # "BiLSTM": BiLSTM,

@@ -36,7 +36,7 @@ python -u run_dl.py \
     --step_size 1 \
     --features M \
     --feature_size 7 \
-    --target_size 7 \
+    --output_size 7 \
     --hidden_size 64 \
     --kernel_size 3 \
     --num_layers 2 \

@@ -42,7 +42,7 @@ class Dataset_Train:
                  # size=None,  # size [seq_len, label_len, pred_len]
                  seq_len=1,
                  feature_size=1,
-                 target_size=1,
+                 output_size=1,
                  target="WIND",
                  features="MS",
                  train_ratio=0.8,
@@ -65,7 +65,7 @@ class Dataset_Train:
         # data size
         self.seq_len = seq_len
         self.feature_size = feature_size
-        self.target_size = target_size
+        self.output_size = output_size
         # data freq, feature columns, and target
         self.features = features
         self.target = target
@@ -149,7 +149,7 @@ class Dataset_Train:
         border2s = [num_train, num_train + num_vali, data_len]
         border1, border2 = border1s[self.set_type], border2s[self.set_type]
         data_x = data_X[border1:border2, :].reshape(-1, self.seq_len, self.feature_size)  # (batch_size, seq_len, feature_size)
-        data_y = data_Y[border1:border2].reshape(-1, self.target_size)  # (batch_size, num_target)
+        data_y = data_Y[border1:border2].reshape(-1, self.output_size)  # (batch_size, num_target)
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
         logger.info(f"data_x: \n{data_x} \ndata_x shape: {data_x.shape}")
         logger.info(f"data_y: \n{data_y} \ndata_y shape: {data_y.shape}")
@@ -207,8 +207,8 @@ class Dataset_Train:
         for index in range(len(data) - self.seq_len - 1):
             data_x = data[index:(index + self.seq_len)]
             data_X.append(data_x)
-            data_y = data[(index + self.seq_len):(index + self.seq_len + self.target_size)][:, -1].tolist()
-            if len(data_y) == self.target_size:
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
                 data_Y.append(data_y)
             else:
                 data_X = data_X[:-1]
@@ -229,8 +229,8 @@ class Dataset_Train:
         for index in range(len(data) - self.seq_len - 1):
             data_x = data[index:(index + self.seq_len)]
             data_X.append(data_x)
-            data_y = data[(index + self.seq_len):(index + self.seq_len + self.target_size)][:, -1].tolist()
-            if len(data_y) == self.target_size:
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
                 data_Y.append(data_y)
             else:
                 data_X = data_X[:-1]
@@ -253,8 +253,8 @@ class Dataset_Train:
         for index in range(len(data) - self.seq_len - 1):
             data_x = data[index:(index + self.seq_len)]#[:, -1]  # TODO
             data_X.append(data_x)
-            data_y = data[(index + self.seq_len):(index + self.seq_len + self.target_size)][:, -1].tolist()
-            if len(data_y) == self.target_size:
+            data_y = data[(index + self.seq_len):(index + self.seq_len + self.output_size)][:, -1].tolist()
+            if len(data_y) == self.output_size:
                 data_Y.append(data_y)
             else:
                 data_X = data_X[:-1]
