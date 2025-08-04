@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=Nonstationary_Transformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -31,7 +31,7 @@ python -u run.py \
   --p_hidden_dims 256 256 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -60,7 +60,7 @@ python -u run.py \
   --p_hidden_dims 256 256 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -89,7 +89,7 @@ python -u run.py \
   --p_hidden_dims 256 256 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \

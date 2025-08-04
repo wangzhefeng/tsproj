@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=4
 
 model_name=PatchTST
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -25,7 +25,7 @@ python -u run.py \
   --batch_size 32 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -48,7 +48,7 @@ python -u run.py \
   --batch_size 128 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -71,7 +71,7 @@ python -u run.py \
   --batch_size 128 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \

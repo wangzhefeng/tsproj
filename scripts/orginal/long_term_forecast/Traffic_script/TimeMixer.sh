@@ -12,7 +12,7 @@ d_ff=64
 batch_size=8
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -40,7 +40,7 @@ python -u run.py \
   --down_sampling_method avg \
   --down_sampling_window $down_sampling_window
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -68,7 +68,7 @@ python -u run.py \
   --down_sampling_method avg \
   --down_sampling_window $down_sampling_window
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -96,7 +96,7 @@ python -u run.py \
   --down_sampling_method avg \
   --down_sampling_window $down_sampling_window
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \

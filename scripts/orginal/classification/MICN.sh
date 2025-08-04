@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=7
 
 model_name=MICN
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/EthanolConcentration/ \
@@ -21,7 +21,7 @@ python -u run.py \
   --c_out 3 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/FaceDetection/ \
@@ -39,7 +39,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/Handwriting/ \
@@ -57,7 +57,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/Heartbeat/ \
@@ -75,7 +75,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/JapaneseVowels/ \
@@ -93,7 +93,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/PEMS-SF/ \
@@ -111,7 +111,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/SelfRegulationSCP1/ \
@@ -129,7 +129,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/SelfRegulationSCP2/ \
@@ -147,7 +147,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/SpokenArabicDigits/ \
@@ -165,7 +165,7 @@ python -u run.py \
   --train_epochs 100 \
   --patience 10
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/UWaveGestureLibrary/ \

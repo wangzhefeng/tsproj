@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=iTransformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -27,7 +27,7 @@ python -u run.py \
   --learning_rate 0.0005 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -53,7 +53,7 @@ python -u run.py \
   --itr 1
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -79,7 +79,7 @@ python -u run.py \
   --itr 1
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \

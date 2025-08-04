@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=Nonstationary_Transformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -26,7 +26,7 @@ python -u run.py \
   --p_hidden_layers 2 \
   --d_model 2048
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -50,7 +50,7 @@ python -u run.py \
   --p_hidden_layers 2 \
   --d_model 2048
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -74,7 +74,7 @@ python -u run.py \
   --p_hidden_layers 2 \
   --d_model 2048
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \

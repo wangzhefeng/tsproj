@@ -12,7 +12,6 @@
 # ***************************************************
 
 # python libraries
-import os
 import sys
 from pathlib import Path
 ROOT = str(Path.cwd())
@@ -20,8 +19,7 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 
 import torch
-from torch.utils.data import TensorDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 
 from data_provider.data_loader_dl_1 import (
     Dataset_Train, 

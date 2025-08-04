@@ -27,7 +27,7 @@ strides=(8 8 8 8)
 
 # Loop over datasets and prediction lengths
 for i in "${!pred_lens[@]}"; do
-	python -u run.py \
+	python -u run_dl.py \
 		--is_training 1 \
 		--root_path ./data/ETT/ \
 		--data_path ETTh1.csv \

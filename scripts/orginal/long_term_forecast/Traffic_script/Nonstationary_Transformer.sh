@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=5
 
 model_name=Nonstationary_Transformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -26,7 +26,7 @@ python -u run.py \
   --p_hidden_dims 128 128 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -50,7 +50,7 @@ python -u run.py \
   --p_hidden_dims 128 128 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -74,7 +74,7 @@ python -u run.py \
   --p_hidden_dims 16 16 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \

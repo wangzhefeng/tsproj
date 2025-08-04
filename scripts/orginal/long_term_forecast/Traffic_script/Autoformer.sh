@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=6
 
 model_name=Autoformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -24,7 +24,7 @@ python -u run.py \
   --itr 1 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -46,7 +46,7 @@ python -u run.py \
   --itr 1 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \
@@ -68,7 +68,7 @@ python -u run.py \
   --itr 1 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/traffic/ \

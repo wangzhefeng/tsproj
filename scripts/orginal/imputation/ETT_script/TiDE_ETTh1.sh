@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=TiDE
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -28,7 +28,7 @@ python -u run.py \
   --patience 5 \
   --train_epochs 10 \
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -55,7 +55,7 @@ python -u run.py \
   --top_k 3 \
   --learning_rate 0.001
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -82,7 +82,7 @@ python -u run.py \
   --top_k 3 \
   --learning_rate 0.001
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \

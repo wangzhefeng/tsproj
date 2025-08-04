@@ -2,7 +2,7 @@ model_name=Mamba
 for pred_len in 96 192 336 720
 do
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \

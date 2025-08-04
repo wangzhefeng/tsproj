@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -20,7 +20,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -40,7 +40,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -60,7 +60,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -80,7 +80,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -100,7 +100,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -120,7 +120,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \
@@ -140,7 +140,7 @@ python -u run.py \
   --batch_size 128 \
   --train_epochs 3
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/SWaT \

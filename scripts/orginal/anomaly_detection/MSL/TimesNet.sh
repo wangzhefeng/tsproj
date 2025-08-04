@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name anomaly_detection \
   --is_training 1 \
   --root_path ./dataset/MSL \

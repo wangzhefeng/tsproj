@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=4
 
 model_name=Nonstationary_Transformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/exchange_rate/ \
@@ -25,7 +25,7 @@ python -u run.py \
   --p_hidden_dims 256 256 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/exchange_rate/ \
@@ -48,7 +48,7 @@ python -u run.py \
   --p_hidden_dims 64 64 64 64 \
   --p_hidden_layers 4
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/exchange_rate/ \
@@ -72,7 +72,7 @@ python -u run.py \
   --p_hidden_dims 256 256 \
   --p_hidden_layers 2
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/exchange_rate/ \

@@ -12,7 +12,6 @@
 # ***************************************************
 
 # python libraries
-import os
 import sys
 from pathlib import Path
 ROOT = str(Path.cwd())
@@ -69,8 +68,8 @@ class Model(nn.Module):
 
         self.feature_size = args.feature_size
         self.hidden_size = args.hidden_size
-        self.target_size = args.target_size
         self.num_layers = args.num_layers
+        self.target_size = args.target_size
         self.pred_len = args.pred_len
         # hideen layer
         self.hidden = nn.Linear(
@@ -95,8 +94,6 @@ class Model(nn.Module):
         )
 
     def forward(self, x, hidden = None):
-        # rnn module data shape: [seq_len, batch_size, feature_size]
-
         # [batch_size, obs_len, feature_size]
         batch_size, obs_len, feature_size = x.shape
         # [batch_size, obs_len, hidden_size]

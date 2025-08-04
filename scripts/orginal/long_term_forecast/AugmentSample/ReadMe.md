@@ -45,7 +45,7 @@ for aug in jitter scaling permutation magwarp timewarp windowslice windowwarp ro
 do
 echo using augmentation: ${aug}
 
-python -u run.py \
+python -u run_dl.py \
   --task_name classification \
   --is_training 1 \
   --root_path ./dataset/EthanolConcentration/ \

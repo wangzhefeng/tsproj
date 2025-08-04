@@ -13,7 +13,7 @@ train_epochs=10
 patience=10
 batch_size=16
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path  ./dataset/ETT-small/\
@@ -41,7 +41,7 @@ python -u run.py \
   --down_sampling_window $down_sampling_window
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -69,7 +69,7 @@ python -u run.py \
   --down_sampling_window $down_sampling_window
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \
@@ -97,7 +97,7 @@ python -u run.py \
   --down_sampling_window $down_sampling_window
 
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/ETT-small/ \

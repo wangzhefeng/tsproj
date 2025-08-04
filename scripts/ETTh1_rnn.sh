@@ -6,7 +6,7 @@ export LOG_NAME=$model_id
 # model vars
 model_name=RNN
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \

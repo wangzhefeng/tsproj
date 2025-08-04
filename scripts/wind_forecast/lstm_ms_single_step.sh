@@ -3,7 +3,7 @@ export LOG_NAME=wind_lstm_ms_single_step
 
 model_name=LSTM
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \

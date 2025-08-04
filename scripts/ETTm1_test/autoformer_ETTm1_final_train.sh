@@ -8,7 +8,7 @@ model_name=Autoformer
 # --d_ff 2048
 
 # 训练最终用于预测的模型
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 0 \

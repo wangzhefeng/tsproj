@@ -3,7 +3,7 @@ export LOG_NAME=A3204
 
 model_name=PatchTST
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \

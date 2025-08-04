@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=3
 
 model_name=FiLM
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -24,7 +24,7 @@ python -u run.py \
   --batch_size 4 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -46,7 +46,7 @@ python -u run.py \
   --batch_size 4 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \
@@ -68,7 +68,7 @@ python -u run.py \
   --batch_size 4 \
   --itr 1
 
-python -u run.py \
+python -u run_dl.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --root_path ./dataset/electricity/ \

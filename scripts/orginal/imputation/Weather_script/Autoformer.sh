@@ -2,7 +2,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=Autoformer
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/weather/ \
@@ -29,7 +29,7 @@ python -u run.py \
   --top_k 5 \
   --learning_rate 0.001
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/weather/ \
@@ -56,7 +56,7 @@ python -u run.py \
   --top_k 5 \
   --learning_rate 0.001
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/weather/ \
@@ -83,7 +83,7 @@ python -u run.py \
   --top_k 5 \
   --learning_rate 0.001
 
-python -u run.py \
+python -u run_dl.py \
   --task_name imputation \
   --is_training 1 \
   --root_path ./dataset/weather/ \

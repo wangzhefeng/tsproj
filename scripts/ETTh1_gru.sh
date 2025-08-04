@@ -3,7 +3,7 @@ export LOG_NAME=ETTh1_gru
 
 model_name=GRU
 
-python -u run.py \
+python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp' \
     --is_training 1 \
