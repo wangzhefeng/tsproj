@@ -29,7 +29,7 @@ import torch.nn as nn
 from exp.exp_basic import Exp_Basic
 # data pipeline
 # from data_provider.data_factory_dl_1 import data_provider
-from data_provider.data_factory_dl_3 import data_provider
+from data_provider.RNNs_type.data_factory import data_provider
 # model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
 # loss

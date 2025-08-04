@@ -25,7 +25,7 @@ import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
-from data_provider.data_factory import data_provider
+from data_provider.TFs_type.data_factory import data_provider
 from utils.model_tools import EarlyStopping, adjust_learning_rate
 from utils.ts.losses import mape_loss, mase_loss, smape_loss
 from utils.ts.m4 import M4Meta
