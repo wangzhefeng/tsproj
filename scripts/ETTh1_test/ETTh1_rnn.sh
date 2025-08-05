@@ -20,7 +20,8 @@ python -u run_dl.py \
     --data_path ETTh1.csv \
     --data ETTh1 \
     --target OT \
-    --train_ratio 0.6 \
+    --time date \
+    --train_ratio 0.7 \
     --test_ratio 0.2 \
     --pred_method recursive_multi_step \
     --inspect_fit 1 \
@@ -37,14 +38,14 @@ python -u run_dl.py \
     --features M \
     --feature_size 7 \
     --output_size 7 \
-    --hidden_size 64 \
+    --hidden_size 128 \
     --kernel_size 3 \
     --num_layers 2 \
     --dropout 0.05 \
     --activation gelu \
     --teacher_forcing 0.3 \
     --iters 1 \
-    --train_epochs 20 \
+    --train_epochs 1 \
     --batch_size 32 \
     --learning_rate 5e-3 \
     --lr_scheduler 1 \
@@ -57,6 +58,6 @@ python -u run_dl.py \
     --inverse 1 \
     --num_workers 0 \
     --use_gpu 1 \
-    --gpu_type 'cuda' \
+    --gpu_type 'mps' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7

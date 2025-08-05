@@ -196,15 +196,37 @@ class Exp_Forecast(Exp_Basic):
         self.model.eval()
 
     # TODO
+    # def _inverse_data(self, data, outputs, batch_y):
+    #     """
+    #     输入输出逆转换
+    #     """
+    #     if data.scale and self.args.inverse:
+    #         outputs = data.inverse_target(outputs)
+    #         batch_y = data.inverse_target(batch_y)
+    #     logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+    #     logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+        
+    #     return outputs, batch_y
+
     def _inverse_data(self, data, outputs, batch_y):
         """
         输入输出逆转换
         """
         if data.scale and self.args.inverse:
-            outputs = data.inverse_target(outputs)
-            batch_y = data.inverse_target(batch_y)
-        logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
+            outputs = outputs.numpy()
+            batch_y = batch_y.numpy()
+            # 数据逆转换 output 最后一个维度转换为与 batch_y 一致: [1, pred_len, enc_in/dec_in]
+            if outputs.shape[-1] != batch_y.shape[-1]:
+                outputs = np.tile(outputs, [1, 1, int(batch_y.shape[-1] / outputs.shape[-1])])
+            # inverse transform
+            shape = outputs.shape  # [batch, pred_len, enc_in/dec_in]
+            outputs = data.inverse_transform(outputs.reshape(shape[0] * shape[1], -1)).reshape(shape)
+            batch_y = data.inverse_transform(batch_y.reshape(shape[0] * shape[1], -1)).reshape(shape)
+            # or
+            # outputs = data.inverse_transform(outputs.squeeze(0)).reshape(shape)
+            # batch_y = data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
+        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
         
         return outputs, batch_y
 
@@ -271,8 +293,12 @@ class Exp_Forecast(Exp_Basic):
                 x_train, y_train = data_batch
                 x_train = x_train.float().to(self.device)
                 y_train = y_train.float().to(self.device)
+                # logger.info(f"debug::x_train: \n{x_train}, \nx_train.shape: {x_train.shape}")
+                # logger.info(f"debug::y_train: \n{y_train}, \ny_train.shape: {y_train.shape}")
                 # 前向传播
                 outputs = self.model(x_train)
+                # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
+                
                 # TODO 输入输出逆转换
                 # outputs, y_train = self._inverse_data(train_data, outputs, y_train)
                 # TODO 预测值/真实值提取
@@ -281,6 +307,7 @@ class Exp_Forecast(Exp_Basic):
                 # y_train = y_train[:, :, f_dim:].to(self.device)
                 # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
                 # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
+                
                 # 计算训练损失
                 if self.args.output_size == 1:
                     loss = criterion(outputs, y_train.reshape(-1, 1))
@@ -336,7 +363,7 @@ class Exp_Forecast(Exp_Basic):
         plot_losses(
             train_epochs=self.args.train_epochs,
             train_losses=train_losses, 
-            vali_losses=vali_losses, 
+            valid_losses=vali_losses, 
             label="loss",
             results_path=test_results_path
         )
@@ -362,7 +389,7 @@ class Exp_Forecast(Exp_Basic):
         self.model.eval()
         with torch.no_grad():
             for i, data_batch in enumerate(vali_loader):
-                logger.info(f"Vali step: {i} running...")
+                # logger.info(f"Vali step: {i} running...")
                 x_vali, y_vali = data_batch
                 x_vali = x_vali.float().to(self.device)
                 y_vali = y_vali.float()
@@ -374,9 +401,10 @@ class Exp_Forecast(Exp_Basic):
                 else:
                     loss = criterion(outputs.detach().cpu(), y_vali)
                 vali_loss.append(loss.item())
-                # logger.info(f"debug::valid step: {i}, valid loss: {loss}")
+                # logger.info(f"Valid step: {i}, valid loss: {loss}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
+        logger.info(f"debug::vali_loss: {vali_loss}")
         # 计算模型输出
         self.model.train()
         # log
@@ -483,7 +511,7 @@ class Exp_Forecast(Exp_Basic):
 
         return
 
-    def test_dl3(self, setting, load: bool=False):
+    def test(self, setting, load: bool=False):
         """
         模型测试
         """
@@ -517,31 +545,44 @@ class Exp_Forecast(Exp_Basic):
         preds_flat, trues_flat = [], []
         with torch.no_grad():
             for i, data_batch in enumerate(test_loader):
-                logger.info(f"test step: {i}")
+                logger.info(f"Test step: {i}")
                 x_test, y_test = data_batch
                 x_test = x_test.float().to(self.device)
                 y_test = y_test.float().to(self.device)
                 # 前向传播
                 outputs = self.model(x_test)
+                outputs = outputs.detach().cpu()
+                y_test = y_test.detach().cpu()
+                logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+                logger.info(f"debug::y_test: \n{y_test} \ny_test.shape: {y_test.shape}")
+                
+                # 输入输出逆转换
+                # outputs, y_test = self._inverse_data(test_data, outputs, y_test)
+                # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
+                # logger.info(f"debug::y_test: \n{y_test} \ny_test.shape: {y_test.shape}")
+                
                 # 验证结果收集
-                y_pred = outputs[:, 0, :]
-                y_test = y_test[:, 0, :]
-                y_pred = test_data.inverse_transform(y_pred.detach().cpu().numpy())
-                y_test = test_data.inverse_transform(y_test.detach().cpu().numpy())
-                # for j in range(self.args.batch_size):
-                for i in range(self.args.pred_len):
-                    preds.append(outputs[i][-1])
-                    trues.append(y_test[i][-1])
+                f_dim = -1 if self.args.features == "MS" else 0
+                y_pred = outputs[0, :, f_dim:]
+                y_test = y_test[0, :, f_dim:]
+                # y_pred = test_data.inverse_transform(y_pred.detach().cpu().numpy())
+                # y_test = test_data.inverse_transform(y_test.detach().cpu().numpy())
+                logger.info(f"debug::y_pred: \n{y_pred} \ny_pred.shape: {y_pred.shape}")
+                logger.info(f"debug::y_test: \n{y_test} \ny_test.shape: {y_test.shape}")
+                
+                preds.append(y_pred)
+                trues.append(y_test)
                 logger.info(f"debug::preds: \n{preds}")
                 logger.info(f"debug::trues: \n{trues}")
+                
                 # TODO debug
                 if i == 1:
                     break
         # 测试结果保存
+        logger.info(f"debug::preds: \n{preds}")
+        logger.info(f"debug::trues: \n{trues}")
         preds = np.array(preds).reshape(1, -1)
         trues = np.array(trues).reshape(1, -1)
-        preds = test_data.inverse_transform(preds)
-        trues = test_data.inverse_transform(trues)
         logger.info(f"Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
         logger.info(f"Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
         logger.info(f"{40 * '-'}")
@@ -549,6 +590,7 @@ class Exp_Forecast(Exp_Basic):
         logger.info(f"{40 * '-'}")
         self._test_results_save(preds, trues, setting, test_results_path)
         logger.info(test_results_path)
+        
         # 测试结果可视化
         logger.info(f"{40 * '-'}")
         logger.info(f"Test visual results have been saved in path:")
@@ -596,7 +638,7 @@ class Exp_Forecast(Exp_Basic):
                 preds.append(y_pred[i][-1])
                 trues.append(y_test[i][-1])
 
-    def forecast_v3(self, rolling_data, scaler, device, show, plt):
+    def forecast_dl3(self, rolling_data, scaler, device, show, plt):
         # 预测未知数据的功能
         df = pd.read_csv(self.args.data_path)
         df = pd.concat((df, rolling_data), axis=0).reset_index(drop=True)

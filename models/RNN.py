@@ -21,6 +21,8 @@ if ROOT not in sys.path:
 import torch
 import torch.nn as nn
 
+from utils.log_util import logger
+
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]
 
@@ -64,10 +66,14 @@ class Model_v1(nn.Module):
         return output
 
 
-class Model_v2(nn.Module):
+
+
+
+
+class Model(nn.Module):
 
     def __init__(self, args) -> None:
-        super(Model_v2, self).__init__()
+        super(Model, self).__init__()
 
         self.args = args
         # hideen layer
@@ -95,29 +101,43 @@ class Model_v2(nn.Module):
         )
 
     def forward(self, x):
+        # logger.info(f"debug::x.device: {x.device}")
+        
         # [batch_size, seq_len, feature_size]
         batch_size, seq_len, feature_size = x.shape
+        # logger.info(f"debug::batch_size: {batch_size}, seq_len: {seq_len}, feature_size: {feature_size}")
+        
         # [batch_size, seq_len, hidden_size]
         x_concat = self.hidden(x)
+        # logger.info(f"debug::x_concat.shape: {x_concat.shape}")
+        
         # [batch_size, seq_len-1, hidden_size]
         H = torch.zeros(batch_size, seq_len-1, self.args.hidden_size).to(x.device)
+        # logger.info(f"debug::H.shape: {H.shape}")
+        
         # [num_layers, batch_size, hidden_size]
         h_t = torch.zeros(self.args.num_layers, batch_size, self.args.hidden_size).to(x.device)
+        # logger.info(f"debug::h_t.shape: {h_t.shape}")
+        
         for t in range(seq_len):
             # [batch_size, 1, hidden_size]
-            x_t = x_concat[:, t, :].viwe(batch_size, 1, -1)
+            x_t = x_concat[:, t, :].view(batch_size, 1, -1)
             # ht: [num_layers, batch_size, hidden_size]
             out, h_t = self.rnn(x_t, h_t)
             # [batch_size, hidden_size]
             htt = h_t[-1, :, :]
             if t != seq_len - 1:
                 H[:, t, :] = htt
+        
         # [batch_size, seq_len-1, hidden_size]
         H = self.relu(H)
+        # logger.info(f"debug::H.shape: {H.shape}")
+        
         # [batch_size, hidden_size, output_size]
         x = self.linear(H)
+        # logger.info(f"debug::x.shape: {x.shape}")
 
-        return x[:, -self.args.pred_len, :]
+        return x[:, -self.args.pred_len:, :]
 
 
 
@@ -157,7 +177,7 @@ def main():
     args = DotDict(args)
     
     # model
-    rnn2 = Model_v2(args)
+    rnn2 = Model(args)
     logger.info(f"rnn2: \n{rnn2}")
 
 if __name__ == "__main__":

@@ -43,7 +43,8 @@ def args_parse():
     parser.add_argument('--root_path', type=str, required=True, default='./dataset/', help='root path of the data file')
     parser.add_argument('--data_path', type=str, required=True, default='ETTh1.csv', help='data file')
     parser.add_argument('--data', type=str, required=True, default='ETTh1', help='dataset type')
-    parser.add_argument('--target', type=str, required=True, default='OT', help='target feature in S or MS task')    
+    parser.add_argument('--target', type=str, required=True, default='OT', help='target feature in S or MS task')
+    parser.add_argument('--time', type=str, required=True, default='time', help='time feature in S or MS task')
     parser.add_argument('--freq', type=str, required=True, default='h', 
                         help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
     parser.add_argument('--features', type=str, default='MS', 
@@ -155,9 +156,9 @@ def args_parse():
     # TODO RNNs
     parser.add_argument("--pred_method", type=str, default="recursive_multi_step", 
                         help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
-    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
     parser.add_argument("--feature_size", type=int, default=1, help="feature size")
     parser.add_argument("--hidden_size", type=int, default=256, help="hidden size")
+    parser.add_argument("--num_layers", type=int, default=2, help="number of layers")
     parser.add_argument("--kernel_size", type=int, default=3, help="kernel size")
     parser.add_argument("--output_size", type=int, default=1, help="target size")
     parser.add_argument("--lr_scheduler", type=int, default=1, help="learning rate scheduler")
@@ -213,9 +214,9 @@ def run(args):
             if args.is_testing:
                 logger.info(f">>>>>>>>> start testing: iter-{ii}: {training_setting}>>>>>>>>>>")
                 logger.info(f"{180 * '='}")
-                exp.test_dl_3(setting=training_setting, load=False)
+                exp.test(setting=training_setting, load=False)
 
-    # TODO 模型测试
+    # 模型测试
     if not args.is_training and args.is_testing:
         for ii in range(args.iters):
             # setting record of experiments
@@ -225,7 +226,7 @@ def run(args):
             # 实例化
             exp = Exp_Forecast(args)
             # 模型测试
-            exp.test_dl_3(setting=test_setting, load=True)
+            exp.test(setting=test_setting, load=True)
     
     # 模型最终训练
     if not args.is_training and not args.is_testing and not args.is_forecasting:
@@ -258,7 +259,10 @@ def run(args):
     logger.info(f"{180 * '='}")
     logger.info(f">>>>>>>>>>>> Empty cuda cache and memory pecices...")
     logger.info(f"{180 * '='}")
-    torch_gc(gpu_type=args.gpu_type, device=exp.device)
+    if sys.platform == "win32":
+        torch_gc(device_id="0")
+    else:
+        torch_gc()
 
 
 
