@@ -66,10 +66,6 @@ class Model_v1(nn.Module):
         return output
 
 
-
-
-
-
 class Model(nn.Module):
 
     def __init__(self, args) -> None:
@@ -77,28 +73,15 @@ class Model(nn.Module):
 
         self.args = args
         # hideen layer
-        self.hidden = nn.Linear(
-            in_features = args.feature_size,
-            out_features = args.hidden_size,
-            bias = True,
-        )
+        self.hidden = nn.Linear(args.feature_size, args.hidden_size, bias=True)
         # relu
         self.relu = nn.ReLU()
-        # rnn
-        self.rnn = nn.RNN(
-            input_size = args.hidden_size, 
-            hidden_size = args.hidden_size, 
-            num_layers = args.num_layers, 
-            bias = True,
-            batch_first = True,
-        )  # [batch_size,seq_len,hidden_size]
-        # fc layer
+        # rnn: [batch_size,seq_len,hidden_size]
+        self.rnn = nn.RNN(args.hidden_size, args.hidden_size, args.num_layers, bias=True, batch_first=True)
+        # output size
         output_size = 1 if (args.features == "MS" or args.features == "S") else args.feature_size
-        self.linear = nn.Linear(
-            in_features = args.hidden_size, 
-            out_features = output_size,
-            bias = True,
-        )
+        # fc layer
+        self.linear = nn.Linear(args.hidden_size, output_size, bias=True)
 
     def forward(self, x):
         # logger.info(f"debug::x.device: {x.device}")

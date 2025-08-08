@@ -25,7 +25,7 @@ import torch.nn as nn
 LOGGING_LABEL = Path(__file__).name[:-3]
 
 
-class Model(nn.Module):
+class Model_v1(nn.Module):
     """
     GRU
     """
@@ -37,7 +37,7 @@ class Model(nn.Module):
         num_layers (_type_): GRU 层数，默认为 1
         output_size (_type_): 输出维度
         """
-        super(Model, self).__init__()
+        super(Model_v1, self).__init__()
         
         self.cfgs = cfgs
         self.hidden_size = self.cfgs.hidden_size
@@ -99,35 +99,38 @@ class Model(nn.Module):
         return output[-1]
 
 
-class GRU(nn.Module):
+class Model(nn.Module):
     
-    def __init__(self, feature_size=1, hidden_size=32, num_layers=1, output_size=1, pred_len= 4):
-        super(GRU, self).__init__()
+    def __init__(self, args):
+        super(Model, self).__init__()
         
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.pred_len = pred_len
-
+        self.args = args
         self.gru = nn.GRU(
-            feature_size, 
-            hidden_size, 
-            num_layers=num_layers, 
+            args.feature_size, 
+            args.hidden_size, 
+            args.num_layers, 
+            bias=True,
             batch_first=True
         )
         self.dropout = nn.Dropout(0.1)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.fc = nn.Linear(args.hidden_size, args.output_size)
         self.relu = nn.ReLU()
     
     def forward(self, x):
-        h0_gru = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        batch_size, seq_len, feature_size = x.shape
+
+        h0_gru = torch.zeros(self.args.num_layers, batch_size, self.args.hidden_size).to(x.device)
         
+        # gru layer
         out, _ = self.gru(x, h0_gru)
         out = self.dropout(out)
         
         # 取最后 pred_len 时间步的输出
-        out = out[:, -self.pred_len:, :]
+        out = out[:, -self.args.pred_len:, :]
         
+        # fc linear
         out = self.fc(out)
+        # relu
         out = self.relu(out)
         
         return out

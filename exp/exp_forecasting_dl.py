@@ -295,6 +295,7 @@ class Exp_Forecast(Exp_Basic):
                 y_train = y_train.float().to(self.device)
                 # logger.info(f"debug::x_train: \n{x_train}, \nx_train.shape: {x_train.shape}")
                 # logger.info(f"debug::y_train: \n{y_train}, \ny_train.shape: {y_train.shape}")
+                
                 # 前向传播
                 outputs = self.model(x_train)
                 # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")

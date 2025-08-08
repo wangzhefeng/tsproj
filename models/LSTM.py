@@ -18,51 +18,61 @@ ROOT = str(Path.cwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
+import torch
 import torch.nn as nn
+
+from utils.log_util import logger
 
 # global variable
 LOGGING_LABEL = Path(__file__).name[:-3]
 
 
-class Model(nn.Module):
+class Model_v1(nn.Module):
     
-    def __init__(self, configs):
-        super(Model, self).__init__()
+    def __init__(self, args):
+        super(Model_v1, self).__init__()
         
-        self.hidden_size = configs.hidden_size
-        self.num_layers = configs.num_layers
+        self.args = args
         # lstm
         self.lstm = nn.LSTM(
-            input_size = configs.feature_size, 
-            hidden_size = configs.hidden_size, 
-            num_layers = configs.num_layers, 
+            input_size = args.feature_size, 
+            hidden_size = args.hidden_size, 
+            num_layers = args.num_layers, 
+            bias = True,
             batch_first = True
         )
+        # output size
+        output_size = 1 if (args.features == "MS" or args.features == "S") else args.feature_size
         # fc layer
         self.linear = nn.Linear(
-            in_features = configs.hidden_size, 
-            out_features = configs.output_size,
+            in_features = args.hidden_size, 
+            out_features = output_size,
         )
 
     def forward(self, x, hidden = None):
         # 获取批次大小
-        batch_size = x.shape[0]  # x.shape=(batch_size, seq_len, feature_size)
+        batch_size, seq_len, feature_size = x.shape[0]  # x.shape=(batch_size, seq_len, feature_size)
+        
         # 初始化隐藏状态
         if hidden is None:
             # (D*num_layers, batch_size, hidden_size)
-            h_0 = x.data.new(self.num_layers, batch_size, self.hidden_size).fill_(0).float()
+            h_0 = x.data.new(self.args.num_layers, batch_size, self.args.hidden_size).fill_(0).float()
            # (D*num_layers, batch_size, hidden_size) 
-            c_0 = x.data.new(self.num_layers, batch_size, self.hidden_size).fill_(0).float()
+            c_0 = x.data.new(self.args.num_layers, batch_size, self.args.hidden_size).fill_(0).float()
         else:
             h_0, c_0 = hidden
 
         # LSTM
         # output.shape=(batch_size, seq_len, D*output_size) 
-        # h_0.shape=(D*num_layers, batch_size, h_out)
-        # c_0.shape=(D*num_layers, batch_size, h_cell)
+        # h_0.shape   =(D*num_layers, batch_size, h_out)
+        # c_0.shape   =(D*num_layers, batch_size, h_cell)
         output, (h_0, c_0) = self.lstm(x, (h_0, c_0))
-        batch_size, seq_len, hidden_size = output.shape  # 获取 LSTM 输出的维度信息
-        output = output.reshape(-1, hidden_size)  # 将 output 变成 (batch_size * seq_len, hidden_size)
+        
+        # 获取 LSTM 输出的维度信息
+        batch_size, seq_len, hidden_size = output.shape
+        
+        # 将 output 变成 (batch_size * seq_len, hidden_size)
+        output = output.reshape(-1, hidden_size)
 
         # 全连接层
         output = self.linear(output)  # (batch_size * seq_len, 1)
@@ -76,56 +86,69 @@ class Model(nn.Module):
         return output
 
 
+class Model(nn.Module):
+    
+    def __init__(self, args):
+        super(Model, self).__init__()
+
+        self.args = args
+        # hideen layer
+        self.hidden = nn.Linear(args.feature_size, args.hidden_size, bias=True)
+        # relu
+        self.relu = nn.ReLU()
+        # lstm: [batch_size,seq_len,hidden_size]
+        self.lstm = nn.LSTM(args.hidden_size, args.hidden_size, args.num_layers, bias=True, batch_first=True)
+        # output size
+        output_size = 1 if (args.features == "MS" or args.features == "S") else args.feature_size
+        # fc layer
+        self.linear = nn.Linear(args.hidden_size, output_size, bias=True)
+ 
+    def forward(self, x):
+        # logger.info(f"debug::x.device: {x.device}")
+        
+        # [batch_size, seq_len, feature_size]
+        batch_size, seq_len, feature_size = x.shape
+        # logger.info(f"debug::batch_size: {batch_size}, seq_len: {seq_len}, feature_size: {feature_size}")
+        
+        # [batch_size, seq_len, hidden_size]
+        x_concat = self.hidden(x)
+        # logger.info(f"debug::x_concat.shape: {x_concat.shape}")
+        
+        # [batch_size, seq_len-1, hidden_size]
+        H = torch.zeros(batch_size, seq_len-1, self.args.hidden_size).to(x.device)
+        # logger.info(f"debug::H.shape: {H.shape}")
+        
+        # [num_layers, batch_size, hidden_size]
+        h_t = torch.zeros(self.args.num_layers, batch_size, self.hidden_size).to(x.device)
+        # logger.info(f"debug::h_t.shape: {h_t.shape}")
+        
+        c_t = h_t.clone()
+        for t in range(seq_len):
+            # [batch_size, 1, hidden_size]
+            x_t = x_concat[:, t, :].view(batch_size, 1, -1)
+            # ht: [num_layers, batch_size, hidden_size]
+            out, (h_t, c_t) = self.lstm(x_t, (h_t, c_t))
+            # [batch_size, hidden_size]
+            htt = h_t[-1, :, :]
+            if t != seq_len - 1:
+                H[:, t, :] = htt
+        
+        # [batch_size, seq_len-1, hidden_size]
+        H = self.relu(H)
+        # logger.info(f"debug::H.shape: {H.shape}")
+        
+        # [batch_size, hidden_size, output_size]
+        x = self.linear(H)
+        # logger.info(f"debug::x.shape: {x.shape}")
+        
+        return x[:, -self.args.pred_len:, :]
+
+
 
 
 # 测试代码 main 函数
 def main():
-    """
-    from utils.ts.tsproj_dl.config.lstm import Config
-    from tsproj_dl.data_provider.data_loader import Data_Loader
-    from tsproj_dl.exp.exp_forecasting import train, plot_train_results
-    
-    # config
-    config = config()
-    
-    # data
-    data_loader = Data_Loader(cfgs = config)
-    train_loader, test_loader = data_loader.run()
-
-    # model
-    model = LSTM(
-        feature_size = config.feature_size,
-        hidden_size = config.hidden_size,
-        num_layers = config.num_layers,
-        output_size = config.output_size,
-    )
-    
-    # loss
-    loss_func = nn.MSELoss()
-    
-    # optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr = config.learning_rate)
-    
-    # model train
-    (y_train_pred, y_train_true), (y_test_pred, y_test_true) = train(
-        config = config,
-        train_loader = train_loader,
-        test_loader = test_loader,
-        model = model,
-        loss_func = loss_func,
-        optimizer = optimizer,
-        x_train_tensor = data_loader.x_train_tensor, 
-        y_train_tensor = data_loader.y_train_tensor,
-        x_test_tensor = data_loader.x_test_tensor,
-        y_test_tensor = data_loader.y_test_tensor,
-        plot_size = 200,
-        scaler = data_loader.scaler,
-    )
-    
-    # result plot
-    plot_train_results(y_train_pred, y_train_true)
-    plot_train_results(y_test_pred, y_test_true)  
-    """
+    pass
 
 if __name__ == "__main__":
     main()
