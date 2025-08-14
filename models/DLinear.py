@@ -12,7 +12,6 @@
 # ***************************************************
 
 # python libraries
-import os
 import sys
 from pathlib import Path
 ROOT = str(Path.cwd())
@@ -163,14 +162,19 @@ class Model(nn.Module):
 # 测试代码 main 函数
 def main():
     # args
+    from dataclasses import dataclass, asdict
+
+    @dataclass
     class Config:
         task_name = "long_term_forecast"
         seq_len = 96
         pred_len = 96
         enc_in = 7
         moving_avg = 25
+
     configs = Config()
-    
+    print(configs)
+
     # model
     model = Model(configs, individual = False)
     print(model)

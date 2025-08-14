@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Normalize(nn.Module):
 
-    def __init__(self, num_features: int, eps = 1e-5, affine = False, subtract_last = False, non_norm = False):
+    def __init__(self, num_features: int, eps=1e-5, affine=False, subtract_last=False, non_norm=False):
         """
         num_features: the number of features or channels
         eps: a value added for numerical stability
@@ -28,7 +28,7 @@ class Normalize(nn.Module):
             x = self._denormalize(x)
         else:
             raise NotImplementedError
-        
+
         return x
 
     def _init_params(self):
@@ -44,7 +44,7 @@ class Normalize(nn.Module):
             self.last = x[:, -1, :].unsqueeze(1)
         else:
             self.mean = torch.mean(x, dim=dim2reduce, keepdim=True).detach()
-        self.stdev = torch.sqrt(torch.var(x, dim = dim2reduce, keepdim = True, unbiased = False) + self.eps).detach()
+        self.stdev = torch.sqrt(torch.var(x, dim=dim2reduce, keepdim=True, unbiased=False) + self.eps).detach()
 
     def _normalize(self, x):
         if self.non_norm:
@@ -53,12 +53,10 @@ class Normalize(nn.Module):
             x = x - self.last
         else:
             x = x - self.mean
-        
         x = x / self.stdev
         if self.affine:
             x = x * self.affine_weight
             x = x + self.affine_bias
-        
         return x
 
     def _denormalize(self, x):
@@ -68,7 +66,6 @@ class Normalize(nn.Module):
             x = x - self.affine_bias
             x = x / (self.affine_weight + self.eps * self.eps)
         x = x * self.stdev
-        
         if self.subtract_last:
             x = x + self.last
         else:

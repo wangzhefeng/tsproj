@@ -44,13 +44,13 @@ from utils.log_util import logger
 LOGGING_LABEL = Path(__file__).name[:-3]
 
 
-class Exp_Forecast(Exp_Basic):
+class Exp_Long_Term_Forecast(Exp_Basic):
 
     def __init__(self, args):
         logger.info(f"{40 * '-'}")
         logger.info("Initializing Experiment...")
         logger.info(f"{40 * '-'}")
-        super(Exp_Forecast, self).__init__(args)
+        super(Exp_Long_Term_Forecast, self).__init__(args)
 
     def _build_model(self):
         """

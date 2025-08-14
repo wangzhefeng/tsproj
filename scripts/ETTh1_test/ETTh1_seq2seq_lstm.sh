@@ -20,6 +20,7 @@ python -u run_dl.py \
     --data ETTh1 \
     --features M \
     --target OT \
+    --time date \
     --pred_method recursive_multi_step \
     --inspect_fit 1 \
     --rolling_predict 1 \
@@ -40,7 +41,7 @@ python -u run_dl.py \
     --teacher_forcing 0.3 \
     --train_ratio 0.6 \
     --test_ratio 0.2 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 20 \
     --batch_size 32 \
     --learning_rate 1e-3 \

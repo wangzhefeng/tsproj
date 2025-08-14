@@ -15,6 +15,7 @@ python -u run_autoformer.py \
     --data df_history \
     --features MS \
     --target load \
+    --time time \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -35,10 +36,9 @@ python -u run_autoformer.py \
     --c_out 1 \
     --dropout 0.05 \
     --rev 1 \
-    --output_attention 0 \
     --padding 0 \
     --num_workers 0 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 5 \
     --batch_size 1 \
     --loss MSE \

@@ -34,11 +34,12 @@ class AutoCorrelation(nn.Module):
     This block can replace the self-attention family mechanism seamlessly.
     """
 
-    def __init__(self, mask_flag = True, factor = 1, scale = None, attention_dropout = 0.1, output_attention = False):
+    def __init__(self, mask_flag=True, factor=1, scale=None, attention_dropout=0.1, output_attention=False):
         super(AutoCorrelation, self).__init__()
+
         self.mask_flag = mask_flag
         self.factor = factor
-        self.scale = scale 
+        self.scale = scale
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 
@@ -52,11 +53,11 @@ class AutoCorrelation(nn.Module):
         length = values.shape[3]
         # find top k
         top_k = int(self.factor * math.log(length))
-        mean_value = torch.mean(torch.mean(corr, dim = 1), dim = 1)
-        index = torch.topk(torch.mean(mean_value, dim = 0), top_k, dim = -1)[1]
-        weights = torch.stack([mean_value[:, index[i]] for i in range(top_k)], dim = -1)
+        mean_value = torch.mean(torch.mean(corr, dim=1), dim=1)
+        index = torch.topk(torch.mean(mean_value, dim = 0), top_k, dim=-1)[1]
+        weights = torch.stack([mean_value[:, index[i]] for i in range(top_k)], dim=-1)
         # update corr
-        tmp_corr = torch.softmax(weights, dim = -1)
+        tmp_corr = torch.softmax(weights, dim=-1)
         # aggregation
         tmp_values = values
         delays_agg = torch.zeros_like(values).float()
@@ -113,7 +114,7 @@ class AutoCorrelation(nn.Module):
         delays_agg = torch.zeros_like(values).float()
         for i in range(top_k):
             tmp_delay = init_index + delay[..., i].unsqueeze(-1)
-            pattern = torch.gather(tmp_values, dim = -1, index = tmp_delay)
+            pattern = torch.gather(tmp_values, dim = -1, index=tmp_delay)
             delays_agg = delays_agg + pattern * (tmp_corr[..., i].unsqueeze(-1))
         return delays_agg
 
@@ -148,7 +149,7 @@ class AutoCorrelation(nn.Module):
 
 class AutoCorrelationLayer(nn.Module):
 
-    def __init__(self, correlation, d_model, n_heads, d_keys = None, d_values = None):
+    def __init__(self, correlation, d_model, n_heads, d_keys=None, d_value=None):
         super(AutoCorrelationLayer, self).__init__()
 
         d_keys = d_keys or (d_model // n_heads)

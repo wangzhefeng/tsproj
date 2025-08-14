@@ -47,6 +47,7 @@ class Dataset_Train(Dataset):
                  size=None,  # size [seq_len, label_len, pred_len]
                  features='MS', 
                  target='OT',
+                 time="time",
                  freq='15min',
                  timeenc=0,
                  seasonal_patterns=None,
@@ -69,6 +70,7 @@ class Dataset_Train(Dataset):
         # data freq, feature columns, and target
         self.features = features
         self.target = target
+        self.time = time
         self.freq = freq
         self.timeenc = timeenc
         self.seasonal_patterns = seasonal_patterns
@@ -89,18 +91,20 @@ class Dataset_Train(Dataset):
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
         logger.info(f"Train data shape after dropna: {df_raw.shape}")
+        # 删除方差为 0 的特征
+        df_raw = df_raw.loc[:, (df_raw != df_raw.loc[0]).any()]
+        logger.info(f"Train data shape after drop 0 variance: {df_raw.shape}")
         # 数据特征排序
         cols = list(df_raw.columns)
         cols.remove(self.target)
-        cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]]
+        cols.remove(self.time)
+        df_raw = df_raw[[self.time] + cols + [self.target]]
         logger.info(f"Train data shape after feature order: {df_raw.shape}")
         # 根据预测任务进行特征筛选
         if self.features == 'M' or self.features == 'MS':
             df_data = df_raw[df_raw.columns[1:]]
         elif self.features == 'S':
             df_data = df_raw[[self.target]]
-        df_stamp = df_raw[['date']]
         logger.info(f"Train data shape after feature selection: {df_data.shape}")
         # 数据分割比例
         num_train = int(len(df_data) * self.args.train_ratio)  # 0.7
@@ -124,19 +128,20 @@ class Dataset_Train(Dataset):
         logger.info(f"Train step: {1}, Valid step: {1}, Test step: {self.testing_step}")
         logger.info(f"{self.flag.capitalize()} input data index: {border1}:{border2}, data length: {border2-border1}")
         # 时间特征处理
+        df_stamp = df_raw[[self.time]]
         df_stamp = df_stamp[border1:border2]
-        df_stamp['date'] = pd.to_datetime(df_stamp['date'])
+        df_stamp[self.time] = pd.to_datetime(df_stamp[self.time])
         if self.timeenc == 0:
             freq_num = filter_number(self.freq)[0]
-            df_stamp['month'] = df_stamp['date'].apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp['date'].apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp['date'].apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp['date'].apply(lambda row: row.hour, 1)
-            df_stamp['minute'] = df_stamp['date'].apply(lambda row: row.minute, 1)
-            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // freq_num)
-            data_stamp = df_stamp.drop(['date'], axis=1).values
+            df_stamp['month'] = df_stamp[self.time].apply(lambda row: row.month, 1)
+            df_stamp['day'] = df_stamp[self.time].apply(lambda row: row.day, 1)
+            df_stamp['weekday'] = df_stamp[self.time].apply(lambda row: row.weekday(), 1)
+            df_stamp['hour'] = df_stamp[self.time].apply(lambda row: row.hour, 1)
+            df_stamp['minute'] = df_stamp[self.time].apply(lambda row: row.minute, 1)
+            df_stamp['minute'] = df_stamp[self.time].map(lambda x: x // freq_num)
+            data_stamp = df_stamp.drop([self.time], axis=1).values
         elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
+            data_stamp = time_features(pd.to_datetime(df_stamp[self.time].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
         logger.info(f"Train timestamp features shape: {data_stamp.shape}")
         # 数据切分
@@ -173,13 +178,7 @@ class Dataset_Train(Dataset):
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
-        # log
-        # logger.info(f"debug::index: {index}")
-        # logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
-        # logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
-        # logger.info(f"debug::seq_y index:      r_begin:r_end {r_begin}:{r_end}")
-        # logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{r_end}")
-        
+         
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
@@ -199,6 +198,7 @@ class Dataset_Pred(Dataset):
                  size=None,  # size: [seq_len, label_len, pred_len]
                  features='MS',
                  target='OT', 
+                 time="time",
                  timeenc=0, 
                  freq='15min',
                  seasonal_patterns=None,
@@ -211,6 +211,7 @@ class Dataset_Pred(Dataset):
         self.data_path = data_path
         # data type
         self.flag = flag
+        assert flag in ["pred"]
         # data size
         self.seq_len = 24 * 4 * 4 if size is None else size[0]
         self.label_len = 24 * 4 if size is None else size[1]
@@ -218,6 +219,7 @@ class Dataset_Pred(Dataset):
         # data freq, feature columns, and target
         self.features = features
         self.target = target
+        self.time = time
         self.freq = freq
         self.timeenc = timeenc
         self.seasonal_patterns = seasonal_patterns
@@ -237,12 +239,15 @@ class Dataset_Pred(Dataset):
         logger.info(f"Train data shape: {df_raw.shape}")
         # 缺失值处理
         df_raw.dropna(axis=1, how='any', inplace=True)
-        logger.info(f"Train data shape after dropna: {df_raw.shape}") 
+        logger.info(f"Train data shape after dropna: {df_raw.shape}")
+        # 删除方差为 0 的特征
+        df_raw = df_raw.loc[:, (df_raw != df_raw.loc[0]).any()]
+        logger.info(f"Train data shape after drop 0 variance: {df_raw.shape}")
         # 数据特征排序
         cols = list(df_raw.columns)
         cols.remove(self.target)
-        cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]]
+        cols.remove(self.time)
+        df_raw = df_raw[[self.time] + cols + [self.target]]
         logger.info(f"Train data shape after feature order: {df_raw.shape}")
         # 预测特征变量数据
         if self.features == 'M' or self.features == 'MS':
@@ -277,26 +282,26 @@ class Dataset_Pred(Dataset):
         logger.info(f"Forecast input data index: {border1}:{border2}, data length: {border2-border1}")
         # 时间戳特征处理
         # history date
-        forecast_history_stamp = df_raw[['date']][border1:border2]
-        forecast_history_stamp['date'] = pd.to_datetime(forecast_history_stamp['date'], format='mixed')
-        forecast_history_stamp = forecast_history_stamp['date'].values
+        forecast_history_stamp = df_raw[[self.time]][border1:border2]
+        forecast_history_stamp[self.time] = pd.to_datetime(forecast_history_stamp[self.time], format='mixed')
+        forecast_history_stamp = forecast_history_stamp[self.time].values
         # future date
         forecast_future_stamp = pd.date_range(forecast_history_stamp[-1], periods=self.pred_len + 1, freq=self.freq)
         forecast_future_stamp = forecast_future_stamp[1:].values
         self.forecast_start_time = forecast_future_stamp[0]
         # history + future date
-        df_stamp = pd.DataFrame({'date': list(forecast_history_stamp) + list(forecast_future_stamp)})
+        df_stamp = pd.DataFrame({self.time: list(forecast_history_stamp) + list(forecast_future_stamp)})
         if self.timeenc == 0:
             freq_num = filter_number(self.freq)[0]
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
+            df_stamp['month'] = df_stamp[self.time].apply(lambda row: row.month, 1)
+            df_stamp['day'] = df_stamp[self.time].apply(lambda row: row.day, 1)
+            df_stamp['weekday'] = df_stamp[self.time].apply(lambda row: row.weekday(), 1)
+            df_stamp['hour'] = df_stamp[self.time].apply(lambda row: row.hour, 1)
+            df_stamp['minute'] = df_stamp[self.time].apply(lambda row: row.minute, 1)
             df_stamp['minute'] = df_stamp.minute.map(lambda x: x // freq_num)
-            data_stamp = df_stamp.drop(['date'], axis=1).values
+            data_stamp = df_stamp.drop([self.time], axis=1).values
         elif self.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
+            data_stamp = time_features(pd.to_datetime(df_stamp[self.time].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
         logger.info(f"Train and Forecast timestamp features shape: {data_stamp.shape}")
         # 数据切分
@@ -326,13 +331,7 @@ class Dataset_Pred(Dataset):
         # 时间特征分割
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
-        # log
-        # logger.info(f"debug::index: {index}")
-        # logger.info(f"debug::seq_x index:      s_begin:s_end {s_begin}:{s_end}")
-        # logger.info(f"debug::seq_x_mark index: s_begin:s_end {s_begin}:{s_end}")
-        # logger.info(f"debug::seq_y index:      r_begin:s_end {r_begin}:{s_end}")
-        # logger.info(f"debug::seq_y_mark index: r_begin:r_end {r_begin}:{s_end + self.pred_len}")
-
+        
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):

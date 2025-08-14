@@ -21,6 +21,7 @@ python -u run_dl.py \
     --data ETTh1 \
     --target OT \
     --time date \
+    --time date \
     --train_ratio 0.7 \
     --test_ratio 0.2 \
     --pred_method recursive_multi_step \
@@ -44,7 +45,7 @@ python -u run_dl.py \
     --dropout 0.05 \
     --activation gelu \
     --teacher_forcing 0.3 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 1 \
     --batch_size 32 \
     --learning_rate 5e-3 \
