@@ -149,10 +149,10 @@ class Dataset_Train(Dataset):
         self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
         # TODO 数据增强
-        if self.set_type == 0 and self.args.augmentation_ratio > 0:
-            self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
-                self.data_x, self.data_y, self.args
-            )
+        # if self.set_type == 0 and self.args.augmentation_ratio > 0:
+        #     self.data_x, self.data_y, augmentation_tags = run_augmentation_single(
+        #         self.data_x, self.data_y, self.args
+        #     )
         # logger.info(f"debug::data_x: \n{self.data_x} \ndata_x shape: {self.data_x.shape}")
         # logger.info(f"debug::data_y: \n{self.data_y} \ndata_y shape: {self.data_y.shape}")
         # logger.info(f"debug::data_stamp: \n{self.data_stamp} \ndata_stamp shape: {self.data_stamp.shape}")

@@ -159,18 +159,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
     def _model_forward(self, data, batch_x, batch_y, batch_x_mark, batch_y_mark, flag, reverse=False):
         """
         前向传播
-
-        Args:
-            data (_type_): _description_
-            batch_x (_type_): _description_
-            batch_y (_type_): _description_
-            batch_x_mark (_type_): _description_
-            batch_y_mark (_type_): _description_
-            flag (_type_): _description_
-            reverse (bool, optional): _description_. Defaults to False.
-
-        Returns:
-            _type_: _description_
         """
         # 数据预处理
         # ---------------------
@@ -197,6 +185,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             dec_inp = None
         # encoder-decoder
         # ---------------------
+        logger.info(f"debug:: batch_x: {batch_x.shape}, batch_x_mark: {batch_x_mark.shape}, ")
         def _run_model():
             if self.args.model in self.non_transformer:
                 outputs = self.model(batch_x)
@@ -321,6 +310,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 optimizer.zero_grad()
                 # 前向传播
                 outputs, batch_y = self._model_forward(
+                    train_data,
                     batch_x, batch_y, 
                     batch_x_mark, batch_y_mark, 
                     flag="train", reverse=False,
@@ -352,7 +342,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
-            vali_loss = self.valid(vali_loader, criterion)
+            vali_loss = self.valid(vali_data, vali_loader, criterion)
             logger.info(f"Epoch: {epoch + 1}, \tSteps: {train_steps} | Train Loss: {train_loss:.7f}, Vali Loss: {vali_loss:.7f}")
             # 训练/验证损失收集
             train_losses.append(train_loss)
@@ -385,7 +375,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         logger.info("Return training results...")
         return self.model
 
-    def valid(self, vali_loader, criterion):
+    def valid(self, vali_data, vali_loader, criterion):
         """
         模型验证
         """
@@ -403,6 +393,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 logger.info(f"Vali step: {i} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(
+                    vali_data,
                     batch_x, batch_y, 
                     batch_x_mark, batch_y_mark, 
                     flag="valid", reverse=False
@@ -457,6 +448,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 logger.info(f"Test step: {i} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(
+                    test_data,
                     batch_x, batch_y, 
                     batch_x_mark, batch_y_mark, 
                     flag = "test", reverse=True,
@@ -564,7 +556,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
                 logger.info(f"Forecast step: {i} running...")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "pred")
+                outputs, batch_y = self._model_forward(pred_data, batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "pred")
                 # 输入输出逆转换
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs.numpy()  # [1, pred_len, 1]

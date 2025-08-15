@@ -19,7 +19,7 @@ if ROOT not in sys.path:
 import argparse
 
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
-from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
+# from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 # from exp.exp_forecasting_dl import Exp_Long_Term_Forecast
 from utils.args_tools import print_args_ts
 from utils.device import torch_gc
@@ -35,7 +35,7 @@ def args_parse():
                         help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
     parser.add_argument('--is_training', type=int, required=True, default=0, help='Whether to conduct training')
     parser.add_argument('--is_testing', type=int, required=True, default=0, help='Whether to conduct testing')
-    parser.add_argument('--testing_step', type=int, required=True, default=1, help="Test step")
+    parser.add_argument('--testing_step', type=int, default=1, help="Test step")
     parser.add_argument('--is_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
     parser.add_argument('--model', type=str, required=True, default='Transformer', help='model name, options: [Autoformer, Transformer, TimesNet]')
@@ -100,6 +100,7 @@ def args_parse():
     parser.add_argument('--down_sampling_method', type=str, default=None, help='down sampling method, only support avg, max, conv')
     parser.add_argument('--use_future_temporal_feature', type=int, default=0,
                         help='whether to use future_temporal_feature; True 1 False 0')
+    parser.add_argument('--begin_order', type=int, default=1, help='begin_order')
     parser.add_argument('--rev', action="store_false", default=True, help='whether to apply RevIN')
     parser.add_argument('--padding', type=int, default=0, help='padding')
     parser.add_argument('--seg_len', type=int, default=96, help='the length of segmen-wise iteration of SegRNN') 
@@ -188,8 +189,8 @@ def args_parse():
 def run(args):
     if args.task_name == 'long_term_forecast':
         Exp = Exp_Long_Term_Forecast
-    elif args.task_name == 'short_term_forecast':
-        Exp = Exp_Short_Term_Forecast
+    # elif args.task_name == 'short_term_forecast':
+        # Exp = Exp_Short_Term_Forecast
     # elif args.task_name == 'imputation':
     #     Exp = Exp_Imputation
     # elif args.task_name == 'anomaly_detection':
