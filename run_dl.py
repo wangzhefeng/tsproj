@@ -202,8 +202,8 @@ def run(args):
     # setting record of experiments
     setting = (
         f'{args.task_name}_{args.model}_{args.data}_{args.freq}_ft{args.features}_tg{args.target}_'
-        f'sl{args.seq_len}_ll{args.label_len}_pl{args.pred_len}_dm{args.d_model}_'
-        f'nh{args.n_heads}_el{args.e_layers}_dl{args.d_layers}_df{args.d_ff}_'
+        f'sl{args.seq_len}_ll{args.label_len}_pl{args.pred_len}_'
+        f'dm{args.d_model}_nh{args.n_heads}_el{args.e_layers}_dl{args.d_layers}_df{args.d_ff}_'
         f'te{args.train_epochs}_'
     )
     logger.info(setting)

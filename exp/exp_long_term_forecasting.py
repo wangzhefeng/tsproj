@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # ***************************************************
-# * File        : exp_forecast_dl.py
+# * File        : exp_long_term_forecasting.py
 # * Author      : Zhefeng Wang
 # * Email       : zfwang7@gmail.com
 # * Date        : 2025-01-13
@@ -13,11 +13,9 @@
 
 import sys
 from pathlib import Path
-ROOT = str(Path.cwd())
-if ROOT not in sys.path:
-    sys.path.append(ROOT)
+ROOT = str(Path.cwd()); 
+if ROOT not in sys.path: sys.path.append(ROOT)
 import time
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -25,17 +23,12 @@ import torch
 import torch.nn as nn
 
 from exp.exp_basic import Exp_Basic
-# data pipeline
 from data_provider.TFs_type.data_factory import data_provider
-# model training
 from utils.model_tools import adjust_learning_rate, EarlyStopping
-# loss
 from utils.ts.losses import mape_loss, mase_loss, smape_loss
-# metric
 from utils.ts.metrics_dl import metric, DTW
 from utils.plot_results import predict_result_visual
 from utils.plot_losses import plot_losses
-# log
 from utils.model_memory import model_memory_size
 from utils.timestamp_utils import from_unix_time
 from utils.log_util import logger
@@ -58,12 +51,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         """
         # 时间序列模型初始化
         logger.info(f"Initializing model {self.args.model}...")
-        model = self.model_dict[self.args.model].Model(self.args)
+        model = self.model_dict[self.args.model].Model(self.args).float()
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
             model = nn.DataParallel(model, device_ids=self.args.devices)
         # 打印模型参数量
-        total_memory_gb = model_memory_size(model, verbose=True)
+        model_memory_size(model, verbose=True)
 
         return model
 
@@ -87,21 +80,17 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             return mase_loss()
         elif self.args.loss == "SMAPE":
             return smape_loss()
+        elif self.args.loss == "L1":
+            return nn.L1Loss()
 
     def _select_optimizer(self):
         """
         优化器
         """ 
         if self.args.optimizer.lower() == "adam":
-            optimizer = torch.optim.Adam(
-                self.model.parameters(), 
-                lr = self.args.learning_rate,
-            )
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         elif self.args.optimizer.lower() == "adamw":
-            optimizer = torch.optim.AdamW(
-                self.model.parameters(), 
-                lr = self.args.learning_rate,
-            )
+            optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
         
         return optimizer
     
@@ -167,21 +156,33 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         if preds_df is not None:
             preds_df.to_csv(Path(path).joinpath("prediction.csv"), encoding="utf_8_sig", index=False)
     
-    def _model_forward(self, batch_x, batch_y, batch_x_mark, batch_y_mark, flag):
+    def _model_forward(self, data, batch_x, batch_y, batch_x_mark, batch_y_mark, flag, reverse=False):
+        """
+        前向传播
+
+        Args:
+            data (_type_): _description_
+            batch_x (_type_): _description_
+            batch_y (_type_): _description_
+            batch_x_mark (_type_): _description_
+            batch_y_mark (_type_): _description_
+            flag (_type_): _description_
+            reverse (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         # 数据预处理
+        # ---------------------
         batch_x = batch_x.float().to(self.device)
-        if flag in ["valid", "pred"]:
-            batch_y = batch_y.float()
-        else:
-            batch_y = batch_y.float().to(self.device)
+        batch_y = batch_y.float().to(self.device)
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        # logger.info(f"debug::batch_x: \n{batch_x} \nbatch_x.shape: {batch_x.shape}")
-        # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
-        # logger.info(f"debug::batch_x_mark: \n{batch_x_mark} \nbatch_x_mark.shape: {batch_x_mark.shape}")
-        # logger.info(f"debug::batch_y_mark: \n{batch_y_mark} \nbatch_y_mark.shape: {batch_y_mark.shape}")
-        
+        if self.args.data in ["PEMS", "Solar"]:
+            batch_x_mark = None
+            batch_y_mark = None
         # decoder input
+        # ---------------------
         if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
             if flag in ["train", "valid", "test"]:
                 logger.info(f"Train Stop::Data batch_y.shape[1] not equal to (label_len + pred_len).")
@@ -191,9 +192,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
         dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
-        # logger.info(f"debug::dec_inp: \n{dec_inp} \ndec_inp.shape: {dec_inp.shape}")
         
+        if self.args.down_sampling_layers != 0:
+            dec_inp = None
         # encoder-decoder
+        # ---------------------
         def _run_model():
             if self.args.model in self.non_transformer:
                 outputs = self.model(batch_x)
@@ -202,23 +205,32 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             if self.args.output_attention:
                 outputs = outputs[0]
             return outputs
-        
         if self.args.use_amp:
             with torch.amp.autocast("cuda"):
                 outputs = _run_model()
         else:
             outputs = _run_model()
-        
-        # output
+        # pred and true process
+        # ---------------------
+        # pred and true 提取
         outputs = outputs[:, -self.args.pred_len:, :]
         batch_y = batch_y[:, -self.args.pred_len:, :]
-        # detach device
+        # output detach device
         if flag in ["valid", "test", "pred"]:
             outputs = outputs.detach().cpu()
             batch_y = batch_y.detach().cpu()
-        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
-
+        # 输入输出逆转换
+        if reverse:
+            outputs, batch_y = self._inverse_data(data, outputs, batch_y)
+        # 预测值/真实值提取
+        f_dim = -1 if self.args.features == 'MS' else 0
+        if flag in ["valid", "test", "pred"]:
+            outputs = outputs[:, :, f_dim:]
+            batch_y = batch_y[:, :, f_dim:]
+        elif flag == "train":
+            outputs = outputs[:, :, f_dim:]
+            batch_y = batch_y[:, :, f_dim:].to(self.device)
+        
         return outputs, batch_y
 
     def _inverse_data(self, data, outputs, batch_y):
@@ -238,9 +250,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             # or
             # outputs = data.inverse_transform(outputs.squeeze(0)).reshape(shape)
             # batch_y = data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
-        # logger.info(f"debug::outputs: \n{outputs} \noutputs.shape: {outputs.shape}")
-        # logger.info(f"debug::batch_y: \n{batch_y} \nbatch_y.shape: {batch_y.shape}")
-        
+
         return outputs, batch_y
     
     def train(self, setting):
@@ -281,6 +291,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 早停类实例
         early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
         logger.info(f"Train early stopping instance has builded, patience: {self.args.patience}")
+        # learning rate scheduler
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer=optimizer,
+            steps_per_epoch=train_steps,
+            pct_start=self.args.pct_start,
+            epochs=self.args.train_epochs,
+            max_lr=self.args.learning_rate,
+        )
         # 自动混合精度训练
         if self.args.use_amp:
             scaler = torch.amp.GradScaler()
@@ -297,29 +315,26 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             # 模型训练模式
             self.model.train()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
-                # logger.info(f"Train step: {i} running...")
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
                 optimizer.zero_grad()
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag="train")
-                if outputs is None and batch_y is None: break
-                # 预测值/真实值提取
-                f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, :, f_dim:].to(self.device)
-                batch_y = batch_y[:, :, f_dim:].to(self.device)
-                # logger.info(f"debug::outputs: \n{outputs}, \noutputs.shape: {outputs.shape}")
-                # logger.info(f"debug::batch_y: \n{batch_y}, \nbatch_y.shape: {batch_y.shape}")
+                outputs, batch_y = self._model_forward(
+                    batch_x, batch_y, 
+                    batch_x_mark, batch_y_mark, 
+                    flag="train", reverse=False,
+                )
+                if outputs is None and batch_y is None: 
+                    break
                 # 计算训练损失
                 loss = criterion(outputs, batch_y)
                 train_loss.append(loss.item())
-                # logger.info(f"debug::train step: {i}, train loss: {loss.item()}")
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
-                if (i + 1) % 5 == 0:
+                if (i + 1) % 10 == 0:
                     speed = (time.time() - train_start_time) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    logger.info(f'Epoch: {epoch + 1}, \tBatch: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/batch; left time: {left_time:.4f}s')
+                    logger.info(f'Epoch: {epoch + 1}, \tIters: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/iter; left time: {left_time:.4f}s')
                     iter_count = 0
                     train_start_time = time.time()
                 # 后向传播、参数优化更新
@@ -330,6 +345,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 else:
                     loss.backward()
                     optimizer.step()
+                # learning rate update
+                if self.args.lradj != "TST":
+                    adjust_learning_rate(optimizer, scheduler, epoch + 1, self.args, printout=False)
+                    scheduler.step()
             logger.info(f"Epoch: {epoch + 1}, \tCost time: {time.time() - epoch_start_time}")
             # 模型验证
             train_loss = np.average(train_loss)
@@ -339,37 +358,29 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             train_losses.append(train_loss)
             vali_losses.append(vali_loss)
             # 早停机制、模型保存
-            early_stopping(
-                vali_loss, 
-                epoch=epoch, 
-                model=self.model, 
-                optimizer=optimizer, 
-                scheduler=None, 
-                model_path=model_checkpoint_path,
-            )
+            early_stopping(vali_loss, epoch, self.model, optimizer, scheduler, model_checkpoint_path)
             if early_stopping.early_stop:
                 logger.info(f"Epoch: {epoch + 1}, \tEarly stopping...")
                 break
             # 学习率调整
-            adjust_learning_rate(optimizer, epoch + 1, self.args)
+            if self.args.lradj != "TST":
+                adjust_learning_rate(optimizer, scheduler, epoch + 1, self.args, printout=True)
+            else:
+                logger.info(f"Updating learning rate to {scheduler.get_last_lr()[0]}")
         # -----------------------------
         # 模型加载
         # ------------------------------
         logger.info(f"{40 * '-'}")
         logger.info(f"Training Finished!")
-        logger.info(f"{40 * '-'}")
-        # plot losses
+        logger.info(f"{40 * '-'}") 
+        # plot train and valid losses
         logger.info("Plot and save train/valid losses...")
-        plot_losses(
-            train_epochs=self.args.train_epochs,
-            train_losses=train_losses, 
-            vali_losses=vali_losses, 
-            label="loss",
-            results_path=test_results_path
-        )
+        plot_losses(self.args.train_epochs, train_losses, vali_losses, "loss", test_results_path)
+        
         # load model
         logger.info("Loading best model...")
         self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
+        
         # return model and train results
         logger.info("Return training results...")
         return self.model
@@ -391,17 +402,16 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
                 logger.info(f"Vali step: {i} running...")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "valid")
+                outputs, batch_y = self._model_forward(
+                    batch_x, batch_y, 
+                    batch_x_mark, batch_y_mark, 
+                    flag="valid", reverse=False
+                )
                 if outputs is None and batch_y is None:
                     break
-                # 预测值/真实值提取
-                f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, :, f_dim:]
-                batch_y = batch_y[:, :, f_dim:]
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
-                # logger.info(f"debug::valid step: {i}, valid loss: {loss.item()}")
         # 计算验证集上所有 batch 的平均验证损失
         vali_loss = np.average(vali_loss)
         # 计算模型输出
@@ -446,21 +456,18 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
                 logger.info(f"Test step: {i} running...")
                 # 前向传播
-                outputs, batch_y = self._model_forward(batch_x, batch_y, batch_x_mark, batch_y_mark, flag = "test")
-                if outputs is None and batch_y is None: break
-                # 输入输出逆转换
-                outputs, batch_y = self._inverse_data(test_data, outputs, batch_y)
-                # 预测值/真实值提取
-                f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, :, f_dim:]
-                batch_y = batch_y[:, :, f_dim:]
+                outputs, batch_y = self._model_forward(
+                    batch_x, batch_y, 
+                    batch_x_mark, batch_y_mark, 
+                    flag = "test", reverse=True,
+                )
+                if outputs is None and batch_y is None:
+                    break
                 # 测试结果收集
                 pred = outputs
                 true = batch_y
                 preds.append(pred)
                 trues.append(true)
-                # logger.info(f"debug::pred: \n{pred} \npred shape: {pred.shape}")
-                # logger.info(f"debug::true: \n{true} \ntrue shape: {true.shape}")
                 # TODO test batch_size > 1
                 # if test_loader.batch_size > 1:
                 #     for batch_idx in range(self.args.batch_size):
@@ -469,12 +476,13 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 #     logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat length: {len(preds_flat)}")
                 #     logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat length: {len(trues_flat)}")
                 # 预测数据可视化
-                if i % 5 == 0:
-                    inputs = batch_x.detach().cpu().numpy()
+                if i % 20 == 0:
+                    inputs = batch_x.numpy()
                     if test_data.scale and self.args.inverse:
                         inputs = test_data \
                             .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
                             .reshape(inputs.shape)
+                        # or
                         # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)

@@ -12,7 +12,7 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id all_df_72_24 \
     --model $model_name \
-    --root_path ./dataset/electricity/A1F2/tf_data \
+    --root_path ./dataset/electricity_work/A1F2/tf_data \
     --data_path all_df.csv \
     --data all_df \
     --features MS \

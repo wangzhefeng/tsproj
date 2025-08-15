@@ -12,7 +12,7 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id df_load_72_24 \
     --model $model_name \
-    --root_path ./dataset/electricity/AIDC/line_B \
+    --root_path ./dataset/electricity_work/AIDC/line_B \
     --data_path df_load.csv \
     --data df_load \
     --features MS \

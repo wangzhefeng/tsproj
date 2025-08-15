@@ -30,6 +30,8 @@ from models import (
     Transformer_v2,
     Transformer,
     PatchTST,
+    TimeKAN,
+    TimeMixer,
     LSTM2LSTM,
     RNN,
 )
@@ -73,7 +75,8 @@ class Exp_Basic:
             # 'TiDE': TiDE,
             # 'FreTS': FreTS,
             # 'MambaSimple': MambaSimple,
-            # 'TimeMixer': TimeMixer,
+            'TimeKAN': TimeKAN,
+            'TimeMixer': TimeMixer,
             # 'TSMixer': TSMixer,
             # 'SegRNN': SegRNN,
             # 'TemporalFusionTransformer': TemporalFusionTransformer,
@@ -110,7 +113,7 @@ class Exp_Basic:
         # 设备
         self.device = self._acquire_device()
         # 模型构建
-        self.model = self._build_model().float().to(self.device)
+        self.model = self._build_model().to(self.device)
     
     def _acquire_device(self):
         # use gpu or not

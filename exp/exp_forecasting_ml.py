@@ -851,7 +851,7 @@ class Model:
 
 @dataclass
 class ModelConfig:
-    data_dir = Path("./dataset/electricity/exp_ml")
+    data_dir = Path("./dataset/electricity_work/exp_ml")
     # target series
     target = "h_total_use"                        # 预测目标变量名称
     target_ts_feat = "count_data_time"            # 功率数据时间戳特征名称
