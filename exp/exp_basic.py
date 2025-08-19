@@ -47,9 +47,9 @@ class Exp_Basic:
         # 参数
         self.args = args
         # 模型集 
-        self.non_transformer = [
-            "DLinear",
-        ]
+        # self.non_transformer = [
+        #     "DLinear",
+        # ]
         self.model_dict = {
             # ------------------------------
             # Time Series Library models

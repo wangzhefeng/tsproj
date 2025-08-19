@@ -31,38 +31,31 @@ def args_parse():
     parser = argparse.ArgumentParser(description='Transformer Multivariate Time Series Forecasting')
     # basic config
     parser.add_argument('--des', type=str, default='TimeSeries Forecasting Exp', help='exp description')
-    parser.add_argument('--task_name', type=str, required=True, default='long_term_forecasting', 
-                        help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
+    parser.add_argument('--task_name', type=str, required=True, default='long_term_forecasting', help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
     parser.add_argument('--is_training', type=int, required=True, default=0, help='Whether to conduct training')
     parser.add_argument('--is_testing', type=int, required=True, default=0, help='Whether to conduct testing')
     parser.add_argument('--testing_step', type=int, default=1, help="Test step")
     parser.add_argument('--is_forecasting', type=int, required=True, default=0, help='Whether to conduct forecasting')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
     parser.add_argument('--model', type=str, required=True, default='Transformer', help='model name, options: [Autoformer, Transformer, TimesNet]')
-    
     # data loader
     parser.add_argument('--root_path', type=str, required=True, default='./dataset/', help='root path of the data file')
     parser.add_argument('--data_path', type=str, required=True, default='ETTh1.csv', help='data file')
     parser.add_argument('--data', type=str, required=True, default='ETTh1', help='dataset type')
     parser.add_argument('--target', type=str, required=True, default='OT', help='target feature in S or MS task')
     parser.add_argument('--time', type=str, required=True, default='time', help='time feature in S or MS task')
-    parser.add_argument('--freq', type=str, required=True, default='h', 
-                        help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-    parser.add_argument('--features', type=str, default='MS', 
-                        help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
+    parser.add_argument('--freq', type=str, required=True, default='h', help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
+    parser.add_argument('--features', type=str, default='MS', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
     parser.add_argument("--step_size", type=int, default=1, help="RNNs data window step")
     parser.add_argument('--train_ratio', type=float, required=True, default=0.7, help='train dataset ratio')
     parser.add_argument('--test_ratio', type=float, required=True, default=0.2, help='test dataset ratio')
     parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
     parser.add_argument('--scale', type=int, default=0, help = 'data transform')
     parser.add_argument('--inverse', type=int, default=0, help='inverse output data')
-    # parser.add_argument('--inverse', action='store_true', help='inverse output data', default=False)
-    
     # output dirs
     parser.add_argument('--checkpoints', type=str, default='./saved_results/pretrained_models/', help='location of model models')
     parser.add_argument('--test_results', type=str, default='./saved_results/test_results/', help='location of model models')
     parser.add_argument('--predict_results', type=str, default='./saved_results/predict_results/', help='location of model models') 
-    
     # forecasting task
     parser.add_argument('--seq_len', type=int, required=True, default=72, help='input sequence length')
     parser.add_argument('--label_len', type=int, default=12, help='start token length')
@@ -72,7 +65,6 @@ def args_parse():
     parser.add_argument('--mask_rate', type=float, default=0.25, help='mask ratio')
     # anomaly detection task
     parser.add_argument('--anomaly_ratio', type=float, default=0.25, help='prior anomaly ratio (%%)')
-    
     # model define
     parser.add_argument('--expand', type=int, default=2, help='expansion factor for Mamba')
     parser.add_argument('--d_conv', type=int, default=4, help='conv kernel size for Mamba')
@@ -91,15 +83,14 @@ def args_parse():
     parser.add_argument('--distil', action='store_false', default=True, help='whether to use distilling in encoder, using this argument means not using distilling')
     parser.add_argument('--dropout', type=float, default=0.1, help='dropout')
     parser.add_argument('--activation', type=str, default='gelu', help='activation')
-    parser.add_argument('--output_attention', action='store_false', default=True, help='whether to output attention in ecoder')
+    parser.add_argument('--output_attention', action='store_true', default=False, help='whether to output attention in ecoder')
     parser.add_argument('--channel_independence', type=int, default=1, help='0: channel dependence 1: channel independence for FreTS model')
     parser.add_argument('--decomp_method', type=str, default='moving_avg', help='method of series decompsition, only support moving_avg or dft_decomp')
     parser.add_argument('--use_norm', type=int, default=1, help='whether to use normalize; True 1 False 0')    
     parser.add_argument('--down_sampling_layers', type=int, default=0, help='num of down sampling layers')
     parser.add_argument('--down_sampling_window', type=int, default=1, help='down sampling window size')
     parser.add_argument('--down_sampling_method', type=str, default=None, help='down sampling method, only support avg, max, conv')
-    parser.add_argument('--use_future_temporal_feature', type=int, default=0,
-                        help='whether to use future_temporal_feature; True 1 False 0')
+    parser.add_argument('--use_future_temporal_feature', type=int, default=0, help='whether to use future_temporal_feature; True 1 False 0')
     parser.add_argument('--begin_order', type=int, default=1, help='begin_order')
     parser.add_argument('--rev', action="store_false", default=True, help='whether to apply RevIN')
     parser.add_argument('--padding', type=int, default=0, help='padding')
@@ -109,7 +100,6 @@ def args_parse():
     # de-stationary projector params
     parser.add_argument('--p_hidden_dims', type=int, nargs='+', default=[128, 128], help='hidden layer dimensions of projector (List)')
     parser.add_argument('--p_hidden_layers', type=int, default=2, help='number of hidden layers in projector')
-    
     # optimization
     parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
     parser.add_argument('--itr', type=int, default=1, help='experiments times')
@@ -120,13 +110,11 @@ def args_parse():
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer type")
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
-    parser.add_argument('--use_amp', action='store_false', default=True, help='use automatic mixed precision training')
+    parser.add_argument('--use_amp', action='store_true', default=False, help='use automatic mixed precision training')
     parser.add_argument('--pct_start', type=float, default=0.2, help='pct_start')
     parser.add_argument('--comment', type=str, default='none', help='com')
-    
     # metrics (dtw)
     parser.add_argument('--use_dtw', type=int, default=0, help='the controller of using dtw metric (dtw is time consuming, not suggested unless necessary)')
-    
     # TODO Augmentation
     # parser.add_argument('--augmentation_ratio', type=int, default=0, help="How many times to augment")
     # parser.add_argument('--seed', type=int, default=2, help="Randomization seed")
@@ -146,14 +134,12 @@ def args_parse():
     # parser.add_argument('--discdtw', default=False, action="store_true", help="Discrimitive DTW warp preset augmentation")
     # parser.add_argument('--discsdtw', default=False, action="store_true", help="Discrimitive shapeDTW warp preset augmentation")
     # parser.add_argument('--extra_tag', type=str, default="", help="Anything extra")
-    
     # GPU
     parser.add_argument('--use_gpu', type=int, default=1, help='use gpu')
     parser.add_argument('--gpu_type', type=str, default='cuda', help='gpu type')
-    # parser.add_argument('--gpu', type=int, default=0, help='gpu')
+    parser.add_argument('--gpu', type=int, default=0, help='gpu')
     parser.add_argument('--use_multi_gpu', type=int, default=0, help = 'use multiple gpus')
     parser.add_argument('--devices', type=str, default="0,1,2,3,4,5,6,7,8", help='device ids of multile gpus')
-    
     # TODO FreDF
     # parser.add_argument('--add_fredf', type=int, default=0, help='weather add fredf loss')
     # parser.add_argument('--rec_lambda', type=float, default=0., help='weight of reconstruction function')
@@ -166,7 +152,6 @@ def args_parse():
     # parser.add_argument('--add_noise', type=int, default=1, help='add noise')
     # parser.add_argument('--noise_amp', type=float, default=1, help='noise ampitude')
     # parser.add_argument('--noise_freq_percentage', type=float, default=0.05, help='noise frequency percentage')
-    
     # TODO RNNs
     parser.add_argument("--pred_method", type=str, default="recursive_multi_step", help="Prediction method: recursive_multi_step | direct_multi_step_output | direct_recursive_mix")
     parser.add_argument("--feature_size", type=int, default=1, help="feature size")

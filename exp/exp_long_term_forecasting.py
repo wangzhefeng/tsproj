@@ -166,9 +166,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         batch_y = batch_y.float().to(self.device)
         batch_x_mark = batch_x_mark.float().to(self.device)
         batch_y_mark = batch_y_mark.float().to(self.device)
-        if self.args.data in ["PEMS", "Solar"]:
-            batch_x_mark = None
-            batch_y_mark = None
+        # logger.info(f"debug::batch_x: {batch_x.shape}")
+        # logger.info(f"debug::batch_x_mark: {batch_x_mark.shape}")
+        # logger.info(f"debug::batch_y: {batch_y.shape}")
+        # logger.info(f"debug::batch_y_mark: {batch_y_mark.shape}")
+        
         # decoder input
         # ---------------------
         if batch_y.shape[1] != (self.args.label_len + self.args.pred_len):
@@ -179,26 +181,23 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 dec_inp = torch.zeros((batch_y.shape[0], self.args.pred_len, batch_y.shape[2])).float().to(batch_y.device)
         else:
             dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) 
+        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
         
         if self.args.down_sampling_layers != 0:
             dec_inp = None
+        
         # encoder-decoder
         # ---------------------
-        logger.info(f"debug:: batch_x: {batch_x.shape}, batch_x_mark: {batch_x_mark.shape}, ")
         def _run_model():
-            if self.args.model in self.non_transformer:
-                outputs = self.model(batch_x)
-            else:
-                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-            if self.args.output_attention:
-                outputs = outputs[0]
+            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            outputs = outputs[0] if self.args.output_attention else outputs
             return outputs
         if self.args.use_amp:
             with torch.amp.autocast("cuda"):
                 outputs = _run_model()
         else:
             outputs = _run_model()
+        
         # pred and true process
         # ---------------------
         # pred and true 提取
@@ -213,12 +212,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             outputs, batch_y = self._inverse_data(data, outputs, batch_y)
         # 预测值/真实值提取
         f_dim = -1 if self.args.features == 'MS' else 0
-        if flag in ["valid", "test", "pred"]:
-            outputs = outputs[:, :, f_dim:]
-            batch_y = batch_y[:, :, f_dim:]
-        elif flag == "train":
-            outputs = outputs[:, :, f_dim:]
-            batch_y = batch_y[:, :, f_dim:].to(self.device)
+        outputs = outputs[:, :, f_dim:]
+        batch_y = batch_y[:, :, f_dim:]
+        if flag == "train":
+            batch_y.to(self.device)
         
         return outputs, batch_y
 
@@ -311,8 +308,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 # 前向传播
                 outputs, batch_y = self._model_forward(
                     train_data,
-                    batch_x, batch_y, 
-                    batch_x_mark, batch_y_mark, 
+                    batch_x, batch_y, batch_x_mark, batch_y_mark, 
                     flag="train", reverse=False,
                 )
                 if outputs is None and batch_y is None: 
@@ -475,7 +471,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                             .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
                             .reshape(inputs.shape)
                         # or
-                        # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(shape)
+                        # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(inputs.shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
                     predict_result_visual(pred_plot, true_plot, path=Path(test_results_path).joinpath(f'{str(i)}.pdf')) 

@@ -22,7 +22,7 @@ python -u run_dl.py \
     --root_path ./dataset/ETT-small/ \
     --data_path ETTh1.csv \
     --data ETTh1 \
-    --features MS \
+    --features M \
     --target OT \
     --time date \
     --checkpoints ./saved_results/pretrained_models/ \
@@ -41,7 +41,7 @@ python -u run_dl.py \
     --d_ff 32 \
     --enc_in 7 \
     --dec_in 7 \
-    --c_out 1 \
+    --c_out 7 \
     --e_layers 2 \
     --d_layers 1 \
     --factor  3 \
