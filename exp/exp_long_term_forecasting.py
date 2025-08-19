@@ -54,7 +54,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         model = self.model_dict[self.args.model].Model(self.args).float()
         # 多 GPU 训练
         if self.args.use_gpu and self.args.use_multi_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.devices)
+            model = nn.DataParallel(model, device_ids=self.args.device_ids)
         # 打印模型参数量
         model_memory_size(model, verbose=True)
 
@@ -311,16 +311,24 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     batch_x, batch_y, batch_x_mark, batch_y_mark, 
                     flag="train", reverse=False,
                 )
-                if outputs is None and batch_y is None: 
+                if outputs is None and batch_y is None:
                     break
                 # 计算训练损失
                 loss = criterion(outputs, batch_y)
                 train_loss.append(loss.item())
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
                 if (i + 1) % 10 == 0:
+                    # 训练速度和时间
                     speed = (time.time() - train_start_time) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                     logger.info(f'Epoch: {epoch + 1}, \tIters: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/iter; left time: {left_time:.4f}s')
+                    # 返回指定设备上张量当前占用的 GPU 内存字节数, 这很可能小于在 nvidia-smi 中显示的量，
+                    # 因为一些未使用的内存可能被缓存分配器持有，并且需要在 GPU 上创建一些上下文
+                    allocated_memory = torch.cuda.memory_allocated() / 1024 ** 2
+                    # 返回指定设备上缓存分配器管理的当前 GPU 内存字节数
+                    cached_memory = torch.cuda.memory_reserved() / 1024 ** 2
+                    logger.info(f"Allocated tensor emory: {allocated_memory:.1f}MB. Cached total memory: {cached_memory:.1f}MB.")
+                    # 更新计数器和时间
                     iter_count = 0
                     train_start_time = time.time()
                 # 后向传播、参数优化更新

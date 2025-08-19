@@ -122,31 +122,24 @@ class Exp_Basic:
             else False
         # gpu type: "cuda", "mps"
         self.args.gpu_type = self.args.gpu_type.lower().strip()
-        # gpu device ids strings
-        self.args.devices = self.args.devices.replace(" ", "")
         # gpu device ids list
+        self.args.devices = self.args.devices.replace(" ", "")
         self.args.device_ids = [int(id_) for id_ in self.args.devices.split(",")]
         # gpu device ids string
-        if self.args.use_gpu and not self.args.use_multi_gpu:
-            self.gpu = self.args.device_ids[0]  # '0'
-        elif self.args.use_gpu and self.args.use_multi_gpu:
-            self.gpu = self.args.devices  # '0,1,2,3,4,5,6,7'
-        else:
-            self.gpu = "0"
-        
+        self.gpu = self.args.device_ids[0]  # or self.gpu = "0"
         # device
         if self.args.use_gpu and self.args.gpu_type == "cuda":
             os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu) if not self.args.use_multi_gpu else self.args.devices
             device = torch.device(f"cuda:{self.gpu}")
-            logger.info(f"Use device GPU: cuda:{self.gpu}")
+            logger.info(f"\t\tUse device GPU: cuda:{self.gpu}")
         elif self.args.use_gpu and self.args.gpu_type == "mps":
             device = torch.device("mps") \
                 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() \
                 else torch.device("cpu")
-            logger.info(f"Use device GPU: mps")
+            logger.info(f"\t\tUse device GPU: mps")
         else:
             device = torch.device("cpu")
-            logger.info("Use device CPU")
+            logger.info("\t\tUse device CPU")
 
         return device
  
