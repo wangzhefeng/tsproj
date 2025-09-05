@@ -40,7 +40,6 @@ python -u run_dl.py \
     --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
     --padding 0 \
     --num_workers 0 \
     --itr 1 \

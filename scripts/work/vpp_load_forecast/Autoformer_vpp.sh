@@ -35,7 +35,6 @@ python -u run_autoformer.py \
     --d_ff 2048 \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
     --padding 0 \
     --num_workers 0 \
     --itr 1 \

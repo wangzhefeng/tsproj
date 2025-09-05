@@ -149,7 +149,7 @@ class AutoCorrelation(nn.Module):
 
 class AutoCorrelationLayer(nn.Module):
 
-    def __init__(self, correlation, d_model, n_heads, d_keys=None, d_value=None):
+    def __init__(self, correlation, d_model, n_heads, d_keys=None, d_values=None):
         super(AutoCorrelationLayer, self).__init__()
 
         d_keys = d_keys or (d_model // n_heads)

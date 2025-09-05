@@ -30,7 +30,6 @@ python -u run_transformer_original.py \
     --activation gelu \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
     --use_dtw 0 \
     --padding 0 \
     --loss MSE \

@@ -129,20 +129,20 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         测试结果保存
         """
         # 计算测试结果评价指标
-        mse, rmse, mae, mape, mape_accuracy, mspe = metric(preds, trues)
+        r2, mse, rmse, mae, mape, mape_accuracy, mspe = metric(preds, trues)
         dtw = DTW(preds, trues) if self.args.use_dtw else -999
-        logger.info(f"Test results: mse:{mse:.4f} rmse:{rmse:.4f} mae:{mae:.4f} mape:{mape:.4f} mape accuracy:{mape_accuracy:.4f} mspe:{mspe:.4f} dtw: {dtw:.4f}")
+        logger.info(f"Test results: r2:{r2:.4f} mse:{mse:.4f} rmse:{rmse:.4f} mae:{mae:.4f} mape:{mape:.4f} mape accuracy:{mape_accuracy:.4f} mspe:{mspe:.4f} dtw: {dtw:.4f}")
         # result1 保存
         with open(Path(path).joinpath("result_forecast.txt"), 'a') as file:
             file.write(setting + "  \n")
-            file.write(f"mse:{mse}, rmse:{rmse}, mae:{mae}, mape:{mape}, mape accuracy:{mape_accuracy}, mspe:{mspe}, dtw:{dtw}")
+            file.write(f"r2:{r2:.4f}, mse:{mse:.4f}, rmse:{rmse:.4f}, mae:{mae:.4f}, mape:{mape:.4f}, mape accuracy:{mape_accuracy:.4f}, mspe:{mspe:.4f}, dtw:{dtw:.4f}")
             file.write('\n')
             file.write('\n')
             file.close()
         # result2 保存
         np.save(
             Path(path).joinpath('metrics.npy'), 
-            np.array([mae, mse, rmse, mape, mape_accuracy, mspe, dtw])
+            np.array([r2, mae, mse, rmse, mape, mape_accuracy, mspe, dtw])
         )
         np.save(Path(path).joinpath('preds.npy'), preds)
         np.save(Path(path).joinpath('trues.npy'), trues)
@@ -294,13 +294,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         for epoch in range(self.args.train_epochs):
             # time: epoch 训练开始时间
             epoch_start_time = time.time()
-            logger.info(f"Epoch: {epoch+1} \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info(" ")
+            logger.info(f"Epoch: {epoch+1}, \tstart time: {from_unix_time(epoch_start_time).strftime('%Y-%m-%d %H:%M:%S')}")
             # epoch 训练结果收集
             iter_count = 0
             train_loss = []
             # 模型训练模式
             self.model.train()
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
+            for iters, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # 当前 epoch 的迭代次数记录
                 iter_count += 1
                 # 模型优化器梯度归零
@@ -311,23 +312,22 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     batch_x, batch_y, batch_x_mark, batch_y_mark, 
                     flag="train", reverse=False,
                 )
-                if outputs is None and batch_y is None:
-                    break
+                if outputs is None and batch_y is None: break
                 # 计算训练损失
                 loss = criterion(outputs, batch_y)
                 train_loss.append(loss.item())
                 # 当前 epoch-batch 下每 100 个 batch 的训练速度、误差损失
-                if (i + 1) % 10 == 0:
+                if (iters + 1) % 50 == 0:
                     # 训练速度和时间
                     speed = (time.time() - train_start_time) / iter_count
-                    left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    logger.info(f'Epoch: {epoch + 1}, \tIters: {i + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/iter; left time: {left_time:.4f}s')
-                    # 返回指定设备上张量当前占用的 GPU 内存字节数, 这很可能小于在 nvidia-smi 中显示的量，
-                    # 因为一些未使用的内存可能被缓存分配器持有，并且需要在 GPU 上创建一些上下文
-                    allocated_memory = torch.cuda.memory_allocated() / 1024 ** 2
-                    # 返回指定设备上缓存分配器管理的当前 GPU 内存字节数
-                    cached_memory = torch.cuda.memory_reserved() / 1024 ** 2
-                    logger.info(f"Allocated tensor emory: {allocated_memory:.1f}MB. Cached total memory: {cached_memory:.1f}MB.")
+                    left_time = speed * ((self.args.train_epochs - epoch) * train_steps - iters)
+                    logger.info(f'Epoch: {epoch + 1}, \tIters: {iters + 1} | train loss: {loss.item():.7f}, \tSpeed: {speed:.4f}s/iter; left time: {left_time:.4f}s')
+                    # 打印模型参数量
+                    # model_memory_size(self.model, verbose=True)
+                    # 内存占用
+                    # allocated_memory = torch.cuda.memory_allocated() / (1024 ** 2)
+                    # cached_memory = torch.cuda.memory_reserved() / (1024 ** 2)
+                    # logger.info(f"\t\tAllocated tensor emory: {allocated_memory:.1f}MB. Cached total memory: {cached_memory:.1f}MB.")
                     # 更新计数器和时间
                     iter_count = 0
                     train_start_time = time.time()
@@ -361,20 +361,15 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 adjust_learning_rate(optimizer, scheduler, epoch + 1, self.args, printout=True)
             else:
                 logger.info(f"Updating learning rate to {scheduler.get_last_lr()[0]}")
-        # -----------------------------
-        # 模型加载
-        # ------------------------------
         logger.info(f"{40 * '-'}")
         logger.info(f"Training Finished!")
-        logger.info(f"{40 * '-'}") 
+        logger.info(f"{40 * '-'}")
         # plot train and valid losses
         logger.info("Plot and save train/valid losses...")
         plot_losses(self.args.train_epochs, train_losses, vali_losses, "loss", test_results_path)
-        
         # load model
         logger.info("Loading best model...")
         self.model.load_state_dict(torch.load(model_checkpoint_path)["model"])
-        
         # return model and train results
         logger.info("Return training results...")
         return self.model
@@ -393,17 +388,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 模型评估模式
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
-                logger.info(f"Vali step: {i} running...")
+            for iters, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+                logger.info(f"Vali step: {iters} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(
-                    vali_data,
-                    batch_x, batch_y, 
-                    batch_x_mark, batch_y_mark, 
+                    vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark, 
                     flag="valid", reverse=False
                 )
-                if outputs is None and batch_y is None:
-                    break
+                if outputs is None and batch_y is None: break
                 # 计算/保存验证损失
                 loss = criterion(outputs, batch_y)
                 vali_loss.append(loss)
@@ -448,73 +440,50 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         preds, trues = [], []
         preds_flat, trues_flat = [], []
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
-                logger.info(f"Test step: {i} running...")
+            for iters, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
+                logger.info(f"Test step: {iters} running...")
                 # 前向传播
                 outputs, batch_y = self._model_forward(
-                    test_data,
-                    batch_x, batch_y, 
-                    batch_x_mark, batch_y_mark, 
-                    flag = "test", reverse=True,
+                    test_data, batch_x, batch_y, batch_x_mark, batch_y_mark, 
+                    flag = "test", reverse=True
                 )
-                if outputs is None and batch_y is None:
-                    break
+                if outputs is None and batch_y is None: break
                 # 测试结果收集
                 pred = outputs
                 true = batch_y
                 preds.append(pred)
                 trues.append(true)
-                # TODO test batch_size > 1
-                # if test_loader.batch_size > 1:
-                #     for batch_idx in range(self.args.batch_size):
-                #         preds_flat.append(pred[batch_idx, :, -1].tolist())
-                #         trues_flat.append(true[batch_idx, :, -1].tolist())
-                #     logger.info(f"debug::preds_flat: \n{preds_flat} \npreds_flat length: {len(preds_flat)}")
-                #     logger.info(f"debug::trues_flat: \n{trues_flat} \ntrues_flat length: {len(trues_flat)}")
                 # 预测数据可视化
-                if i % 20 == 0:
+                if iters % 10 == 0:
                     inputs = batch_x.numpy()
                     if test_data.scale and self.args.inverse:
-                        inputs = test_data \
-                            .inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)) \
-                            .reshape(inputs.shape)
-                        # or
-                        # inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(inputs.shape)
+                        inputs = test_data.inverse_transform(inputs.reshape(inputs.shape[0] * inputs.shape[1], -1)).reshape(inputs.shape)
+                        # or inputs = test_data.inverse_transform(inputs.squeeze(0)).reshape(inputs.shape)
                     pred_plot = np.concatenate((inputs[0, :, -1], pred[0, :, -1]), axis=0)
                     true_plot = np.concatenate((inputs[0, :, -1], true[0, :, -1]), axis=0)
-                    predict_result_visual(pred_plot, true_plot, path=Path(test_results_path).joinpath(f'{str(i)}.pdf')) 
+                    predict_result_visual(pred_plot, true_plot, path=Path(test_results_path).joinpath(f'{str(iters)}.pdf')) 
         # 测试结果保存
-        preds = np.concatenate(preds, axis = 0)  # preds = np.array(preds) 
-        trues = np.concatenate(trues, axis = 0)  # trues = np.array(trues)        
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        # logger.info(f"debug::Test results: preds: \n{preds} \npreds.shape: {preds.shape}")
-        # logger.info(f"debug::Test results: trues: \n{trues} \ntrues.shape: {trues.shape}")
         logger.info(f"{40 * '-'}")
         logger.info(f"Test metric results have been saved in path:")
         logger.info(f"{40 * '-'}")
-        self._test_results_save(preds, trues, setting, test_results_path)
+        preds = np.concatenate(preds, axis = 0)  # preds = np.array(preds)
+        trues = np.concatenate(trues, axis = 0)  # trues = np.array(trues)
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        self._test_results_save(preds.reshape(-1, 1), trues.reshape(-1, 1), setting, test_results_path)
         logger.info(test_results_path)
         # 测试结果可视化
         logger.info(f"{40 * '-'}")
         logger.info(f"Test visual results have been saved in path:")
         logger.info(f"{40 * '-'}")
-        # TODO test batch_size > 1
-        # if test_loader.batch_size > 1:
-        #     preds_flat = np.concatenate(preds_flat, axis = 0)
-        #     trues_flat = np.concatenate(trues_flat, axis = 0)
-        preds_flat = np.concatenate(preds, axis = 0)
-        trues_flat = np.concatenate(trues, axis = 0)
-        # logger.info(f"debug::Test results: preds_flat: \n{preds_flat} \npreds_flat.shape: {preds_flat.shape}")
-        # logger.info(f"debug::Test results: trues_flat: \n{trues_flat} \ntrues_flat.shape: {trues_flat.shape}")
+        if self.args.features == 'M':
+            preds_flat = np.concatenate(preds, axis = 0)[:, -1]
+            trues_flat = np.concatenate(trues, axis = 0)[:, -1]
+        else:
+            preds_flat = np.concatenate(preds, axis = 0)
+            trues_flat = np.concatenate(trues, axis = 0)
         predict_result_visual(preds_flat, trues_flat, path=Path(test_results_path).joinpath("test_prediction.png")) 
         logger.info(test_results_path)
-        # results_df = pd.DataFrame({
-        #     "timestamp": pd.date_range("2024-12-01 00:00:00", periods=self.args.pred_len, freq=self.args.freq),
-        #     "true_value": np.array(trues_flat).squeeze()[-self.args.pred_len:],
-        #     "predict_value": np.array(preds_flat).squeeze()[-self.args.pred_len:],
-        # })
-        # self._pred_results_save(preds = None, preds_df = results_df, path=test_results_path)
         # log
         logger.info(f"{40 * '-'}")
         logger.info(f"Testing Finished!")

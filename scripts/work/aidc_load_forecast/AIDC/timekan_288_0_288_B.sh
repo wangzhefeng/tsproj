@@ -1,21 +1,15 @@
 # export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=timekan_B
+export LOG_NAME=timekan-AIDC_B
 
 model_name=TimeKAN
 
-# 模型大小相关参数
-# --d_model 512
-# --d_ff 2048
-# --n_heads 8
-# --e_layers 2
-# --d_layers 1
-
-# 训练最终用于预测的模型
+# 训练、验证、测试
 python -u run_dl.py \
     --task_name long_term_forecast \
     --des 'Exp TimeKAN_288_0_288_B' \
     --is_training 1 \
-    --is_testing 0 \
+    --is_testing 1 \
+    --testing_step 288 \
     --is_forecasting 0 \
     --model_id aidc_b_288_0_288 \
     --model $model_name \
@@ -33,8 +27,8 @@ python -u run_dl.py \
     --seq_len 288 \
     --label_len 0 \
     --pred_len 288 \
-    --train_ratio 0.8 \
-    --test_ratio 0.1 \
+    --train_ratio 0.7 \
+    --test_ratio 0.2 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 32 \

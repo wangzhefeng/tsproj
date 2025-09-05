@@ -1,21 +1,15 @@
 export CUDA_VISIBLE_DEVICES=0
-export LOG_NAME=timekan
+export LOG_NAME=timekan-etth1
 
 model_name=TimeKAN
 
-# 模型大小相关参数
-# --d_model 512
-# --d_ff 2048
-# --n_heads 8
-# --e_layers 2
-# --d_layers 1
-
-# 训练最终用于预测的模型
+# 训练、验证、测试
 python -u run_dl.py \
     --task_name long_term_forecast \
-    --des 'Exp TimeKAN_96_0_96' \
+    --des 'Exp TimeKAN_24_0_24' \
     --is_training 1 \
     --is_testing 1 \
+    --testing_step 24 \
     --is_forecasting 0 \
     --model_id etth1_96_0_96 \
     --model $model_name \
@@ -30,9 +24,9 @@ python -u run_dl.py \
     --predict_results ./saved_results/predict_results/ \
     --freq 1h \
     --embed timeF \
-    --seq_len 96 \
+    --seq_len 24 \
     --label_len 0 \
-    --pred_len 96 \
+    --pred_len 24 \
     --train_ratio 0.7 \
     --test_ratio 0.2 \
     --moving_avg 25 \
@@ -44,7 +38,7 @@ python -u run_dl.py \
     --c_out 7 \
     --e_layers 2 \
     --d_layers 1 \
-    --factor  3 \
+    --factor 3 \
     --n_heads 1 \
     --dropout 0.05 \
     --down_sampling_layers 2 \
@@ -53,12 +47,12 @@ python -u run_dl.py \
     --num_workers 0 \
     --itr 1 \
     --train_epochs 1 \
-    --batch_size 128 \
+    --batch_size 8 \
     --loss MSE \
     --activation gelu \
     --use_dtw 0 \
-    --learning_rate 0.01 \
-    --patience 10 \
+    --learning_rate 1e-4 \
+    --patience 7 \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
