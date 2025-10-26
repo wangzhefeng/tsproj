@@ -38,17 +38,17 @@ class TokenEmbedding(nn.Module):
         # Conv1d layer
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         self.tokenConv = nn.Conv1d(
-            in_channels = c_in,
-            out_channels = d_model,
-            kernel_size = 3,
-            padding = padding,
-            padding_mode = 'circular',
-            bias = False,
+            in_channels=c_in,
+            out_channels=d_model,
+            kernel_size=3,
+            padding=padding,
+            padding_mode='circular',
+            bias=False,
         )
         # Conv1d layer 参数初始化
         for m in self.modules():
             if isinstance(m, nn.Conv1d):
-                nn.init.kaiming_normal_(m.weight, mode = 'fan_in', nonlinearity = 'leaky_relu')
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu')
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
@@ -88,7 +88,7 @@ class PositionalEmbedding(nn.Module):
 class PositionalEmbedding_v2(nn.Module):
     
     def __init__(self, d_model, n_position=1024):
-        super(PositionalEmbedding, self).__init__()
+        super(PositionalEmbedding_v2, self).__init__()
 
         # Not a parameter
         self.register_buffer('pos_table', self._get_sinusoid_encoding_table(n_position, d_model))
@@ -137,7 +137,7 @@ class TemporalEmbedding(nn.Module):
     Temporal Embedding
     """
 
-    def __init__(self, d_model, embed_type = 'fixed', freq = 'h'):
+    def __init__(self, d_model, embed_type='fixed', freq='h'):
         super(TemporalEmbedding, self).__init__()
         
         minute_size = 4
@@ -293,20 +293,22 @@ class DataEmbedding_wo_pos(nn.Module):
     def __init__(self, c_in, d_model, embed_type = 'fixed', freq = 'h', dropout = 0.1):
         super(DataEmbedding_wo_pos, self).__init__()
 
-        self.value_embedding = TokenEmbedding(c_in = c_in, d_model = d_model)
-        self.position_embedding = PositionalEmbedding(d_model = d_model)
+        self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model)
+        self.position_embedding = PositionalEmbedding(d_model=d_model)
         self.temporal_embedding = TemporalEmbedding(
-            d_model = d_model, 
-            embed_type = embed_type,
-            freq = freq
+            d_model=d_model, 
+            embed_type=embed_type,
+            freq=freq
         ) if embed_type != 'timeF' else TimeFeatureEmbedding(
-            d_model = d_model, 
-            embed_type = embed_type, 
-            freq = freq
+            d_model=d_model, 
+            embed_type=embed_type, 
+            freq=freq
         )
-        self.dropout = nn.Dropout(p = dropout)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
+        if x is None and x_mark is not None:
+            return self.temporal_embedding(x_mark)
         if x_mark is None:
             x = self.value_embedding(x)
         else:

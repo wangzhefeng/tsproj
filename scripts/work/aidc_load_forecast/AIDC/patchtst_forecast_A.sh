@@ -12,11 +12,12 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id df_load_72_24 \
     --model $model_name \
-    --root_path ./dataset/electricity/AIDC/line_A \
+    --root_path ./dataset/electricity_work/AIDC/line_A \
     --data_path df_load.csv \
     --data df_load \
     --features MS \
     --target load \
+    --time time \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
@@ -39,11 +40,9 @@ python -u run_dl.py \
     --n_heads 1 \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
     --padding 0 \
-    --output_attention 0 \
     --num_workers 0 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 30 \
     --batch_size 1 \
     --loss MSE \
@@ -54,7 +53,6 @@ python -u run_dl.py \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
-    --use_amp 0 \
     --use_gpu 1 \
     --gpu_type 'mps' \
     --use_multi_gpu 0 \

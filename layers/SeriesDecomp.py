@@ -57,6 +57,7 @@ class series_decomp(nn.Module):
 
     def __init__(self, kernel_size: int):
         super(series_decomp, self).__init__()
+
         self.moving_avg = moving_avg(kernel_size, stride = 1)
 
     def forward(self, x):

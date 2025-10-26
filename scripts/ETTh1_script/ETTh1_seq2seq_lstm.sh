@@ -1,11 +1,10 @@
 export CUDA_VISIBLE_DEVICES=0
 
 # log vars
-model_id=ETTh1_rnn
+model_id=ETTh1_lstm2lstm
 export LOG_NAME=$model_id
-
 # model vars
-model_name=RNN
+model_name=LSTM2LSTM
 
 python -u run_dl.py \
     --task_name long_term_forecast \
@@ -16,12 +15,12 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id $model_id \
     --model $model_name \
-    --root_path ./dataset/ETT-small \
+    --root_path ./dataset/ETT-small/ \
     --data_path ETTh1.csv \
     --data ETTh1 \
+    --features M \
     --target OT \
-    --train_ratio 0.6 \
-    --test_ratio 0.2 \
+    --time date \
     --pred_method recursive_multi_step \
     --inspect_fit 1 \
     --rolling_predict 1 \
@@ -31,26 +30,27 @@ python -u run_dl.py \
     --predict_results ./saved_results/predict_results/ \
     --freq h \
     --embed timeF \
-    --seq_len 126 \
+    --seq_len 64 \
     --pred_len 24 \
     --step_size 1 \
-    --features M \
-    --feature_size 7 \
-    --output_size 7 \
-    --hidden_size 64 \
-    --kernel_size 3 \
     --num_layers 2 \
-    --dropout 0.05 \
-    --activation gelu \
+    --feature_size 7 \
+    --hidden_size 128 \
+    --kernel_size 3 \
+    --output_size 7 \
     --teacher_forcing 0.3 \
-    --iters 1 \
+    --train_ratio 0.6 \
+    --test_ratio 0.2 \
+    --itr 1 \
     --train_epochs 20 \
     --batch_size 32 \
-    --learning_rate 5e-3 \
+    --learning_rate 1e-3 \
     --lr_scheduler 1 \
     --lradj type1 \
+    --dropout 0.05 \
     --loss MSE \
     --optimizer adam \
+    --activation gelu \
     --use_dtw 0 \
     --patience 14 \
     --scale 1 \

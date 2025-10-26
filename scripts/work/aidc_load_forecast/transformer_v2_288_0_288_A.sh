@@ -1,52 +1,49 @@
-export CUDA_VISIBLE_DEVICES=1
-export LOG_NAME=asc
+export CUDA_VISIBLE_DEVICES=0
+export LOG_NAME=Transformer-v2-AIDC_A_dataset
 
-model_name=Autoformer
+model_name=Transformer_v2
 
-# 模型大小相关参数
-# --d_model 512
-# --d_ff 2048
-
-# 训练最终用于预测的模型
+# 训练、验证、测试
 python -u run_dl.py \
     --task_name long_term_forecast \
-    --des 'Exp' \
-    --is_training 0 \
-    --is_testing 0 \
+    --des 'Exp Transformer_v2_288_144_288' \
+    --is_training 1 \
+    --is_testing 1 \
+    --testing_step 288 \
     --is_forecasting 0 \
-    --model_id ETTm1_96_96 \
+    --model_id AIDC_A_dataset_288_144_288 \
     --model $model_name \
-    --root_path ./dataset/ETT-small \
-    --data_path ETTm1.csv \
-    --data ETTm1 \
+    --root_path ./dataset/electricity_work// \
+    --data_path AIDC_A_dataset.csv \
+    --data AIDC_A_dataset \
     --features MS \
     --target OT \
+    --time date \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
-    --freq 15min \
+    --freq 5min \
     --embed timeF \
-    --seq_len 96 \
-    --label_len 48 \
-    --pred_len 96 \
-    --train_ratio 0.8 \
-    --test_ratio 0.3 \
+    --seq_len 288 \
+    --label_len 144 \
+    --pred_len 288 \
+    --train_ratio 0.7 \
+    --test_ratio 0.2 \
     --moving_avg 25 \
     --embed_type 0 \
     --d_model 512 \
     --d_ff 2048 \
     --enc_in 7 \
     --dec_in 7 \
+    --c_out 1 \
     --e_layers 2 \
     --d_layers 1 \
-    --factor  3 \
+    --factor 3 \
     --n_heads 1 \
-    --c_out 1 \
     --dropout 0.05 \
-    --output_attention 0 \
-    --num_workers 0 \
-    --iters 1 \
-    --train_epochs 1 \
+    --num_workers 4 \
+    --itr 1 \
+    --train_epochs 10 \
     --batch_size 8 \
     --loss MSE \
     --activation gelu \
@@ -56,8 +53,7 @@ python -u run_dl.py \
     --lradj type1 \
     --scale 1 \
     --inverse 1 \
-    --use_amp 0 \
-    --use_gpu 0 \
+    --use_gpu 1 \
     --gpu_type 'cuda' \
-    --use_multi_gpu 0 \
+    --use_multi_gpu 1 \
     --devices 0,1,2,3,4,5,6,7

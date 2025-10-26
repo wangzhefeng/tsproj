@@ -6,10 +6,10 @@
 # * Email       : zfwang7@gmail.com
 # * Date        : 2024-12-11
 # * Version     : 1.0.121116
-# * Description :  1. 单变量多步直接预测(数据标准化)
-# *                2. 单变量多步递归预测(滞后特征，数据标准化)
-# *                3. 多变量多步递归预测(滞后特征，数据标准化)
-# * Link        : link
+# * Description : 1.单变量多步直接预测(数据标准化)
+# *               2.单变量多步递归预测(滞后特征，数据标准化)
+# *               3.多变量多步递归预测(滞后特征，数据标准化)
+# * Link        : https://mp.weixin.qq.com/s/haCeJW9wamtXkBjX3oUvdQ
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)增加 log;
 # ***************************************************
 
@@ -79,14 +79,10 @@ class Model:
         self.args.train_end_time = args.time_range["now_time"]
         self.args.forecast_start_time = args.time_range["now_time"]
         self.args.forecast_end_time = args.time_range["future_time"]
-        # self.train_start_time_str = self.args.train_start_time.strftime("%Y%m%d")
-        # self.train_end_time_str = self.args.train_end_time.strftime("%Y%m%d")
-        # self.forecast_start_time_str = self.args.forecast_start_time.strftime("%Y%m%d")
-        # self.forecast_end_time_str = self.args.forecast_end_time.strftime("%Y%m%d")
-        logger.info(f"train_start_time_str: {self.train_start_time_str}")
-        logger.info(f"train_end_time_str: {self.train_end_time_str}")
-        logger.info(f"forecast_start_time_str: {self.forecast_start_time_str}")
-        logger.info(f"forecast_end_time_str: {self.forecast_end_time_str}")
+        logger.info(f"train_start_time: {self.train_start_time}")
+        logger.info(f"train_end_time: {self.train_end_time}")
+        logger.info(f"forecast_start_time: {self.forecast_start_time}")
+        logger.info(f"forecast_end_time: {self.forecast_end_time}")
 
     def load_csv_data(self):
         """
@@ -484,6 +480,13 @@ class Model:
         return cv_plot_df_window
     
     # TODO
+    def _hyperparameters_tuning(self):
+        # Grid Search
+        # Random Search
+        # Bayesian Optimization
+        pass
+    
+    # TODO
     def __calc_features_corr(self, df, train_features):
         """
         分析预测特征与目标特征的相关性
@@ -492,7 +495,7 @@ class Model:
     
         return features_corr
     
-    def _window_test(self, X_train, Y_train, X_test):
+    def _window_test(self, X_train, Y_train, X_test, Y_test):
         """
         模型训练
         """
@@ -512,11 +515,25 @@ class Model:
         # 模型训练
         if Y_train.shape[1] == 1:
             model = lgb.LGBMRegressor(**self.model_params)
-            model.fit(X_train, Y_train)
+            model.fit(
+                X_train, 
+                Y_train,
+                # categorical_feature=[],
+                # eval_set=[(X_test, Y_test)],
+                # eval_metric="mae",
+                # callbacks=[lgb.early_stopping(100, verbose=False)],
+            )
         else:
             model = MultiOutputRegressor(lgb.LGBMRegressor(**self.model_params))
             # model = RegressorChain(lgb.LGBMRegressor(**self.model_params))
-            model.fit(X_train, Y_train)
+            model.fit(
+                X_train, 
+                Y_train,
+                # categorical_feature=[],
+                # eval_set=[(X_test, Y_test)],
+                # eval_metric="mae",
+                # callbacks=[lgb.early_stopping(100, verbose=False)],
+            )
         # 模型预测
         if self.pred_method == "multip-step-directly":
             Y_pred = self.univariate_directly_forecast(
@@ -567,7 +584,7 @@ class Model:
                 Y_train = Y_train.iloc[:, -1:]
                 Y_train.columns = [self.target]
             # 模型测试
-            Y_pred = self._window_test(X_train, Y_train, X_test)
+            Y_pred = self._window_test(X_train, Y_train, X_test, Y_test)
             # 多变量, 单变量直接多步预测: 目标特征转换
             if self.target_transform:
                 # test
@@ -631,11 +648,25 @@ class Model:
         # 模型训练
         if isinstance(final_Y_train, pd.Series):
             final_model = lgb.LGBMRegressor(**self.model_params)
-            final_model.fit(final_X_train, final_Y_train)
+            final_model.fit(
+                final_X_train, 
+                final_Y_train,
+                # categorical_feature=[],
+                # eval_set=[(X_test, Y_test)],
+                # eval_metric="mae",
+                # callbacks=[lgb.early_stopping(100, verbose=False)],
+            )
         else:
             final_model = MultiOutputRegressor(lgb.LGBMRegressor(**self.model_params))
             # final_model = RegressorChain(lgb.LGBMRegressor(**self.model_params))
-            final_model.fit(final_X_train, final_Y_train)
+            final_model.fit(
+                final_X_train, 
+                final_Y_train,
+                # categorical_feature=[],
+                # eval_set=[(X_test, Y_test)],
+                # eval_metric="mae",
+                # callbacks=[lgb.early_stopping(100, verbose=False)],
+            )
 
         return final_model, scaler_features
 
@@ -851,7 +882,7 @@ class Model:
 
 @dataclass
 class ModelConfig:
-    data_dir = Path("./dataset/electricity/exp_ml")
+    data_dir = Path("./dataset/electricity_work/exp_ml")
     # target series
     target = "h_total_use"                        # 预测目标变量名称
     target_ts_feat = "count_data_time"            # 功率数据时间戳特征名称
@@ -887,11 +918,12 @@ class ModelConfig:
     }
     model_params = {
         "boosting_type": "gbdt",
-        "objective": "regression",
-        "metric": "rmse",
+        "objective": "regression",  # "regression_l1": L1 loss or MAE, "regression": L2 loss or MSE
+        "metric": "rmse",  # if objective=="regression_l1": mae, if objective=="regression": rmse
+        "n_estimators": 1000,
+        "learning_rate": 0.05,
         "max_bin": 31,
         "num_leaves": 31,
-        "learning_rate": 0.05,
         "feature_fraction": 0.6,
         "bagging_fraction": 0.7,
         "bagging_freq": 5,

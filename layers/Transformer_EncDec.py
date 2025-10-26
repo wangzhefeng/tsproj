@@ -29,6 +29,7 @@ class ConvLayer(nn.Module):
 
     def __init__(self, c_in):
         super(ConvLayer, self).__init__()
+
         self.downConv = nn.Conv1d(
             in_channels=c_in,
             out_channels=c_in,
@@ -115,6 +116,7 @@ class DecoderLayer(nn.Module):
     def __init__(self, self_attention, cross_attention, d_model, d_ff=None,
                  dropout=0.1, activation="relu"):
         super(DecoderLayer, self).__init__()
+        
         d_ff = d_ff or 4 * d_model
         self.self_attention = self_attention
         self.cross_attention = cross_attention
@@ -153,6 +155,7 @@ class Decoder(nn.Module):
 
     def __init__(self, layers, norm_layer=None, projection=None):
         super(Decoder, self).__init__()
+        
         self.layers = nn.ModuleList(layers)
         self.norm = norm_layer
         self.projection = projection

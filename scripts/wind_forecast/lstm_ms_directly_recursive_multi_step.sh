@@ -30,7 +30,7 @@ python -u run_dl.py \
     --num_layers 2 \
     --train_ratio 0.8 \
     --test_ratio 0.2 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 10 \
     --learning_rate 3e-4 \
     --num_workers 0 \

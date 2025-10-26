@@ -30,12 +30,11 @@ model_name=Transformer_original
 #     --c_out 1 \
 #     --dropout 0.05 \
 #     --rev 1 \
-#     --output_attention 0 \
 #     --use_dtw 0 \
 #     --padding 0 \
 #     --loss MSE \
 #     --features MS \
-#     --iters 10 \
+#     --itr 10 \
 #     --train_epochs 10 \
 #     --batch_size 1 \
 #     --learning_rate 1e-5 \
@@ -60,6 +59,7 @@ python -u tf_power_forecasting.py \
     --data_path df_history_workday.csv \
     --rolling_data_path ETTh1-Test.csv \
     --target load \
+    --time time \
     --freq h \
     --embed timeF \
     --seq_len 72 \
@@ -78,13 +78,11 @@ python -u tf_power_forecasting.py \
     --activation gelu \
     --c_out 1 \
     --dropout 0.05 \
-    --rev 1 \
-    --output_attention 0 \
     --use_dtw 0 \
     --padding 0 \
     --loss MSE \
     --features MS \
-    --iters 10 \
+    --itr 10 \
     --train_epochs 20 \
     --batch_size 1 \
     --learning_rate 1e-5 \

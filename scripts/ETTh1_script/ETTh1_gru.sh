@@ -17,6 +17,7 @@ python -u run_dl.py \
     --data ETTh1 \
     --features MS \
     --target OT \
+    --time date \
     --pred_method recursive_multi_step \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
@@ -33,7 +34,7 @@ python -u run_dl.py \
     --num_layers 2 \
     --train_ratio 0.8 \
     --test_ratio 0.2 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 10 \
     --learning_rate 5e-3 \
     --batch_size 1 \

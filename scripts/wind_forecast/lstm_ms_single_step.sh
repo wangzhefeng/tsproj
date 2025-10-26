@@ -31,7 +31,7 @@ python -u run_dl.py \
     --num_layers 2 \
     --train_ratio 0.6 \
     --test_ratio 0.2 \
-    --iters 1 \
+    --itr 1 \
     --train_epochs 30 \
     --learning_rate 3e-4 \
     --batch_size 32 \

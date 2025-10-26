@@ -1,61 +1,62 @@
 export CUDA_VISIBLE_DEVICES=0
+export LOG_NAME=timekan-etth1
 
-# log vars
-model_id=ETTh1_lstm2lstm
-export LOG_NAME=$model_id
-# model vars
-model_name=LSTM2LSTM
+model_name=TimeKAN
 
+# 训练、验证、测试
 python -u run_dl.py \
     --task_name long_term_forecast \
-    --des 'Exp' \
+    --des 'Exp TimeKAN_24_0_24' \
     --is_training 1 \
     --is_testing 1 \
     --testing_step 24 \
     --is_forecasting 0 \
-    --model_id $model_id \
+    --model_id etth1_96_0_96 \
     --model $model_name \
     --root_path ./dataset/ETT-small/ \
     --data_path ETTh1.csv \
     --data ETTh1 \
     --features M \
     --target OT \
-    --pred_method recursive_multi_step \
-    --inspect_fit 1 \
-    --rolling_predict 1 \
-    --rolling_data_path ETTh1-Test.csv \
+    --time date \
     --checkpoints ./saved_results/pretrained_models/ \
     --test_results ./saved_results/test_results/ \
     --predict_results ./saved_results/predict_results/ \
-    --freq h \
+    --freq 1h \
     --embed timeF \
-    --seq_len 64 \
+    --seq_len 24 \
+    --label_len 0 \
     --pred_len 24 \
-    --step_size 1 \
-    --num_layers 2 \
-    --feature_size 7 \
-    --hidden_size 128 \
-    --kernel_size 3 \
-    --output_size 7 \
-    --teacher_forcing 0.3 \
-    --train_ratio 0.6 \
+    --train_ratio 0.7 \
     --test_ratio 0.2 \
-    --iters 1 \
-    --train_epochs 20 \
-    --batch_size 32 \
-    --learning_rate 1e-3 \
-    --lr_scheduler 1 \
-    --lradj type1 \
+    --moving_avg 25 \
+    --embed_type 0 \
+    --d_model 16 \
+    --d_ff 32 \
+    --enc_in 7 \
+    --dec_in 7 \
+    --c_out 7 \
+    --e_layers 2 \
+    --d_layers 1 \
+    --factor 3 \
+    --n_heads 1 \
     --dropout 0.05 \
+    --down_sampling_layers 2 \
+    --down_sampling_window 2 \
+    --begin_order 0 \
+    --num_workers 0 \
+    --itr 1 \
+    --train_epochs 1 \
+    --batch_size 8 \
     --loss MSE \
-    --optimizer adam \
     --activation gelu \
     --use_dtw 0 \
-    --patience 14 \
+    --learning_rate 1e-4 \
+    --patience 7 \
+    --lradj type1 \
     --scale 1 \
     --inverse 1 \
-    --num_workers 0 \
     --use_gpu 1 \
-    --gpu_type 'cuda' \
+    --gpu_type 'mps' \
     --use_multi_gpu 0 \
     --devices 0,1,2,3,4,5,6,7
