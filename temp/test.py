@@ -21,100 +21,103 @@ if ROOT not in sys.path:
 import warnings
 warnings.filterwarnings("ignore")
 
-# global variable
-LOGGING_LABEL = Path(__file__).name[:-3]
-os.environ['LOG_NAME'] = LOGGING_LABEL
-from utils.log_util import logger
-
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def generate_scaled_load_profiles_with_plot():
-    # 1. 创建时间索引：2025-10-26（星期日），1分钟频率
-    time_index = pd.date_range('2025-10-26', periods=1440, freq='1T')
+# global variable
+LOGGING_LABEL = Path(__file__).name[:-3]
 
-    # 2. 生成具有真实量纲的原始负荷曲线（单位：MW）
-    np.random.seed(42)
-    hours = time_index.hour + time_index.minute / 60.0
 
-    # 模拟典型日负荷：基础负荷 + 早晚高峰
-    base = 300  # MW
-    morning = 400 * np.exp(-((hours - 8.0) ** 2) / (2 * 1.8 ** 2))
-    evening = 500 * np.exp(-((hours - 19.5) ** 2) / (2 * 2.2 ** 2))
-    noise = 10 * np.random.randn(len(hours))  # 小幅随机扰动
+def pressing_ratio(raw_data):
+    ratio = (max(raw_data) - min(raw_data)) / ((max(raw_data) + min(raw_data)) / 2)
 
-    load_original = base + morning + evening + noise
-    load_original = np.clip(load_original, a_min=0, a_max=None)  # 确保非负
+    return ratio
 
-    x_max = load_original.max()
-    x_min = load_original.min()
 
-    print(f"原始负荷序列（MW）：最小值 = {x_min:.2f}, 最大值 = {x_max:.2f}")
+def press_data(raw_data, ratio):
+    cyclic_press_data = []
+    new_min_data = max(raw_data) - (ratio * (max(raw_data) + min(raw_data)) / 2)
+    press_ratio = (max(raw_data) - new_min_data) / (max(raw_data) - min(raw_data))
+    for i in raw_data:
+        new_i = max(raw_data) - (press_ratio * (max(raw_data) - i))
+        cyclic_press_data.append(new_i)
+    
+    return cyclic_press_data
+ 
 
-    # 3. 定义目标最小值比例（相对于最大值）
-    target_ratios = [0.1, 0.2, 0.3, 0.4]  # 10%, 20%, 30%, 40%
+def press_all_data(df, target_ratios):
+    new_df = pd.DataFrame()
+    for date in sorted(set(df["time"].dt.date)):
+        print(f"date: {date}")
+        df_temp = df.loc[df["time"].dt.date == date, :]
+        # print(f"df_temp: \n{df_temp}")
+        ratio = pressing_ratio(list(df_temp["value"].values))
+        print(f"ratio: {ratio}")
+        for target_ratio in target_ratios:
+            if ratio > target_ratio:
+                print("press...")
+                df_temp[f"value_{int(target_ratio * 100)}"] = press_data(raw_data=list(df_temp["value"].values), ratio=target_ratio)
+                new_ratio = pressing_ratio(list(df_temp[f"value_{int(target_ratio * 100)}"].values))
+                print(f"new_ratio: {new_ratio}")
+            else:
+                print("no press...")
+                df_temp[f"value_{int(target_ratio * 100)}"] = df_temp["value"]
+                new_ratio = pressing_ratio(list(df_temp[f"value_{int(target_ratio * 100)}"].values))
+                print(f"new_ratio: {new_ratio}")
+        new_df = pd.concat([new_df, df_temp], axis=0)
+    
+    return new_df
 
-    # 4. 构建 DataFrame
-    df = pd.DataFrame(index=time_index)
-    df['original_MW'] = load_original
 
-    # 5. 对每个比例进行线性变换（保持形状，调整 min，max 不变）
-    for r in target_ratios:
-        denom = x_max - x_min
-        if denom == 0:
-            scaled = load_original.copy()
-        else:
-            a = (x_max - r * x_max) / denom
-            b = x_max - a * x_max
-            scaled = a * load_original + b
-        col_name = f'min_{int(r*100)}%_MW'
-        df[col_name] = scaled
+# 构造一段有规律的周期性时序数据（类似于sin或cos曲线）
+# df = pd.DataFrame()
+# time_points = np.arange(0, 4.5, 0.1)
+# cyclic_data = np.sin(time_points)  # 使用正弦函数来模拟周期性
+# cyclic_data = cyclic_data + 1
+# print(cyclic_data)
+# df["time"] = time_points
+# df["value"] = cyclic_data
 
-    # 6. 验证结果
-    print("\n各列极值验证（单位：MW）：")
-    for col in df.columns:
-        col_min = df[col].min()
-        col_max = df[col].max()
-        print(f"{col:>15}: min = {col_min:7.2f}, max = {col_max:7.2f}")
 
-    # 7. 保存到 CSV
-    output_file = 'scaled_load_profiles_real_MW.csv'
-    df.to_csv(output_file)
-    print(f"\n✅ 数据已保存至: {output_file}")
+# load data
+df = pd.read_csv("./dataset/sum_load_20241001_20250930.csv")
+df["time"] = pd.to_datetime(df["time"])
 
-    # 8. 可视化
-    plt.figure(figsize=(14, 7))
-    plt.plot(df.index, df['original_MW'], label='Original', linewidth=2, color='black')
+# press data
+# 一天数据查看
+new_df = press_all_data(df=df.loc[(df["time"] >= "2025-08-25 00:00:00") & (df["time"] < "2025-08-26 00:00:00"), :], target_ratios=[0.1, 0.2, 0.3])
+# 所有数据处理
+# new_df = press_all_data(df=df, target_ratios=[0.1, 0.2, 0.3])
+with pd.option_context('display.max_rows', 100, 'display.max_columns', None):
+    print(f"new_df: \n{new_df}")
 
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
-    for i, r in enumerate(target_ratios):
-        col = f'min_{int(r*100)}%_MW'
-        plt.plot(df.index, df[col], label=f'Min = {int(r*100)}% of Max', 
-                 linewidth=1.2, color=colors[i])
+# 数据保存
+# new_df.to_csv("./dataset/sum_load_20241001_20250930_press.csv", encoding="utf_8_sig", index=False)
 
-    plt.title('Scaled Load Profiles (Max Load Fixed, Min Load Adjusted)', fontsize=14)
-    plt.xlabel('Time of Day')
-    plt.ylabel('Load (MW)')
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.xticks(rotation=0)
 
-    # 设置 x 轴刻度为每 2 小时一个标签
-    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(13))  # 0,2,4,...,24
+# 绘制周期性时序数据
+plt.figure(figsize=(25, 8))
+plt.plot(new_df["time"], new_df["value"], label='Cyclic Component')
+plt.plot(new_df["time"], new_df["value_10"], label='Cyclic press 10% Component', alpha=0.8)
+plt.plot(new_df["time"], new_df["value_20"], label='Cyclic press 20% Component', alpha=0.8)
+plt.plot(new_df["time"], new_df["value_30"], label='Cyclic press 30% Component', alpha=0.8)
+# plt.gca().legend_ = None
+plt.legend()
+plt.title('')
+plt.xlabel('')
+plt.ylabel('')
+# plt.xticks([])
+# plt.yticks([])
+# plt.savefig("./dataset/sum_load_20241001_20250930_press.png", dpi=300)
+plt.show()
 
-    # 保存图像
-    plot_file = 'load_profiles_comparison.png'
-    plt.savefig(plot_file, dpi=300)
-    print(f"✅ 图像已保存至: {plot_file}")
 
-    # 显示图像（在支持的环境中）
-    plt.show()
 
-    return df
 
-# 运行主函数
+
+def main():
+    pass
+
 if __name__ == "__main__":
-    df_result = generate_scaled_load_profiles_with_plot()
+    main()
