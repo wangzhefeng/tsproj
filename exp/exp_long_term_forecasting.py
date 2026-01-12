@@ -470,6 +470,17 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         trues = np.concatenate(trues, axis = 0)  # trues = np.array(trues)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        # 结果收集
+        logger.info(f"preds.reshape(1, -1): \n{preds.reshape(1, -1)}")
+        logger.info(f"trues.reshape(1, -1): \n{trues.reshape(1, -1)}")
+        logger.info(f"trues.reshape(1, -1)[0]: \n{trues.reshape(1, -1)[0]}")
+        logger.info(f"trues.reshape(1, -1)[0]: \n{len(trues.reshape(1, -1)[0])}")
+        test_results = pd.DataFrame({
+            "preds": preds.reshape(1, -1)[0],
+            "trues": trues.reshape(1, -1)[0],
+        }, index=range(len(preds.reshape(1, -1)[0])))
+        test_results.to_csv(Path(test_results_path).joinpath("test_results.csv"), index=False, encoding="utf-8")
+        logger.info(f"test_results: \n{test_results}")
         self._test_results_save(preds.reshape(-1, 1), trues.reshape(-1, 1), setting, test_results_path)
         logger.info(test_results_path)
         # 测试结果可视化
