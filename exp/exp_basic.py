@@ -17,6 +17,10 @@ __all__ = []
 import os
 import sys
 from pathlib import Path
+
+from models.mlp import DLinear
+from models.rnn import RNN
+from models.transformer import Autoformer, PatchTST, iTransformer
 ROOT = str(Path.cwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
@@ -24,16 +28,11 @@ if ROOT not in sys.path:
 import torch
 
 from models import (
-    Autoformer, 
-    DLinear, 
-    iTransformer,
     Transformer_v2,
     Transformer,
-    PatchTST,
     TimeKAN,
     TimeMixer,
     LSTM2LSTM,
-    RNN,
 )
 from utils.log_util import logger
 
