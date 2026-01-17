@@ -1,23 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# ***************************************************
-# * File        : Transformer.py
-# * Author      : Zhefeng Wang
-# * Email       : wangzhefengr@163.com
-# * Date        : 2024-12-22
-# * Version     : 0.1.122222
-# * Description : description
-# * Link        : link
-# * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)
-# ***************************************************
-
-# python libraries
-import sys
-from pathlib import Path
-ROOT = str(Path.cwd())
-if ROOT not in sys.path:
-    sys.path.append(ROOT)
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,11 +6,8 @@ from layers.Embed import DataEmbedding
 from layers.SelfAttention_Family import AttentionLayer, FullAttention
 from layers.Transformer_EncDec import (
     Decoder, DecoderLayer,
-    Encoder, EncoderLayer
+    Encoder, EncoderLayer,
 )
-
-# global variable
-LOGGING_LABEL = Path(__file__).name[:-3]
 
 
 class Model(nn.Module):

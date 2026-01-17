@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 from models.mlp import DLinear
+from models.others import TimeKAN, TimeMixer
 from models.rnn import RNN
 from models.transformer import Autoformer, PatchTST, iTransformer
 ROOT = str(Path.cwd())
@@ -30,8 +31,6 @@ import torch
 from models import (
     Transformer_v2,
     Transformer,
-    TimeKAN,
-    TimeMixer,
     LSTM2LSTM,
 )
 from utils.log_util import logger
