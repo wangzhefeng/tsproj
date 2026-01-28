@@ -28,7 +28,7 @@ from utils.log_util import logger
 
 
 def args_parse():
-    parser = argparse.ArgumentParser(description='Transformer Multivariate Time Series Forecasting')
+    parser = argparse.ArgumentParser(description='Transformer Time Series Forecasting')
     # basic config
     parser.add_argument('--des', type=str, default='TimeSeries Forecasting Exp', help='exp description')
     parser.add_argument('--task_name', type=str, required=True, default='long_term_forecasting', help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')

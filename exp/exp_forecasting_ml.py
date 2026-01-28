@@ -9,7 +9,7 @@
 # * Description : 1.单变量多步直接预测(数据标准化)
 # *               2.单变量多步递归预测(滞后特征，数据标准化)
 # *               3.多变量多步递归预测(滞后特征，数据标准化)
-# * Link        : https://mp.weixin.qq.com/s/haCeJW9wamtXkBjX3oUvdQ
+# * Link        : 1.https://mp.weixin.qq.com/s/haCeJW9wamtXkBjX3oUvdQ
 # * Requirement : 相关模块版本需求(例如: numpy >= 2.1.0)增加 log;
 # ***************************************************
 
@@ -23,12 +23,14 @@ ROOT = str(Path.cwd())
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 import copy
+import math
 import random
 import datetime
 from typing import Dict, List
 from dataclasses import dataclass
 import warnings
 warnings.filterwarnings("ignore")
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -70,68 +72,242 @@ os.environ['LOG_NAME'] = LOGGING_LABEL
 from utils.log_util import logger
 
 
+@dataclass
+class ModelConfig:
+    # ------------------------------
+    # model name
+    # ------------------------------
+    model_name = "LightGBM"
+    # ------------------------------
+    # model task
+    # ------------------------------
+    task_name = "machine_learning_long_term_forecast"
+    is_training = True
+    is_testing = True
+    testing_step = 288
+    is_forecasting = 0
+    model_id = f"LightGBM-ETTh1"
+    model = model_name
+    # ------------------------------
+    # model data
+    # ------------------------------
+    data_dir = Path("./dataset/electricity_work/demand_load/lingang_A")       # 数据路径
+    data_path = "AIDC_A_dataset.csv"                       # 目标时间序列数据路径
+    data = "AIDC_A_dataset"                                # 目标时间序列数据名称
+    freq = "5min"                                 # 目标时间序列数据频率
+    n_per_day = 288                               # 目标时间序列每天样本数量
+    target_ts_feat = "count_data_time"                       # 目标时间序列时间戳特征名称
+    target_series_numeric_features = []           # 目标时间序列的数值特征
+    target_series_categorical_features = []       # 目标时间序列的类别特征
+    target = "h_total_use"                        # 目标时间序列预测目标变量名称
+    # date type
+    date_history_path = "df_date.csv"
+    # date_history_path = None
+    date_future_path = "df_date_future.csv"
+    # date_future_path = None
+    date_ts_feat = "date"                         # 日期数据时间戳特征名称
+    # weather
+    weather_history_path = "df_weather.csv"
+    # weather_history_path = None
+    weather_future_path = "df_weather_future.csv"
+    # weather_future_path = None
+    weather_ts_feat = "ts"                        # 天气数据时间戳特征名称
+    # time
+    now_time = datetime.datetime(2025, 12, 27, 0, 0, 0).replace(tzinfo=None, minute=0, second=0, microsecond=0)
+    # ------------------------------
+    # model data preprocessing
+    # ------------------------------
+    scale = True # 是否进行标准化
+    inverse = True
+    target_transform = False                      # 预测目标是否需要转换
+    target_transform_predict = None               # 预测目标的转换特征是否需要预测
+    date_type = None                              # 日期类型，用于区分工作日("workday")，非工作日("offday")
+    lags = [1, 2, 3]                              # 特征滞后数列表
+    threshold = 100000
+    # ------------------------------
+    # model define
+    # ------------------------------
+    model_params = {
+        "boosting_type": "gbdt",
+        "objective": "regression",  # "regression_l1": L1 loss or MAE, "regression": L2 loss or MSE
+        "metric": "rmse",  # if objective=="regression_l1": mae, if objective=="regression": rmse
+        "n_estimators": 1000,
+        "learning_rate": 0.05,
+        "max_bin": 31,
+        "num_leaves": 31,
+        "feature_fraction": 0.6,
+        "bagging_fraction": 0.7,
+        "bagging_freq": 5,
+        "lambda_l1": 0.5,
+        "lambda_l2": 0.5,
+        "verbose": -1,
+    }
+    # ------------------------------
+    # model training
+    # ------------------------------
+    # 预测方法
+    pred_method = "univariate-multip-step-recursive"  # "multip-step-directly"
+    featuresd = "MS"
+    history_days = 30                             # 历史数据天数
+    predict_days = 1                              # 预测未来 1 天的数据
+    window_days = 15                              # 滑动窗口天数
+    train_ratio = 0.7
+    test_ratio = 0.2
+    loss = "MSE"
+    learning_rate = 3e-5
+    patience = 7
+    # ------------------------------
+    # model testing
+    # ------------------------------
+    # TODO
+    # ------------------------------
+    # model forecasting
+    # ------------------------------
+    # TODO
+    # ------------------------------
+    # result saved
+    # ------------------------------
+    checkpoints = "./saved_results/pretrained_models/"
+    test_results = "./saved_results/test_results/"
+    pred_results = "./saved_results/predict_results/"
+
+
 class Model:
 
-    def __init__(self, args) -> None:
+    def __init__(self, args: ModelConfig) -> None:
         self.args = args
+        # ------------------------------
+        # 特征工程
+        # ------------------------------
+        # 特征滞后数个数(1,2,...)
+        self.n_lags = len(args.lags)
+        # ------------------------------
+        # 模型预测
+        # ------------------------------
+        # 预测未来 1 天(24小时)的数据/数据划分长度/预测数据长度
+        self.horizon = args.predict_days * args.n_per_day
+        # ------------------------------
+        # 数据窗口
+        # ------------------------------
+        # 测试滑动窗口数量, >=1, 1: 单个窗口
+        self.n_windows = args.history_days - (args.window_days - 1)
+        # 测试窗口数据长度(训练+测试)
+        self.window_len = args.window_days * args.n_per_day if self.n_windows > 1 else args.history_days * args.n_per_day
+        # ------------------------------
+        # 数据划分时间
+        # ------------------------------
+        # 时间序列历史数据开始时刻
+        self.start_time = args.now_time.replace(hour=0) - datetime.timedelta(days=args.history_days)
+        # 时间序列当前时刻(模型预测的日期时间)
+        self.now_time = args.now_time
+        # 时间序列未来结束时刻
+        self.future_time = args.now_time + datetime.timedelta(days=args.predict_days)
+        # TODO
+        self.before_days = -args.history_days
+        self.after_days = args.predict_days
         # datetime index
-        self.args.train_start_time = args.time_range["start_time"]
-        self.args.train_end_time = args.time_range["now_time"]
-        self.args.forecast_start_time = args.time_range["now_time"]
-        self.args.forecast_end_time = args.time_range["future_time"]
-        logger.info(f"train_start_time: {self.train_start_time}")
-        logger.info(f"train_end_time: {self.train_end_time}")
-        logger.info(f"forecast_start_time: {self.forecast_start_time}")
-        logger.info(f"forecast_end_time: {self.forecast_end_time}")
+        self.train_start_time = self.start_time
+        self.train_end_time = self.now_time
+        self.forecast_start_time = self.now_time
+        self.forecast_end_time = self.future_time
+        # ------------------------------
+        # log
+        # ------------------------------
+        logger.info(f"{75*'='}")
+        logger.info(f"Prepare params...")
+        logger.info(f"{75*'='}")
+        logger.info(f"history data range: {self.train_start_time}~{self.train_end_time}")
+        logger.info(f"predict data range: {self.forecast_start_time}~{self.forecast_end_time}")
+        self.log_prefix = f"model: {args.model}, data: {args.data}::"
 
-    def load_csv_data(self):
+    def load_data(self):
         """
         数据加载
         """
+        # ------------------------------
         # 历史数据
-        df_series_history = pd.read_csv(self.args.data_dir.joinpath(f"df_target.csv"), encoding="utf-8")
-        df_date_history = pd.read_csv(self.args.data_dir.joinpath(f"df_date_history.csv"), encoding="utf-8")
-        df_weather_history = pd.read_csv(self.args.data_dir.joinpath(f"df_weather_history.csv"), encoding="utf-8")
+        # ------------------------------
+        # series
+        if self.args.data_path is not None:
+            df_series_history = pd.read_csv(self.args.data_dir.joinpath(self.args.data_path), encoding="utf-8")
+            logger.info(f"{self.log_prefix} df_series_history: \n{df_series_history}")
+        else:
+            df_series_history = None
+            logger.info(f"{self.log_prefix} df_series_history: {df_series_history}")
+        # date
+        if self.args.date_history_path is not None:
+            df_date_history = pd.read_csv(self.args.data_dir.joinpath(self.args.date_history_path), encoding="utf-8")
+            logger.info(f"{self.log_prefix} df_date_history: \n{df_date_history}")
+        else:
+            df_date_history = None
+            logger.info(f"{self.log_prefix} df_date_history: {df_date_history}")
+        # weather
+        if self.args.weather_history_path is not None:
+            df_weather_history = pd.read_csv(self.args.data_dir.joinpath(self.args.weather_history_path), encoding="utf-8")
+            logger.info(f"{self.log_prefix} df_weather_history: \n{df_weather_history}")
+        else:
+            df_weather_history = None
+            logger.info(f"{self.log_prefix} df_weather_history: {df_weather_history}")
+        # ------------------------------
         # 未来数据
+        # ------------------------------
+        # series
         df_series_future = None
-        df_date_future = pd.read_csv(self.args.data_dir.joinpath(f"df_date_future.csv"), encoding="utf-8")
-        df_weather_future = pd.read_csv(self.args.data_dir.joinpath(f"df_weather_future.csv"), encoding="utf-8")
+        logger.info(f"{self.log_prefix} df_series_future: {df_series_future}")
+        # date
+        if self.args.date_future_path is not None:
+            df_date_future = pd.read_csv(self.args.data_dir.joinpath(self.args.date_future_path), encoding="utf-8")
+            logger.info(f"{self.log_prefix} df_date_future: \n{df_date_future}")
+        else:
+            df_date_future = None
+            logger.info(f"{self.log_prefix} df_date_future: {df_date_future}")
+        # weather
+        if self.args.weather_future_path is not None:
+            df_weather_future = pd.read_csv(self.args.data_dir.joinpath(self.args.weather_future_path), encoding="utf-8")
+            logger.info(f"{self.log_prefix} df_weather_future: \n{df_weather_future}")
+        else:
+            df_weather_future = None
+            logger.info(f"{self.log_prefix} df_weather_future: {df_weather_future}")
+        # ------------------------------
+        # 数据合并
+        # ------------------------------
+        df_date_all = pd.concat([df_date_history.iloc[:-1, ], df_date_future], axis=0)
+        df_weather_all = pd.concat([df_weather_history.iloc[:-1,], df_weather_future], axis=0)
+        # ------------------------------
         # 输入数据以字典形式整理
+        # ------------------------------
         input_data = {
             "df_series_history": df_series_history,
-            "df_date_history": df_date_history,
-            "df_weather_history": df_weather_history,
+            "df_date_history": df_date_all,
+            "df_weather_history": df_weather_all,
             "df_series_future": df_series_future,
-            "df_date_future": df_date_future,
-            "df_weather_future": df_weather_future,
+            "df_date_future": df_date_all,
+            "df_weather_future": df_weather_all,
         }
         
         return input_data
 
-    def __process_df_timestamp(self, df, ts_col: str):
+    def __process_df_timestamp(self, df, col_ts: str):
         """
         时序数据时间特征预处理
 
         Args:
             df (pd.DataFrame): 时间序列数据
-            ts_col (str): 原时间戳列
-            new_ts_col (str): 新的时间戳列
-            new_ts_col (str, optional): 新的时间戳列. Defaults to "time".
+            col_ts (str): 原时间戳列
         """
         if df is not None:
             # 数据拷贝
             df_processed = copy.deepcopy(df)
             # 转换时间戳类型
-            df_processed[ts_col] = pd.to_datetime(df_processed[ts_col])
+            df_processed[col_ts] = pd.to_datetime(df_processed[col_ts])
             # del df_processed[ts_col]
             # 去除重复时间戳
-            df_processed.drop_duplicates(subset=ts_col, keep="last", inplace=True, ignore_index=True)
+            df_processed.drop_duplicates(subset=col_ts, keep="last", inplace=True, ignore_index=True)
             return df_processed
         else:
             return df
 
-    def __process_target_series(self, df_template, df_series, 
-                                col_ts: str, col_numeric: List, col_categorical: List, col_drop: List):
+    def __process_target_series(self, df_template, df_series, col_ts: str, col_numeric: List, col_categorical: List, col_drop: List):
         """
         目标特征数据预处理
         df_template: ["time", "y"]
@@ -140,7 +316,7 @@ class Model:
             # 目标特征数据转换为浮点数
             if self.args.target in df_series.columns:
                 df_series[self.args.target] = df_series[self.args.target].apply(lambda x: float(x))
-                # 将原始数据映射到时间戳完整的 df 中
+                # 将原始数据映射到时间戳完整的 df_template 中
                 df_template["y"] = df_template["time"].map(df_series.set_index(col_ts)[self.args.target])
             # 数值特征处理
             for col in col_numeric:
@@ -152,74 +328,99 @@ class Model:
             # 类别特征处理
             for col in col_categorical:
                 if col not in [col_ts, self.args.target] + col_drop:
-                    # TODO 类别特征处理
+                    # 类别特征处理
                     df_series[col] = self.__categorical_feature_engineering(df_series, col)
                     # 将时序特征映射到时间戳完整的 df_template 中, 特征包括[ds, y, feature_categorical]
                     df_template[col] = df_template["time"].map(df_series.set_index(col_ts)[col])
+            # 外生特征
+            exogenous_features = [col for col in df_template.columns if col != "time" and col != self.args.target]
         
-        return df_template
+        return df_template, exogenous_features
 
     # TODO
     def __categorical_feature_engineering(self, df, col):
         pass
     
-    def process_history_data(self, input_data: Dict = None):
+    def process_history_data(self, input_data: Dict=None):
         """
         历史数据预处理
         """
         # 历史数据格式
         df_history = pd.DataFrame({
-            "time": pd.date_range(self.args.train_start_time, self.args.train_end_time, freq=self.args.freq, inclusive="left"),
+            "time": pd.date_range(self.train_start_time, self.train_end_time, freq=self.args.freq, inclusive="left"),
             # "unique_id": None,
             # "y": None,
         })
+        logger.info(f"{self.log_prefix} df_history template df_history: \n{df_history}")
         # 特征工程：目标时间序列特征
-        df_series_history = self.__process_df_timestamp(df = input_data["df_series_history"], ts_col = self.args.target_ts_feat)
-        df_history = self.__process_target_series(
-            df_template = df_history,
-            df_series = df_series_history, 
-            col_ts = self.args.target_ts_feat,
-            col_numeric = self.args.target_series_numeric_features, 
-            col_categorical = self.args.target_series_categorical_features,
+        df_series_history = self.__process_df_timestamp(df=input_data["df_series_history"], col_ts=self.args.target_ts_feat)
+        df_history, exogenous_features = self.__process_target_series(
+            df_template=df_history,
+            df_series=df_series_history, 
+            col_ts=self.args.target_ts_feat,
+            col_numeric=self.args.target_series_numeric_features, 
+            col_categorical=self.args.target_series_categorical_features,
             col_drop=[],
         )
+        logger.info(f"{self.log_prefix} after process_target_series df_history: \n{df_history}")
         # 特征工程：日期时间特征
         df_history, datetime_features = extend_datetime_feature(
-            df = df_history, 
-            feature_names = [
+            df=df_history, 
+            feature_names=[
                 'minute', 'hour', 'day', 'weekday', 'week', 
                 'day_of_week', 'week_of_year', 'month', 'days_in_month', 
                 'quarter', 'day_of_year', 'year'
             ],
         )
-        
+        with pd.option_context('display.max_columns', None):
+            logger.info(f"{self.log_prefix} after extend_datetime_feature df_history: \n{df_history}")
         # 特征工程：日期类型(节假日、特殊事件)特征
-        df_date_history = self.__process_df_timestamp(df = input_data["df_date_history"], ts_col = self.args.date_ts_feat)
-        df_history, date_features = extend_datetype_feature(df = df_history, df_date = df_date_history)
-        
-        # 特征工程：天气特征
-        df_weather_history = self.__process_df_timestamp(df = input_data["df_weather_history"], ts_col = self.args.weather_ts_feat)
-        df_history, weather_features = extend_weather_feature(df_history = df_history, df_weather = df_weather_history)
-        
-        # 特征工程：滞后特征
-        df_history, lag_features = extend_lag_feature(
-            df = df_history, 
-            target = self.args.target, 
-            lags = self.args.lags,
+        df_date_history = self.__process_df_timestamp(df=input_data["df_date_history"], col_ts=self.args.date_ts_feat)
+        df_history, date_features = extend_datetype_feature(
+            df=df_history, 
+            df_date=df_date_history, 
+            col_ts=self.args.date_ts_feat,
         )
+        with pd.option_context('display.max_columns', None):
+            logger.info(f"{self.log_prefix} after extend_datetype_feature df_history: \n{df_history}")
+        # 特征工程：天气特征
+        df_weather_history = self.__process_df_timestamp(df=input_data["df_weather_history"], col_ts=self.args.weather_ts_feat)
+        df_history, weather_features = extend_weather_feature(
+            df=df_history, 
+            df_weather=df_weather_history, 
+            col_ts=self.args.weather_ts_feat,
+        )
+        with pd.option_context('display.max_columns', None):
+            logger.info(f"{self.log_prefix} after extend_weather_feature df_history: \n{df_history}")
+        # 特征工程：滞后特征
+        if exogenous_features == [] or (not self.args.target_transform and self.args.pred_method != "multivariate-multip-step-recursive"):
+            df_history, lag_features = extend_lag_feature_univariate(
+                df=df_history,
+                target=self.args.target, 
+                lags=self.args.lags,
+            )
+        else:
+            df_history, lag_features, target_features = extend_lag_feature_multivariate(
+                df=df_history,
+                exogenous_features=exogenous_features,
+                target=self.args.target,
+                n_lags=self.n_lags,
+            )
+        with pd.option_context('display.max_columns', None):
+            logger.info(f"{self.log_prefix} after extend_lag_feature df_history: \n{df_history}")
 
         # 插值填充预测缺失值
         df_history = df_history.interpolate()
         # df_history = df_history.ffill()
         # df_history = df_history.bfill()
-        df_history.dropna(inplace = True, ignore_index = True)
+        df_history.dropna(inplace=True, ignore_index=True)
 
         # 特征排序
         train_features = lag_features + datetime_features + date_features + weather_features
-        df_history = df_history[["ds"] + train_features + ["y"]]
+        df_history = df_history[["time"] + train_features + ["y"]]
 
-        # 本筛选: 异常值处理
-        df_history = df_history[df_history["y"] > self.args.threshold]
+        # 样本筛选: 异常值处理
+        df_history = df_history.loc[df_history["y"] < self.args.threshold, :]
 
         # TODO 数据分割: 工作日预测特征，目标特征
         # if self.args.is_workday:
@@ -235,10 +436,10 @@ class Model:
         #         df_history.to_csv(df_history_offday_path)
         #         logger.info(f"df_history_offday has saved in {df_history_offday_path}")
 
-        # TODO 预测特征、目标特征分割
-        # df_history_X, df_history_Y = df_history[train_features], df_history[self.args.target]
+        # 预测特征、目标特征分割
+        df_history_X, df_history_Y = df_history[train_features], df_history["y"]
 
-        return df_history, train_features
+        return df_history_X, df_history_Y
 
     def process_future_data(self, input_data):
         """
@@ -246,14 +447,14 @@ class Model:
         """
         # 未来数据格式
         df_future = pd.DataFrame({
-            "time": pd.date_range(self.args.forecast_start_time, self.args.forecast_end_time, freq=self.args.freq, inclusive="left"),
+            "time": pd.date_range(self.forecast_start_time, self.forecast_end_time, freq=self.args.freq, inclusive="left"),
             # "unique_id": None,
             # "y": None,
         })
         
         # 特征工程：除目标特征外的其他特征
-        df_series_future = self.__process_df_timestamp(df = input_data["df_series_future"], ts_col = self.args.target_ts_feat)
-        df_future = self.__process_target_series(
+        df_series_future = self.__process_df_timestamp(df = input_data["df_series_future"], col_ts = self.args.target_ts_feat)
+        df_future, exogenous_features = self.__process_target_series(
             df_template = df_future, 
             df_series = df_series_future, 
             col_ts=self.args.target_ts_feat,
@@ -273,11 +474,11 @@ class Model:
         )
 
         # 特征工程: 日期类型(节假日、特殊事件)特征
-        df_date_future = self.__process_df_timestamp(df = input_data["df_date_future"], ts_col = self.args.date_ts_feat)
+        df_date_future = self.__process_df_timestamp(df = input_data["df_date_future"], col_ts = self.args.date_ts_feat)
         df_future, date_features = extend_datetype_feature(df = df_future, df_date = df_date_future)
 
         # 特征工程: 天气特征
-        df_weather_future = self.__process_df_timestamp(df = input_data["df_weather_future"], ts_col = self.args.weather_ts_feat)
+        df_weather_future = self.__process_df_timestamp(df = input_data["df_weather_future"], col_ts = self.args.weather_ts_feat)
         df_future, weather_features = extend_future_weather_feature(df_future = df_future, df_weather_future = df_weather_future)
         
         # 插值填充预测缺失值
@@ -305,6 +506,9 @@ class Model:
 
         return df_future, future_features
 
+    # ##############################
+    # 
+    # ##############################
     @staticmethod
     def univariate_directly_forecast(model, X_test):
         """
@@ -386,14 +590,14 @@ class Model:
             next_pred = model.predict(current_features.reshape(1, -1))
             # 更新 pred_history
             pred_history.append(next_pred[0])
-            pred_history_list = np.array(pred_history[-self.n_lags:]).T.flatten().tolist()
+            pred_history_list = np.array(pred_history[-len(self.args.lags):]).T.flatten().tolist()
             # 更新特征: 将预测值作为新的滞后特征
             new_row_df = current_features_df.iloc[-1:].copy()
             # 更新特征: date, weather
             for future_feature in future.columns:
                 new_row_df[future_feature] = future.iloc[step][future_feature]
             # 更新特征: lag
-            new_row_df.iloc[:, 0:(Y_train.shape[1]*self.n_lags)] = pred_history_list
+            new_row_df.iloc[:, 0:(Y_train.shape[1]*len(self.args.lags))] = pred_history_list
             # 更新 current_features_df
             current_features_df = pd.concat([current_features_df, new_row_df], axis=0, ignore_index=True)
             # TODO 收集预测结果
@@ -401,7 +605,9 @@ class Model:
             Y_pred.append(next_pred[0])
 
         return Y_pred
-
+    # ##############################
+    # 
+    # ##############################
     def _evaluate_split_index(self, window: int):
         """
         数据分割索引构建
@@ -464,7 +670,7 @@ class Model:
         train_start, train_end, test_start, test_end = self._evaluate_split_index(window)
         # 训练结果数据收集
         cv_plot_df_window = pd.DataFrame()
-        cv_timestamp_df = pd.DataFrame({"ds": pd.date_range(self.args.train_start_time, self.args.train_end_time, self.args.freq, inclusive="left")})
+        cv_timestamp_df = pd.DataFrame({"ds": pd.date_range(self.train_start_time, self.train_end_time, self.args.freq, inclusive="left")})
         if test_end == -1:
             cv_plot_df_window["ds"] = cv_timestamp_df[test_start:]
             logger.info(f"split indexes:: train_start:train_end: {train_start}:{train_end}, test_start:test_end: {test_start}:{''}")
@@ -562,7 +768,9 @@ class Model:
             )
         
         return Y_pred
-
+    # ##############################
+    # 
+    # ##############################
     def test(self, data_X: pd.DataFrame, data_Y):
         """
         交叉验证
@@ -730,7 +938,9 @@ class Model:
         else:
             data_future = pd.merge(data_future, data_X_future, how="outer")
             return data_future
-
+    # ##############################
+    # 
+    # ##############################
     # TODO
     def model_save(self, final_model):
         """
@@ -766,7 +976,9 @@ class Model:
         )
 
         return df_future 
-
+    # ##############################
+    # 
+    # ##############################
     def run(self):
         # ------------------------------
         # 数据加载
@@ -774,7 +986,7 @@ class Model:
         logger.info(f"{80*'='}")
         logger.info(f"Load history and future data...")
         logger.info(f"{80*'='}")
-        input_data = self.load_csv_data()
+        input_data = self.load_data()
         # ------------------------------
         # 历史数据处理
         # ------------------------------
@@ -787,6 +999,7 @@ class Model:
         else:
             data_X, data_Y = self.process_history_data(input_data = input_data)
         logger.info(f"Model history data preprocessing over...")
+        """
         # ------------------------------
         # 未来数据处理
         # ------------------------------
@@ -878,70 +1091,18 @@ class Model:
             y_pred = self.process_output(y_pred)
             logger.info(f"Model forecast result: {y_pred}")
             logger.info(f"Model forecasting over...")
+        """
 
-
-@dataclass
-class ModelConfig:
-    data_dir = Path("./dataset/electricity_work/exp_ml")
-    # target series
-    target = "h_total_use"                        # 预测目标变量名称
-    target_ts_feat = "count_data_time"            # 功率数据时间戳特征名称
-    target_series_numeric_features = []           # 目标时间序列的数值特征
-    target_series_categorical_features = []       # 目标时间序列的类别特征
-    freq = "5min"                                 # 数据频率
-    # date type
-    date_ts_feat = "date"                         # 日期数据时间戳特征名称
-    # weather
-    weather_ts_feat = "ts"                        # 天气数据时间戳特征名称
-    # model params
-    pred_method = "multip-step-directly"          # 预测方法
-    scale = False                                 # 是否进行标准化
-    target_transform = False                      # 预测目标是否需要转换
-    target_transform_predict = None               # 预测目标的转换特征是否需要预测
-    date_type = None                              # 日期类型，用于区分工作日，非工作日
-    lags = []                                     # 特征滞后数列表
-    n_lags = len(lags)                            # 特征滞后数个数
-    n_per_day = 24 * 4                            # 每天样本数量
-    history_days = 19                             # 历史数据天数
-    predict_days = 1                              # 预测未来1天的功率
-    window_days = 7                               # 滑动窗口天数
-    horizon = predict_days * n_per_day            # 预测未来 1天(24小时)的功率/数据划分长度/预测数据长度
-    n_windows = history_days - (window_days - 1)  # 测试滑动窗口数量, >=1, 1: 单个窗口
-    window_len = window_days * n_per_day if n_windows > 1 else history_days * n_per_day   # 测试窗口数据长度(训练+测试)
-    now_time = datetime.datetime(2025, 7, 10, 0, 0, 0).replace(tzinfo=None, minute=0, second=0, microsecond=0)  
-    time_range = {
-        "start_time": now_time.replace(hour=0) - datetime.timedelta(days=history_days),   # 时间序列历史数据开始时刻
-        "now_time": now_time,                                                             # 时间序列当前时刻(模型预测的日期时间)
-        "future_time": now_time + datetime.timedelta(days=predict_days),                  # 时间序列未来结束时刻
-        "before_days": -history_days,
-        "after_days": predict_days,
-    }
-    model_params = {
-        "boosting_type": "gbdt",
-        "objective": "regression",  # "regression_l1": L1 loss or MAE, "regression": L2 loss or MSE
-        "metric": "rmse",  # if objective=="regression_l1": mae, if objective=="regression": rmse
-        "n_estimators": 1000,
-        "learning_rate": 0.05,
-        "max_bin": 31,
-        "num_leaves": 31,
-        "feature_fraction": 0.6,
-        "bagging_fraction": 0.7,
-        "bagging_freq": 5,
-        "lambda_l1": 0.5,
-        "lambda_l2": 0.5,
-        "verbose": -1,
-    }
-
-
-
+  
 
 # 测试代码 main 函数
 def main():
+    # model config
     args = ModelConfig()
-    logger.info(f"args:\n{args.time_range}")
 
     # model instance
     model = Model(args)
+    model.run()
 
 if __name__ == "__main__":
     main()

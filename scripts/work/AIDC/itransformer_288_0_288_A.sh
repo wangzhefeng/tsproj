@@ -15,7 +15,7 @@ python -u run_dl.py \
     --is_forecasting 0 \
     --model_id iTransformer_288_144_288_A \
     --model $model_name \
-    --root_path ./dataset/electricity_work// \
+    --root_path ./dataset/electricity_work/ \
     --data_path AIDC_A_dataset.csv \
     --data AIDC_A_dataset \
     --features M \
